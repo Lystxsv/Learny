@@ -440,3 +440,14 @@ code { padding: .1rem var(--s1); border-radius: var(--r-ctl); background: var(--
 .review-src, .review-warn { margin: 0; font-size: var(--fs-cap); color: var(--muted); }
 .review-warn { color: var(--warn); }
 .review-warn:empty { display: none; }
+
+/* ===== Etapa 5: planificador transparente e importación con vista previa ===== */
+.plan-load { font-size: var(--fs-cap, .8rem); }
+.plan-load.ok { color: var(--ok); } .plan-load.warn { color: var(--warn); }
+.import-sum { display: flex; flex-wrap: wrap; gap: var(--s1); list-style: none; padding: 0; margin: 0; }
+.import-sum li { padding: var(--s1) var(--s2); border-radius: var(--r-ctl); background: var(--surface2); color: var(--muted); }
+.import-sum li b { color: var(--text); font-size: 1.2rem; margin-right: .2rem; }
+.import-sum li.ok b { color: var(--ok); } .import-sum li.err b { color: var(--err); }
+.import-group summary { cursor: pointer; font-weight: 700; padding: var(--s1) 0; }
+.import-group.err summary { color: var(--err); }
+.import-list { max-height: 11rem; overflow: auto; margin: 0 0 var(--s1); padding-left: 1.4rem; color: var(--muted); font-size: var(--fs-cap, .85rem); line-height: 1.5; }

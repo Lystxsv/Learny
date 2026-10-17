@@ -13,7 +13,7 @@
   const MAX_REVIEWS = 5000;
   const MAX_CHATS = 20;
   const MIN_SAMPLE = 5; // con menos repasos no se afirma nada sobre una materia
-  let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0;
+  let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0, lastSavedRaw = null, lastTimerRaw = null;
   const PHASES = [
     { id: 'comprension', label: 'Comprensión' },
     { id: 'practica', label: 'Práctica' },
@@ -67,7 +67,7 @@
       recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
       tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: ''
     },
-    notes: [], feynman: [], decks: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
+    notes: [], feynman: [], decks: [], planLog: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
   });
   const state = defaults();
   let exam = null;
@@ -162,7 +162,7 @@
     state.settings.proxyUrl = validProxy(state.settings.proxyUrl);
     sanitizeSettings(state.settings, base.settings);
     if (!state.drafts || typeof state.drafts !== 'object' || Array.isArray(state.drafts)) state.drafts = {};
-    ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks'].forEach((k) => {
+    ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'].forEach((k) => {
       if (!Array.isArray(state[k])) state[k] = [];
     });
     if (!Array.isArray(state.settings.recentTurns)) state.settings.recentTurns = [];
@@ -176,9 +176,15 @@
     }));
     state.deadlines = state.deadlines.filter((d) => d && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date)).map((d) => ({
       id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
-      difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45)
+      difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0)
     }));
     state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards));
+    const dayOf = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x));
+    const taskRef = (m) => ({ phase: String(m?.phase || '').slice(0, 20), from: dayOf(m?.from) ? m.from : today() });
+    state.planLog = state.planLog.filter((e) => e && dayOf(e.date)).slice(-30).map((e) => ({
+      id: e.id || uid(), date: e.date, deadlineId: String(e.deadlineId || ''), title: String(e.title || '').slice(0, 80), kind: e.kind === 'replan' ? 'replan' : 'late',
+      minutes: num(e.minutes, 0, 240, 0), moved: arr(e.moved).slice(0, 10).map(taskRef), dropped: arr(e.dropped).slice(0, 40).map(taskRef)
+    }));
     state.topics = state.topics.filter((t) => t && t.name).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
     state.reviews = state.reviews.filter((r) => r && r.date).slice(-MAX_REVIEWS);
     state.tasks = state.tasks.filter((t) => t && t.deadlineId && t.date).map((t) => ({
@@ -230,7 +236,7 @@
   const save = () => {
     rev++;
     if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
-    try { localStorage.setItem(KEY, JSON.stringify(state)); setSaved(true); return true; }
+    try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
     catch { setSaved(false); toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); return false; }
   };
 
@@ -343,10 +349,10 @@
     return PHASES[4];
   }
 
-  function rebuildTasks(deadline, keepDone = true) {
+  function rebuildTasks(deadline, keepDone = true, fromToday = false) {
     const doneMap = {};
-    if (keepDone) state.tasks.filter((t) => t.deadlineId === deadline.id && t.done).forEach((t) => { doneMap[t.date] = true; });
-    state.tasks = state.tasks.filter((t) => t.deadlineId !== deadline.id);
+    if (keepDone) state.tasks.filter((t) => t.deadlineId === deadline.id && t.done && (!fromToday || t.date >= today())).forEach((t) => { doneMap[t.date] = true; });
+    state.tasks = state.tasks.filter((t) => t.deadlineId !== deadline.id || (fromToday && t.date < today())); // fromToday conserva lo anterior a hoy
     const days = Math.max(1, daysUntil(deadline.date));
     const start = today();
     const span = Math.min(MAX_PLAN_DAYS, Math.max(1, daysUntil(deadline.date)));
@@ -371,18 +377,78 @@
     }
   }
 
+  const phaseLabel = (id) => PHASES.find((p) => p.id === id)?.label || id;
+  const shortDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  const hrs = (min) => (min / 60).toFixed(1);
+
+  /* Si te atrasas: se mueven a hoy las 2 tareas atrasadas más recientes de cada examen y se descartan las anteriores.
+     Cada cambio queda registrado (state.planLog) y se explica en Planificar; lo descartado se cuenta en deadline.skipped. */
   function redistributeIfBehind() {
-    let moved = 0;
+    let moved = 0, dropped = 0;
     state.deadlines.forEach((d) => {
       if (daysUntil(d.date) < 0) return;
       const late = state.tasks.filter((t) => t.deadlineId === d.id && !t.done && t.date < today()).sort((a, b) => b.date.localeCompare(a.date));
       if (!late.length) return;
-      const keep = late.slice(0, 2), drop = new Set(late.slice(2).map((t) => t.id));
+      const keep = late.slice(0, 2), drop = late.slice(2), dropIds = new Set(drop.map((t) => t.id));
+      state.planLog.push({
+        id: uid(), date: today(), deadlineId: d.id, title: d.title, kind: 'late', minutes: d.dailyMinutes,
+        moved: keep.map((t) => ({ phase: t.phase, from: t.date })), dropped: drop.map((t) => ({ phase: t.phase, from: t.date }))
+      });
       keep.forEach((t) => { t.date = today(); if (!t.title.startsWith('Recuperar:')) t.title = `Recuperar: ${t.title}`; });
-      if (drop.size) state.tasks = state.tasks.filter((t) => !drop.has(t.id));
-      moved += late.length;
+      if (dropIds.size) { state.tasks = state.tasks.filter((t) => !dropIds.has(t.id)); d.skipped = (d.skipped || 0) + dropIds.size; }
+      moved += keep.length; dropped += drop.length;
     });
-    if (moved) { save(); toast('Moví tus tareas atrasadas a hoy (máximo 2 por examen) para que el plan siga siendo realista.'); }
+    if (!moved && !dropped) return;
+    state.planLog = state.planLog.slice(-30);
+    save();
+    toast(`Plan reajustado: moví ${plural(moved, 'tarea atrasada', 'tareas atrasadas')} a hoy${dropped ? ` y descarté ${plural(dropped, 'tarea', 'tareas')} que ya no cabían` : ''}. El detalle está en Planificar → Cambios en tu plan.`);
+  }
+
+  /* ¿Cabe lo que queda? Trabajo pendiente (tareas abiertas de hoy en adelante + las descartadas) frente al tiempo disponible hasta el examen. */
+  function loadReport(d) {
+    const days = daysUntil(d.date) + 1, mins = d.dailyMinutes, skipped = d.skipped || 0;
+    const open = state.tasks.filter((t) => t.deadlineId === d.id && !t.done && t.date >= today()).length;
+    const needed = (open + skipped) * mins, available = days * mins;
+    const need = Math.ceil(needed / days / 5) * 5;
+    return { days, open, skipped, needed, available, fits: needed <= available, need, canFix: need <= 240 };
+  }
+  function loadMessage(r) {
+    if (r.fits) return `✔ Cabe: quedan ${hrs(r.needed)} h de trabajo y hay ${hrs(r.available)} h disponibles hasta el examen.`;
+    return `⚠ Ya no cabe a este ritmo: quedan ${hrs(r.needed)} h de trabajo (${plural(r.open, 'sesión pendiente', 'sesiones pendientes')}${r.skipped ? ` y ${plural(r.skipped, 'descartada', 'descartadas')}` : ''}) y solo hay ${hrs(r.available)} h hasta el examen. ${r.canFix ? `Con ${r.need} min/día sí cabe.` : 'Ni con 240 min/día cabe: cambia la fecha o recorta el temario.'}`;
+  }
+
+  function renderPlanLog() {
+    const box = $('#plan-log'); if (!box) return;
+    const list = state.planLog.slice(-6).reverse();
+    $('#plan-log-clear').hidden = !list.length;
+    const names = (arr2) => arr2.map((m) => `${phaseLabel(m.phase)} (${shortDate(m.from)})`).join(', ');
+    box.innerHTML = list.length ? list.map((e) => {
+      const head = `<b>${esc(shortDate(e.date))} · ${esc(e.title)}</b>`;
+      if (e.kind === 'replan') return `<div class="session-item">${head}<br><span>Replanificado desde hoy a ${e.minutes} min/día. Lo completado antes de hoy se conservó.</span></div>`;
+      return `<div class="session-item">${head}<br><span>Estabas atrasado: moví a hoy ${esc(names(e.moved))}.${e.dropped.length ? ` Descarté ${esc(names(e.dropped))} porque ya no cabían (≈ ${hrs(e.dropped.length * e.minutes)} h).` : ''}</span></div>`;
+    }).join('') : '<p class="empty">Todavía no hubo cambios. Si te atrasas, aquí verás qué tareas movió o descartó Learny y por qué.</p>';
+  }
+
+  function replanDeadline(id) {
+    const d = state.deadlines.find((x) => x.id === id); if (!d) return;
+    const r = loadReport(d), suggested = Math.min(240, Math.max(d.dailyMinutes, r.fits ? d.dailyMinutes : r.need));
+    modal(`<h2>Replanificar «${esc(d.title)}»</h2>
+      <p>Se recalculan las tareas desde hoy hasta el ${esc(d.date)}. Lo que completaste antes de hoy se conserva${r.skipped ? `, y ${plural(r.skipped, 'sesión descartada vuelve', 'sesiones descartadas vuelven')} al plan` : ''}.</p>
+      <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="${suggested}" required></label>
+      <p class="modal-tip">Ahora: ${d.dailyMinutes} min/día. ${esc(loadMessage(r))}</p>
+      <button class="primary-button">Replanificar</button>`, (data) => {
+      const before = { mins: d.dailyMinutes, skipped: d.skipped || 0, tasks: state.tasks.filter((t) => t.deadlineId === d.id).map((t) => ({ ...t })) };
+      d.dailyMinutes = num(data.get('mins'), 15, 240, d.dailyMinutes); d.skipped = 0;
+      rebuildTasks(d, true, true);
+      const entry = { id: uid(), date: today(), deadlineId: d.id, title: d.title, kind: 'replan', minutes: d.dailyMinutes, moved: [], dropped: [] };
+      state.planLog = [...state.planLog, entry].slice(-30);
+      save(); closeModal(); renderAll();
+      offerUndo('Plan recalculado.', () => {
+        d.dailyMinutes = before.mins; d.skipped = before.skipped;
+        state.tasks = state.tasks.filter((t) => t.deadlineId !== d.id).concat(before.tasks);
+        state.planLog = state.planLog.filter((e) => e.id !== entry.id); save(); renderAll();
+      });
+    });
   }
 
   function pendingHours(deadline) {
@@ -391,22 +457,22 @@
   }
 
   function renderDeadlines() {
-    redistributeIfBehind();
+    redistributeIfBehind(); renderPlanLog();
     const entries = [...state.deadlines].sort((a, b) => a.date.localeCompare(b.date));
     const alert = $('#planner-alert');
     const urgent = entries.find((d) => daysUntil(d.date) >= 0 && daysUntil(d.date) <= 3);
-    if (urgent) {
-      const hours = pendingHours(urgent).toFixed(1);
-      alert.hidden = false;
-      alert.textContent = `Te quedan ${plural(daysUntil(urgent.date), 'día', 'días')} para “${urgent.title}” y tienes ${hours} h pendientes.`;
-    } else alert.hidden = true;
+    const parts = [];
+    if (urgent) parts.push(`Te quedan ${plural(daysUntil(urgent.date), 'día', 'días')} para “${urgent.title}” y tienes ${pendingHours(urgent).toFixed(1)} h pendientes.`);
+    const over = entries.filter((d) => daysUntil(d.date) >= 0 && !loadReport(d).fits);
+    if (over.length) parts.push(`${over.map((d) => `«${d.title}»`).join(', ')} ya no ${over.length > 1 ? 'caben' : 'cabe'} a tu ritmo diario: revisa «Próximas fechas» y replanifica.`);
+    alert.hidden = !parts.length; alert.textContent = parts.join(' ');
 
     $('#deadline-list').innerHTML = entries.length ? entries.map((x) => {
       const d = daysUntil(x.date);
       const tag = d < 0 ? '<span class="tag">Pasada</span>' : `<span class="tag ${d <= 3 ? 'urgent' : ''}">${d === 0 ? 'Hoy' : `en ${plural(d, 'día', 'días')}`}</span>`;
       const done = state.tasks.filter((t) => t.deadlineId === x.id && t.done).length;
       const total = state.tasks.filter((t) => t.deadlineId === x.id).length;
-      return `<div class="session-item"><b>${esc(x.title)}</b> ${tag}<br><span>${esc(x.subject)} · ${esc(x.date)} · dificultad ${x.difficulty}/5 · ${x.dailyMinutes} min/día<br>${done}/${total} tareas · fases: comprensión → práctica → repaso → simulacro → revisión</span><br><button class="text-button danger" data-delete-deadline="${esc(x.id)}" type="button">Eliminar</button></div>`;
+      return `<div class="session-item"><b>${esc(x.title)}</b> ${tag}<br><span>${esc(x.subject)} · ${esc(x.date)} · dificultad ${x.difficulty}/5 · ${x.dailyMinutes} min/día<br>${done}/${total} tareas · fases: comprensión → práctica → repaso → simulacro → revisión</span>${d >= 0 ? `<br><span class="plan-load ${loadReport(x).fits ? 'ok' : 'warn'}">${esc(loadMessage(loadReport(x)))}</span>` : ''}<br>${d >= 0 ? `<button class="text-button" data-replan="${esc(x.id)}" type="button">Replanificar desde hoy</button> ` : ''}<button class="text-button danger" data-delete-deadline="${esc(x.id)}" type="button">Eliminar</button></div>`;
     }).join('') : '<p class="empty">Añade una fecha de examen para generar tareas diarias conectadas a temas y tarjetas.</p>';
 
     const next = entries.find((x) => daysUntil(x.date) >= 0) || entries[0];
@@ -445,26 +511,33 @@
   /* =========================================================
      Pomodoro
      ========================================================= */
-  const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0, intention: '', label: '', id: null, started: false };
+  const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0, intention: '', label: '', id: null, started: false, runId: '' };
   const phaseSeconds = (mode) => (mode === 'focus' ? state.settings.focus : state.settings.rest) * 60;
 
-  function resetTimer(mode = 'focus') {
-    clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false;
-    timer.total = timer.remaining = phaseSeconds(mode); renderTimer(); persistTimer();
+  function resetTimer(mode = 'focus', persist = true) {
+    clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false; timer.runId = '';
+    timer.total = timer.remaining = phaseSeconds(mode); renderTimer(); if (persist) persistTimer();
   }
 
   function persistTimer() {
     try {
-      if (!timer.started) { localStorage.removeItem(TIMER_KEY); return; }
-      localStorage.setItem(TIMER_KEY, JSON.stringify({ mode: timer.mode, running: timer.running, endAt: timer.endAt, remaining: timer.remaining, total: timer.total, intention: timer.intention, label: timer.label }));
+      // En reposo también se escribe (started: false) para que las demás pestañas vean el cambio de modo.
+      const raw = timer.started
+        ? JSON.stringify({ mode: timer.mode, running: timer.running, endAt: timer.endAt, remaining: timer.remaining, total: timer.total, intention: timer.intention, label: timer.label, runId: timer.runId })
+        : JSON.stringify({ started: false, mode: timer.mode });
+      lastTimerRaw = raw; localStorage.setItem(TIMER_KEY, raw);
     } catch { /* sin persistencia */ }
   }
 
   function restoreTimer(raw) {
     const t = parseJSON(raw);
     if (!t || !['focus', 'rest'].includes(t.mode)) return;
+    clearInterval(timer.id); timer.id = null; timer.running = false;
+    if (t.started === false) { // otra pestaña (o una recarga) dejó el temporizador en reposo
+      Object.assign(timer, { mode: t.mode, started: false, runId: '', total: phaseSeconds(t.mode), remaining: phaseSeconds(t.mode) }); renderTimer(); return;
+    }
     const total = num(t.total, 1, 10800, 0); if (!total) return;
-    Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), started: true });
+    Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), started: true, runId: String(t.runId || `${t.mode}:${Number(t.endAt) || 0}:${total}`) });
     if (t.running && Number(t.endAt) > 0) {
       timer.endAt = Number(t.endAt); timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
       if (timer.remaining <= 0) {
@@ -534,6 +607,7 @@
       timer.intention = intention;
       timer.label = clean($('#pomodoro-label').value, 60);
     }
+    if (!timer.started || !timer.runId) timer.runId = uid();
     timer.started = true;
     timer.endAt = Date.now() + timer.remaining * 1000;
     timer.running = true;
@@ -541,8 +615,28 @@
     renderTimer(); persistTimer(); announce(timer.mode === 'focus' ? 'Bloque de enfoque iniciado.' : 'Descanso iniciado.');
   }
 
+  /* Varias pestañas pueden detectar a la vez que el bloque terminó: solo una lo registra.
+     Reclamo atómico con Web Locks (si existe) + marca en localStorage con el id de la ejecución; una pestaña oculta espera 1,2 s para que mande la visible. */
+  const DONE_KEY = 'learny.timer.done';
+  let finishing = false;
+  async function claimFinish(id) {
+    const take = () => { try { if (localStorage.getItem(DONE_KEY) === id) return false; localStorage.setItem(DONE_KEY, id); } catch { /* sin almacenamiento: seguimos */ } return true; };
+    if (document.hidden) await new Promise((r) => setTimeout(r, 1200));
+    if (navigator.locks?.request) { try { return await navigator.locks.request('learny-finish', take); } catch { /* sin Web Locks */ } }
+    return take();
+  }
   function finishPhase() {
-    clearInterval(timer.id); timer.id = null; timer.running = false; beep();
+    if (finishing) return;
+    finishing = true; clearInterval(timer.id); timer.id = null; timer.running = false;
+    const id = timer.runId || `${timer.mode}:${timer.endAt}:${timer.total}`;
+    claimFinish(id).then((won) => {
+      finishing = false;
+      if (!won || !timer.started) { pullFromStorage(); return; } // otra pestaña ya lo registró (o se reinició mientras esperaba)
+      completePhase();
+    });
+  }
+  function completePhase() {
+    beep();
     notify('Learny', timer.mode === 'focus' ? 'Bloque de foco terminado.' : 'Descanso terminado.');
     if (timer.mode === 'rest') { toast('Descanso terminado. ¡Listo para otro bloque!'); resetTimer('focus'); return; }
     const session = {
@@ -583,6 +677,30 @@
       save(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll();
     });
   }
+
+  /* ---- Varias pestañas: el temporizador y los datos se sincronizan; los datos nunca se pisan con una copia vieja ---- */
+  function adoptRemoteState(raw) {
+    const data = parseJSON(raw);
+    if (!data || typeof data !== 'object' || Array.isArray(data) || Number(data.version) > SCHEMA) return;
+    lastSavedRaw = raw;
+    hydrate(data);
+    if (exam) { exam.cards = exam.cards.map((c) => state.cards.find((x) => x.id === c.id)).filter(Boolean); if (exam.i >= exam.cards.length) exam = null; }
+    undoRun = null; // las acciones de deshacer apuntan a objetos que ya no son los actuales
+    applyAppearance(); renderAll();
+    const el = $('#save-status'); if (el) { el.textContent = `Sincronizado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; el.classList.remove('bad'); }
+  }
+  function pullFromStorage() {
+    try {
+      const raw = localStorage.getItem(KEY); if (raw && raw !== lastSavedRaw) adoptRemoteState(raw);
+      const t = localStorage.getItem(TIMER_KEY); if (t && t !== lastTimerRaw) { lastTimerRaw = t; restoreTimer(t); }
+    } catch { /* sin almacenamiento */ }
+  }
+  window.addEventListener('storage', (e) => {
+    if (e.storageArea !== localStorage) return;
+    if (e.key === TIMER_KEY) { lastTimerRaw = e.newValue; restoreTimer(e.newValue || JSON.stringify({ started: false, mode: 'focus' })); }
+    else if (e.key === KEY && e.newValue) adoptRemoteState(e.newValue);
+  });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullFromStorage(); if (timer.running) tick(); } });
 
   function calcStreak() { return cached('streak', calcStreakRaw); }
   function calcStreakRaw() {
@@ -1299,7 +1417,7 @@ ${text}`;
      ========================================================= */
   function syncTutorMode() { $('#ai-question').placeholder = $('#tutor-mode').value === 'direct' ? 'Pregunta y recibe una explicación directa…' : 'Pregunta a tu tutor socrático…'; }
 
-  function applyPreferences() {
+  function applyAppearance() {
     document.documentElement.style.setProperty('--base', `${state.settings.fontSize}px`);
     const ACC = { mint: ['#a7f3d0', '#46c793'], violet: ['#c4b5fd', '#8b5cf6'], amber: ['#fcd34d', '#f59e0b'], sky: ['#9db8ff', '#5b84ff'], rose: ['#fda4af', '#f43f5e'] }[state.settings.accent] || ['#a7f3d0', '#46c793'];
     document.documentElement.style.setProperty('--accent', ACC[0]); document.documentElement.style.setProperty('--accent2', ACC[1]);
@@ -1308,6 +1426,9 @@ ${text}`;
     document.body.classList.toggle('theme-contrast', state.settings.theme === 'contrast');
     document.body.classList.toggle('font-dyslexic', state.settings.font === 'dyslexic');
     document.body.classList.toggle('reduce-motion', !!state.settings.reduceMotion);
+  }
+  function applyPreferences() {
+    applyAppearance();
     $('#daily-goal-input').value = state.settings.dailyGoal || 2;
     const t = state.settings.tutor;
     $('#tutor-subject').value = t.subject; $('#tutor-level').value = t.level; $('#tutor-known').value = t.known; $('#tutor-goal').value = t.goal;
@@ -1333,14 +1454,14 @@ ${text}`;
     toast('Mazo exportado sin progreso personal.');
   }
 
-  const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks'];
+  const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'];
   function validateBackup(data) {
     if (data?.type === 'learny-deck') {
       if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
       const good = data.cards.filter((c) => c && typeof c.question === 'string' && typeof c.answer === 'string' && c.question.trim() && c.answer.trim());
       const decks = (Array.isArray(data.decks) ? data.decks : []).filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards))
         .map((d) => ({ name: d.name.slice(0, 60), cards: d.cards.filter((c) => Array.isArray(c) && typeof c[0] === 'string' && typeof c[1] === 'string').map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => d.cards.length);
-      return good.length || decks.length ? { ok: true, deck: good, decks, dropped: data.cards.length - good.length } : { ok: false, error: 'El mazo no tiene tarjetas válidas.' };
+      return { ok: true, deck: good, decks, dropped: data.cards.length - good.length }; // los errores se detallan en la vista previa
     }
     if (!isLearnyBackup(data)) return { ok: false, error: 'Ese archivo no parece una copia de Learny.' };
     if (Number(data.version) > SCHEMA) return { ok: false, error: `La copia es de una versión más nueva de Learny (v${data.version}). Actualiza la app e inténtalo de nuevo.` };
@@ -1350,23 +1471,78 @@ ${text}`;
     return { ok: true, cards: (data.cards || []).length, deadlines: (data.deadlines || []).length, sessions: (data.sessions || []).length };
   }
 
+  /* Vista previa antes de modificar datos: cifras, errores detallados y «Importar válidas». Devuelve true si el usuario confirma. */
+  function importPreview({ title, intro, counts, groups = [], okLabel, canImport = true, danger = false }) {
+    return new Promise((resolve) => {
+      let done = false; const finish = (v) => { if (!done) { done = true; resolve(v); } };
+      const group = (g) => `<details class="import-group ${g.cls || ''}"><summary>${esc(g.title)} (${g.lines.length})</summary><ol class="import-list">${g.lines.slice(0, 25).map((l) => `<li>${esc(l)}</li>`).join('')}${g.lines.length > 25 ? `<li>… y ${g.lines.length - 25} más</li>` : ''}</ol></details>`;
+      modal(`<h2>${esc(title)}</h2><p>${intro}</p>
+        <ul class="import-sum">${counts.map((c) => `<li class="${c.cls || ''}"><b>${c.n}</b> ${esc(c.label)}</li>`).join('')}</ul>
+        ${groups.filter((g) => g.lines.length).map(group).join('')}
+        <p class="modal-tip">${canImport ? 'Antes de modificar tus datos se guarda una copia automática (Ajustes ⚙️ → Restaurar copia automática).' : 'No hay nada que importar.'}</p>
+        <div class="actions"><button class="outline-button" type="button" data-close-modal>${canImport ? 'Cancelar' : 'Cerrar'}</button>${canImport ? `<button class="${danger ? 'danger-button' : 'primary-button'}">${esc(okLabel)}</button>` : ''}</div>`,
+      () => finish(true), () => finish(false));
+    });
+  }
+
+  function analyzeCards(records) {
+    const key = (q, s) => `${s}\u0001${q}`.toLowerCase();
+    const have = new Set(state.cards.map((c) => key(c.question, c.subject))), seen = new Set(), A = { fresh: [], dups: [], errors: [] };
+    records.forEach((r) => {
+      const tag = `${r.label} ${r.n}`;
+      if (r.bad) { A.errors.push(`${tag}: ${r.bad}`); return; }
+      if (!r.question && !r.answer) { A.errors.push(`${tag}: no tiene texto utilizable`); return; }
+      if (!r.question) { A.errors.push(`${tag}: falta la pregunta (respuesta: «${r.answer.slice(0, 50)}»)`); return; }
+      if (!r.answer) { A.errors.push(`${tag}: falta la respuesta (pregunta: «${r.question.slice(0, 50)}»)`); return; }
+      const k = key(r.question, r.subject);
+      if (have.has(k)) { A.dups.push(`${tag}: «${r.question.slice(0, 60)}» ya está en tu colección`); return; }
+      if (seen.has(k)) { A.dups.push(`${tag}: «${r.question.slice(0, 60)}» está repetida en el archivo`); return; }
+      seen.add(k); A.fresh.push({ question: r.question, answer: r.answer, subject: r.subject });
+    });
+    return A;
+  }
+
+  const previewCards = (title, total, A, { extra = [], over = 0 } = {}) => {
+    const errN = A.errors.length + over;
+    return importPreview({
+      title, intro: `Se leyeron <b>${total}</b> ${total === 1 ? 'registro' : 'registros'} del archivo.`,
+      counts: [{ n: A.fresh.length, label: A.fresh.length === 1 ? 'nueva' : 'nuevas', cls: 'ok' }, { n: A.dups.length, label: A.dups.length === 1 ? 'posible duplicada' : 'posibles duplicadas' }, { n: errN, label: errN === 1 ? 'con error' : 'con errores', cls: errN ? 'err' : '' }, ...extra],
+      groups: [{ title: 'Revisar errores', lines: [...A.errors, ...(over ? [`${plural(over, 'registro', 'registros')} después del límite de 5 000 no se leerán`] : [])], cls: 'err' }, { title: 'Ver duplicadas', lines: A.dups }],
+      okLabel: `Importar ${plural(A.fresh.length, 'válida', 'válidas')}`, canImport: A.fresh.length > 0 || extra.some((x) => x.n > 0)
+    });
+  };
+
   function importData(file) {
     if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
     file.text().then(async (text) => {
       let data; try { data = JSON.parse(text); } catch { throw new Error('El archivo no es un JSON válido.'); }
       const check = validateBackup(data);
       if (!check.ok) throw new Error(check.error);
-      const msg = check.deck
-        ? `Se añadirán ${plural(check.deck.length, 'tarjeta', 'tarjetas')} a tu colección${check.dropped ? ` (${check.dropped} inválidas se omiten)` : ''}.`
-        : `Esta copia REEMPLAZARÁ tus datos actuales por ${plural(check.cards, 'tarjeta', 'tarjetas')}, ${plural(check.deadlines, 'fecha', 'fechas')} y ${plural(check.sessions, 'sesión', 'sesiones')}.`;
-      if (!(await confirmDialog({ title: check.deck ? 'Importar mazo' : 'Reemplazar tus datos', message: `${msg}\nAntes se guardará una copia automática en el navegador.`, ok: check.deck ? 'Importar' : 'Reemplazar', danger: !check.deck }))) return;
+      if (check.deck) {
+        const records = data.cards.map((c, i) => (isObj(c)
+          ? { n: i + 1, label: 'Tarjeta', question: cleanMl(typeof c.question === 'string' ? c.question : '', 500), answer: cleanMl(typeof c.answer === 'string' ? c.answer : '', 1200), subject: clean(typeof c.subject === 'string' ? c.subject : '', 60) || 'Sin materia' }
+          : { n: i + 1, label: 'Tarjeta', bad: 'no es una tarjeta' }));
+        const A = analyzeCards(records), newDecks = (check.decks || []).filter((d) => !state.decks.some((x) => x.name === d.name));
+        if (!(await previewCards('Importar mazo', records.length, A, { extra: newDecks.length ? [{ n: newDecks.length, label: newDecks.length === 1 ? 'mazo propio nuevo' : 'mazos propios nuevos' }] : [] }))) return;
+        snapshot('import');
+        A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); newDecks.forEach((d) => state.decks.push(d));
+        save(); closeModal(); renderAll(); toast(`Mazo importado: ${plural(A.fresh.length, 'tarjeta nueva', 'tarjetas nuevas')}.`);
+        return;
+      }
+      const brokenCards = arr(data.cards).map((c, i) => [c, i]).filter(([c]) => !isObj(c) || isBrokenCard(c)).map(([c, i]) => `Tarjeta ${i + 1}: ${isObj(c) ? 'le falta la pregunta o la respuesta' : 'no es una tarjeta'} (se importará marcada como dañada)`);
+      const badDeadlines = arr(data.deadlines).map((d, i) => [d, i]).filter(([d]) => !(isObj(d) && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date))).map(([, i]) => `Fecha ${i + 1}: sin nombre o con fecha no válida (se omitirá)`);
+      const problems = brokenCards.length + badDeadlines.length;
+      if (!(await importPreview({
+        title: 'Reemplazar tus datos', intro: 'Esta copia <b>reemplazará</b> tus datos actuales.',
+        counts: [{ n: check.cards, label: `tarjetas (ahora: ${state.cards.length})` }, { n: check.deadlines, label: `fechas (ahora: ${state.deadlines.length})` }, { n: check.sessions, label: `sesiones (ahora: ${state.sessions.length})` }, ...(problems ? [{ n: problems, label: problems === 1 ? 'con error' : 'con errores', cls: 'err' }] : [])],
+        groups: [{ title: 'Revisar errores', lines: [...brokenCards, ...badDeadlines], cls: 'err' }], okLabel: 'Reemplazar mis datos', danger: true
+      }))) return;
       snapshot('import');
       const keepProxy = state.settings.proxyUrl; // una copia ajena nunca redirige tu IA
-      if (check.deck) { check.deck.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); (check.decks || []).forEach((d) => { if (!state.decks.some((x) => x.name === d.name)) state.decks.push(d); }); }
-      else { exam = null; hydrate({ ...data, apiKey: state.apiKey }); state.settings.proxyUrl = keepProxy; }
+      exam = null; hydrate({ ...data, apiKey: state.apiKey }); state.settings.proxyUrl = keepProxy;
       state.deadlines.forEach((d) => { if (!state.tasks.some((t) => t.deadlineId === d.id)) rebuildTasks(d, false); });
       save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos importados correctamente.');
-    }).catch((error) => toast(error.message || 'Ese archivo no es una copia válida de Learny.', 'error'));
+    }).catch((error) => { console.error(error); toast(error.message || 'Ese archivo no es una copia válida de Learny.', 'error'); });
   }
 
   async function restoreBackup() {
@@ -1409,27 +1585,17 @@ ${text}`;
   function importCsv(file) {
     if (file.size > 5 * 1024 * 1024) return toast('El archivo es demasiado grande (máximo 5 MB).', 'error');
     file.text().then(async (text) => {
-      const rows = parseCsv(text.replace(/^﻿/, ''));
+      const rows = parseCsv(text.replace(/^\uFEFF/, ''));
       if (rows.length < 1) throw new Error('vacío');
       const header = rows[0].map((h) => h.toLowerCase());
       const body = header.some((h) => /pregunta|question|front|anverso/.test(h)) ? rows.slice(1) : rows;
-      const key = (q, sub) => `${sub}\u0001${q}`.toLowerCase();
-      const have = new Set(state.cards.map((c) => key(c.question, c.subject)));
-      const fresh = []; let dup = 0, skipped = 0;
-      for (const r of body.slice(0, 5000)) {
-        const question = cleanMl(stripHtml(r[0]), 500), answer = cleanMl(stripHtml(r[1]), 1200), subject = clean(stripHtml(r[2]), 60) || 'Importado';
-        if (!question || !answer) { skipped++; continue; }
-        const k = key(question, subject);
-        if (have.has(k)) { dup++; continue; }
-        have.add(k); fresh.push({ question, answer, subject });
-      }
-      if (!fresh.length) return toast(dup ? (dup === 1 ? 'Esa tarjeta ya estaba en tu colección.' : `Las ${dup} tarjetas del archivo ya estaban en tu colección.`) : 'No encontré tarjetas válidas (pregunta, respuesta, materia).', 'error');
-      const extra = [dup ? `${plural(dup, 'repetida se omite', 'repetidas se omiten')}` : '', skipped ? `${plural(skipped, 'fila incompleta se omite', 'filas incompletas se omiten')}` : ''].filter(Boolean).join(' · ');
-      if (!(await confirmDialog({ title: 'Importar tarjetas', message: `Se añadirán ${plural(fresh.length, 'tarjeta', 'tarjetas')} a tu colección.${extra ? `\n${extra}.` : ''}\nAntes se guardará una copia automática.`, ok: 'Importar' }))) return;
+      const records = body.slice(0, 5000).map((r, i) => ({ n: i + 1, label: 'Registro', question: cleanMl(stripHtml(r[0]), 500), answer: cleanMl(stripHtml(r[1]), 1200), subject: clean(stripHtml(r[2]), 60) || 'Importado' }));
+      const A = analyzeCards(records);
+      if (!(await previewCards('Importar tarjetas', body.length, A, { over: Math.max(0, body.length - 5000) }))) return;
       snapshot('import-csv');
-      fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() })));
-      save(); closeModal(); renderAll(); toast(`Importadas ${plural(fresh.length, 'tarjeta', 'tarjetas')} desde CSV.`);
-    }).catch(() => toast('Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma o tabulador).', 'error'));
+      A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() })));
+      save(); closeModal(); renderAll(); toast(`Importadas ${plural(A.fresh.length, 'tarjeta', 'tarjetas')} desde CSV.`);
+    }).catch((e) => { console.error(e); toast('Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma o tabulador).', 'error'); });
   }
 
   function openSettings() {
@@ -1597,7 +1763,9 @@ ${text}`;
     const edit = find('editCard'); if (edit) { cardForm(edit); return; }
     const del = find('deleteCard'); if (del) deleteCard(del);
   };
+  $('#plan-log-clear').onclick = () => { state.planLog = []; save(); renderPlanLog(); };
   $('#deadline-list').onclick = (e) => {
+    if (e.target.dataset.replan) { replanDeadline(e.target.dataset.replan); return; }
     const id = e.target.dataset.deleteDeadline;
     const idx = id ? state.deadlines.findIndex((d) => d.id === id) : -1; if (idx < 0) return;
     const dl = state.deadlines[idx], removed = state.tasks.filter((t) => t.deadlineId === id);
@@ -1662,12 +1830,12 @@ ${text}`;
   const syncOnline = () => { const el = $('#offline-note'); if (el) el.hidden = navigator.onLine; };
   window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
 
-  window.Learny = { validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
-  applyPreferences(); resetTimer('focus'); restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
+  applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
   if (migratedFrom) toast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
   if (droppedCards) toast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
   if (loadProblem) toast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ok */ }
+  try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ }
 })();

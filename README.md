@@ -18,7 +18,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v13`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v14`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -72,6 +72,23 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 180 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Novedades (v14 · etapa 5: planificador transparente, importación con vista previa y varias pestañas)
+**Planificador**
+- Cuando te atrasas, Learny sigue moviendo a hoy las 2 tareas atrasadas más recientes de cada examen y descartando las anteriores, pero ahora **lo explica**: el aviso dice cuántas movió y cuántas descartó, y el bloque **Cambios en tu plan** (Planificar) lista cada tarea con su fase y su fecha original, y las horas que representan las descartadas.
+- Cada fecha indica **si lo que queda todavía cabe**: compara el trabajo pendiente (tareas abiertas de hoy en adelante más las descartadas) con las horas disponibles hasta el examen. Si no cabe, lo dice con las cifras y propone cuántos minutos diarios harían falta; además aparece una alerta arriba.
+- **Replanificar desde hoy**: recalcula las tareas hasta el examen con los minutos que elijas (conserva lo completado antes de hoy, recupera las sesiones descartadas) y se puede **deshacer** (botón o `Z`).
+
+**Importar con vista previa**
+- CSV/Anki, mazos JSON y copias completas muestran antes de tocar nada: cuántas tarjetas son nuevas, posibles duplicadas (ya en tu colección o repetidas en el archivo) y con errores, con el motivo y el número de registro. Botones **Importar N válidas** o Cancelar; si no hay nada válido, solo «Cerrar».
+- En una copia completa se compara con lo que tienes ahora («4 tarjetas, ahora: 6») y se avisa de las tarjetas dañadas y las fechas inválidas antes de reemplazar.
+- Importar un mazo ya no reinicia un Pomodoro en marcha.
+
+**Varias pestañas**
+- El temporizador se **sincroniza** entre pestañas (iniciar, pausar, reanudar, reiniciar) y abrir una pestaña nueva ya no borra el bloque en marcha.
+- Cuando un bloque termina, **solo una pestaña lo registra** (Web Locks + marca de ejecución; una pestaña oculta cede unos 1,2 s a la visible). La otra recibe la sesión y queda lista para el descanso.
+- Los **datos se sincronizan** entre pestañas: guardar en una ya no pisa con una copia vieja lo guardado en otra. Al volver a una pestaña también se comprueba. Un examen en curso conserva sus tarjetas.
+- Aviso: si Learny está en dos navegadores o perfiles distintos, no comparten datos (cada uno tiene su almacenamiento).
 
 ## Novedades (v13 · etapa 4: bandeja de revisión de tarjetas)
 - Las tarjetas generadas con IA (y las sugeridas desde una explicación o una respuesta del tutor) pasan por una **bandeja de revisión**: pregunta y respuesta editables, y cada tarjeta se **acepta o descarta** explícitamente. Nada se guarda por defecto.
