@@ -1,5 +1,5 @@
-const CACHE = 'learny-v7';
-const ASSETS = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
+const CACHE = 'learny-v8';
+const ASSETS = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;
 
 self.addEventListener('install', (event) => {

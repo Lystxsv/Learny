@@ -29,9 +29,10 @@
     const p = interleave([...set.values()].slice(0, 20));
     p.length ? timedExam(p) : toast('Crea tarjetas para hacer un examen.', 'error');
   };
-  let rt = null;
+  let rt = null, timedStarting = false;
+  document.addEventListener('learny:examstart', () => { if (timedStarting) return; clearInterval(rt); const c = $('#exam-clock'); if (c) c.hidden = true; });
   function timedExam(p) {
-    L.startExam(p, 20);
+    timedStarting = true; L.startExam(p, 20); timedStarting = false;
     const end = Date.now() + Math.min(20, p.length) * 90000;
     const el = $('#exam-clock') || $('#card-count').insertAdjacentElement('afterend', Object.assign(document.createElement('span'), { id: 'exam-clock', className: 'tag', hidden: true }));
     clearInterval(rt);
@@ -50,15 +51,16 @@
 
   /* ---- Dictado ---- */
   const dictate = (btn, target) => {
-    const label = btn.textContent;
+    const label = btn.textContent; let active = null;
     btn.onclick = () => {
+      if (active) { active.stop(); return; }
       const R = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!R) return toast('Tu navegador no admite dictado. Prueba con Chrome o Edge.', 'error');
-      const r = new R(); r.lang = 'es-ES'; btn.textContent = '🎤 Escuchando…';
-      r.onresult = (e) => { target().value = `${target().value} ${e.results[0][0].transcript}`.trim(); };
-      r.onend = () => { btn.textContent = label; };
+      const r = new R(); r.lang = 'es-ES'; btn.textContent = '🎤 Escuchando… (pulsa para parar)';
+      r.onresult = (e) => { target().value = `${target().value} ${e.results[0][0].transcript}`.trim(); target().dispatchEvent(new Event('input')); };
+      r.onend = () => { active = null; btn.textContent = label; };
       r.onerror = () => toast('No se pudo dictar. Revisa el permiso del micrófono.', 'error');
-      r.start();
+      try { r.start(); active = r; } catch { btn.textContent = label; }
     };
   };
   dictate($('#tutor-voice'), () => $('#ai-question'));
@@ -82,7 +84,7 @@
       `<div class="session-item"><span>${esc(n.date)}</span><br>${esc(n.text.slice(0, 160))}<br><button class="text-button" data-note-card="${esc(n.id)}" type="button">Hacer tarjeta</button> <button class="text-button danger" data-note-del="${esc(n.id)}" type="button">Quitar</button></div>`).join('')
       : '<p class="empty">Aún no hay notas. Anota una idea durante la clase y conviértela en tarjeta.</p>';
   };
-  const toCard = (t) => L.cardForm(null, { question: `Explica: ${t.split(/[.\n]/)[0].slice(0, 80)}`, answer: t.slice(0, 600) });
+  const toCard = (t) => L.cardForm(null, { question: '', answer: t.slice(0, 1200) });
   $('#save-note').onclick = () => {
     const t = raw($('#quick-note').value); if (!t) return toast('Escribe una nota primero.', 'error');
     state.notes.push({ id: uid(), date: today(), text: t }); $('#quick-note').value = ''; $('#quick-note').dispatchEvent(new Event('input')); save(); renderNotes(); toast('Nota guardada.');
@@ -103,11 +105,13 @@
     const top = sents.slice().sort((a, b) => b.length - a.length).slice(0, 3).sort((a, b) => sents.indexOf(a) - sents.indexOf(b));
     const out = $('#source-out');
     out.innerHTML = `<b>Resumen</b><br>${top.map(esc).join(' ')}<br><br><b>Preguntas para ti</b><br>${sents.slice(0, 3).map((s, i) => `${i + 1}. ¿Qué significa, con tus palabras: “${esc(s.slice(0, 70))}…”?`).join('<br>')}`;
+    const localHtml = out.innerHTML;
     if (L.hasAi()) {
       out.innerHTML = '<div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor… <button class="text-button" type="button" data-cancel-ai>Cancelar</button></p>';
-      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { toast(e.message, 'error'); }
+      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { out.innerHTML = localHtml; toast(e.message, 'error'); }
     }
-    L.suggestCards(clean($('#tutor-subject').value, 60) || 'Lectura', top.join(' '));
+    out.insertAdjacentHTML('beforeend', '<p><button class="outline-button" type="button" id="source-cards">Crear tarjetas con estas ideas</button></p>');
+    $('#source-cards').onclick = () => L.suggestCards(clean($('#tutor-subject').value, 60) || 'Lectura', top.join('. '));
   };
   $('#feynman-feedback').addEventListener('click', () => {
     if ($('#feynman-text').value.trim() && !state.feynman.includes(today())) { state.feynman.push(today()); save(); }
@@ -154,7 +158,7 @@
       const d = addDays(today(), i), dt = new Date(`${d}T12:00:00`);
       const tasks = state.tasks.filter((t) => t.date === d), dl = state.deadlines.filter((x) => x.date === d);
       const due = i === 0 ? L.dueCards().length : live().filter((c) => c.nextReview === d).length;
-      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? '✔ ' : ''}${esc(t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
+      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? '✔ ' : ''}${esc(PH[t.phase] || t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
     }
     $('#week-calendar').innerHTML = h;
     const t = state.tasks.find((x) => x.date === today() && !x.done), dl = t && state.deadlines.find((x) => x.id === t.deadlineId);
@@ -167,12 +171,13 @@
     <p>Dime el examen y Learny reparte Pomodoros, tarjetas, práctica intercalada, simulacro y repaso de errores hasta la fecha.</p>
     <label>Examen<input name="title" required maxlength="80" placeholder="Parcial de cálculo"></label>
     <label>Materia<input name="subject" required maxlength="60" list="subject-list"></label>
-    <div class="form-row"><label>Fecha<input name="date" type="date" min="${today()}" required></label>
+    <div class="form-row"><label>Fecha<input name="date" type="date" min="${today()}" max="${addDays(today(), L.MAX_PLAN_DAYS)}" required></label>
     <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="60" required></label></div>
     <label>Dificultad (1-5)<input name="difficulty" type="number" min="1" max="5" value="3"></label>
     <button class="primary-button">Crear plan</button>`, (d) => {
     const item = { id: uid(), title: clean(d.get('title'), 80), subject: clean(d.get('subject'), 60), date: d.get('date'),
       difficulty: Math.min(5, Math.max(1, Number(d.get('difficulty')) || 3)), dailyMinutes: Math.min(240, Math.max(15, Number(d.get('mins')) || 60)) };
+    if (!L.validDeadlineDate(item.date)) return toast('Elige una fecha entre hoy y los próximos 2 años.', 'error');
     state.deadlines.push(item); L.rebuildTasks(item, false);
     const pom = Math.max(1, Math.round(item.dailyMinutes / state.settings.focus)), mine = state.tasks.filter((t) => t.deadlineId === item.id);
     mine.forEach((t) => { t.title += ` → ${plural(pom, 'Pomodoro', 'Pomodoros')} + ${EXTRA[t.phase]}.`; });

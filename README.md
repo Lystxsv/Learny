@@ -8,17 +8,17 @@ Todo se guarda en el navegador de cada persona; no hay cuentas ni servidor.
 | Archivo | Para qué sirve |
 |---|---|
 | `index.html`, `style.css`, `script.js`, `extras.js` | La app completa (no necesita instalación ni compilación). |
-| `sw.js`, `manifest.json` | Modo sin conexión e instalación como app (PWA). |
+| `sw.js`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Modo sin conexión e instalación como app (PWA) con sus iconos. |
 | `proxy-worker.example.js` | Ejemplo de proxy (Cloudflare Worker) para usar IA sin exponer tu clave. |
 
 ## Probarla en tu computador
 Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa servida por `https://` o `localhost`.)
 
 ## Publicarla gratis en GitHub Pages
-1. Crea un repositorio público en GitHub y sube **los ocho archivos**.
+1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v7`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v8`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -52,7 +52,7 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 - **Crear tarjetas con IA** desde Practicar o desde el estado vacío.
 
 **Móvil y accesibilidad**
-- Barra inferior de 5 destinos, ventanas como hojas inferiores, áreas táctiles ≥ 44 px, temporizador siempre accesible.
+- Barra inferior de 5 destinos con los mismos nombres que el menú lateral (la Guía está en el botón 📖), ventanas como hojas inferiores, áreas táctiles ≥ 44 px, temporizador siempre accesible.
 - Corregido un desbordamiento que hacía que la página se viera más ancha que la pantalla en móviles.
 - Campos con **etiqueta visible** (el buscador del tutor usa una etiqueta solo para lectores de pantalla), sin `aria-label` duplicados.
 - Sistema de diseño aplicado a todo el CSS: espaciado 8/16/24/32 px, 4 tamaños de texto (cuerpo, subtítulo, título, número) más uno de pie de texto, 2 radios (tarjetas y controles; píldoras y círculos son excepciones) y colores de error/éxito/aviso.
@@ -70,6 +70,19 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 `Espacio` revela · `1` `2` `3` califican · `P` inicia/pausa el Pomodoro · `Esc` cierra ventanas.
 
 ## Rendimiento
-Los resultados de cálculo se memorizan y solo se dibuja la sección visible; probado con 1 000 tarjetas,
-3 000 repasos y 400 sesiones (≈ 25 ms por actualización). El historial de repasos se limita a 5 000 registros.
-Los archivos no están minificados (≈ 130 KB en total, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
+Los archivos no están minificados (≈ 180 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Correcciones (v8)
+- Sin `Notification` (p. ej. Safari de iPhone) ya no se rompe el fin de bloque ni el arranque.
+- Abrir una ventana justo después de cerrar otra ya no cancela la consulta a la IA ni ejecuta su `onClose` antes de tiempo.
+- Si falla la IA en «Generar estudio», se conserva el resumen local.
+- Las fechas de examen admiten hasta 2 años; antes una fecha lejana podía congelar el navegador.
+- SM-2: «No lo sabía» ya no hunde el factor de facilidad, y repasar antes de tiempo una tarjeta que sabes no adelanta su calendario.
+- Los prompts conservan saltos de línea y admiten hasta 9 000 caracteres (el proxy igual); las tarjetas conservan sus saltos de línea.
+- Las tarjetas sugeridas son huecos para completar (la pregunta ya no contiene la respuesta) y se crean a petición, sin tapar la guía.
+- Ruleta, atajos con confirmación abierta, cronómetro del Examen real y dictado (doble clic) corregidos.
+- Importar CSV/Anki: comillas escapadas, campos de varias líneas, separadores coma/punto y coma/tabulación y archivos `.txt`.
+- Mazos propios incluidos al compartir y al importar un mazo.
+- Proxy: varios orígenes, límite de uso y saltos de línea conservados.
+- Iconos PNG (192, 512, maskable) y `apple-touch-icon` para instalar la app.

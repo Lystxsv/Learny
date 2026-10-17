@@ -8,7 +8,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <title>Learny · Estudia con intención</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%239db8ff'/%3E%3Cpath d='M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15' fill='none' stroke='%230e1220' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -334,11 +335,17 @@
         <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas.</p></article>
         <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta. Las que dominas, envíalas a la Biblioteca.</p></article>
         <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
-        <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Marca las tareas hechas; si te atrasas, pasan a hoy automáticamente.</p></article>
+        <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen y descarta el resto para que el plan siga siendo realista.</p></article>
       </div>
       <div class="grid planner-grid spaced">
         <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny elige por ti: primero las tarjetas vencidas, luego tu plan de examen, luego tu materia más débil y, si no hay nada pendiente, material nuevo. <i>Empezar sesión inteligente</i> encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
         <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes ⚙️ puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
+      </div>
+      <div class="grid planner-grid spaced">
+        <article class="card"><h2>Más formas de repasar</h2><p class="lead"><i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i>Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
+        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono 🎤 dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
+        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes ⚙️) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
+        <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i>Informe de examen</i> convierte tus fallos en un plan de recuperación de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
       </div>
       <article class="card spaced"><h2>Atajos de teclado</h2>
         <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana. Los atajos de tarjetas funcionan en <i>Practicar</i>.</p></article>
@@ -351,9 +358,9 @@
 <nav class="bottom-nav" aria-label="Secciones en móvil">
   <button class="nav-button active" data-page="study"><span aria-hidden="true">🏠</span><small>Hoy</small></button>
   <button class="nav-button" data-page="practice"><span aria-hidden="true">🧠</span><small>Practicar</small></button>
-  <button class="nav-button" data-page="library"><span aria-hidden="true">📚</span><small>Tarjetas</small></button>
-  <button class="nav-button" data-page="planner"><span aria-hidden="true">📅</span><small>Plan</small></button>
-  <button class="nav-button" data-page="analysis"><span aria-hidden="true">📊</span><small>Progreso</small></button>
+  <button class="nav-button" data-page="library"><span aria-hidden="true">📚</span><small>Biblioteca</small></button>
+  <button class="nav-button" data-page="planner"><span aria-hidden="true">📅</span><small>Planificar</small></button>
+  <button class="nav-button" data-page="analysis"><span aria-hidden="true">📊</span><small>Reforzar</small></button>
 </nav>
 
 <datalist id="subject-list"></datalist>

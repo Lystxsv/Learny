@@ -5,8 +5,9 @@
   const LEGACY_KEYS = ['learny.v2', 'learny.v1'];
   const BACKUP_KEY = 'learny.backup';
   const DEFAULT_MODEL = 'gemini-flash-latest';
-  const MAX_PROMPT = 3500;
+  const MAX_PROMPT = 9000;
   const MAX_INTERVAL = 180;
+  const MAX_PLAN_DAYS = 730;
   const SCHEMA = 4;
   const TIMER_KEY = 'learny.timer';
   const MAX_REVIEWS = 5000;
@@ -34,6 +35,7 @@
   const pad = (n) => String(n).padStart(2, '0');
   const dateStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const today = () => dateStr();
+  const validDeadlineDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d)) && daysUntil(d) >= 0 && daysUntil(d) <= MAX_PLAN_DAYS;
   const addDays = (date, n) => { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + n); return dateStr(d); };
   const daysUntil = (date) => Math.round((new Date(`${date}T12:00:00`) - new Date(`${today()}T12:00:00`)) / 86400000);
   const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -43,6 +45,7 @@
   const time = (s) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const clean = (v, max = MAX_PROMPT) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
+  const cleanMl = (v, max) => String(v || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
   const parseJSON = (raw) => { try { return JSON.parse(raw || 'null'); } catch { return null; } };
   const qualityOf = (rating) => ({ again: 1, hard: 3, easy: 5 }[rating] ?? 3);
 
@@ -152,6 +155,7 @@
       id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
       difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45)
     }));
+    state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards));
     state.topics = state.topics.filter((t) => t && t.name).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
     state.reviews = state.reviews.filter((r) => r && r.date).slice(-MAX_REVIEWS);
     state.tasks = state.tasks.filter((t) => t && t.deadlineId && t.date).map((t) => ({
@@ -251,6 +255,7 @@
     if (!dialog.open) dialog.showModal();
   }
   $('#app-modal').addEventListener('close', () => {
+    if (modalOpen()) return; // se reabrió antes de que llegara el evento: no cancelar la IA ni ejecutar el onClose de la ventana nueva
     clearInterval(rouletteId); rouletteId = null; cancelAi();
     const handler = modalCloseHandler; modalCloseHandler = null; handler?.();
   });
@@ -271,7 +276,7 @@
   }
 
   function notify(title, body) {
-    if (!state.settings.notify) return;
+    if (!state.settings.notify || typeof Notification === 'undefined') return;
     if (Notification.permission === 'granted') {
       try { new Notification(title, { body, silent: false }); } catch { /* ignorar */ }
     }
@@ -303,7 +308,7 @@
     state.tasks = state.tasks.filter((t) => t.deadlineId !== deadline.id);
     const days = Math.max(1, daysUntil(deadline.date));
     const start = today();
-    const span = Math.max(1, daysUntil(deadline.date));
+    const span = Math.min(MAX_PLAN_DAYS, Math.max(1, daysUntil(deadline.date)));
     const cardTarget = Math.max(3, deadline.difficulty * 2);
     for (let i = 0; i <= span; i++) {
       const date = addDays(start, i);
@@ -381,7 +386,7 @@
     modal(`<h2>Nueva fecha</h2>
       <label>Nombre<input name="title" required maxlength="80"></label>
       <label>Materia<input name="subject" required maxlength="60"></label>
-      <label>Fecha<input name="date" type="date" min="${today()}" required></label>
+      <label>Fecha<input name="date" type="date" min="${today()}" max="${addDays(today(), MAX_PLAN_DAYS)}" required></label>
       <div class="form-row"><label>Dificultad (1-5)<input name="difficulty" type="number" min="1" max="5" value="3" required></label>
       <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="45" required></label></div>
       <button class="primary-button">Guardar y crear plan</button>`, (data) => {
@@ -389,6 +394,7 @@
         id: uid(), title: clean(data.get('title'), 80), subject: clean(data.get('subject'), 60),
         date: data.get('date'), difficulty: num(data.get('difficulty'), 1, 5, 3), dailyMinutes: num(data.get('mins'), 15, 240, 45)
       };
+      if (!validDeadlineDate(item.date)) return toast('Elige una fecha entre hoy y los próximos 2 años.', 'error');
       state.deadlines.push(item);
       rebuildTasks(item, false);
       save(); closeModal(); renderAll(); toast('Plan inverso creado con tareas diarias.');
@@ -450,7 +456,7 @@
     if (mini) {
       const show = timer.started && currentPage !== 'study';
       mini.hidden = !show;
-      if (show) mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`;
+      if (show) { mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`; mini.setAttribute('aria-label', `Volver al temporizador. ${focusMode ? 'Foco' : 'Descanso'}: quedan ${time(timer.remaining)}${timer.running ? '' : ', en pausa'}`); }
     }
   }
 
@@ -638,10 +644,9 @@
     const q = qualityOf(rating);
     card.lastReviewed = today();
     card.history = [...(card.history || []), { date: today(), rating, quality: q }].slice(-40);
+    if (card.nextReview > today() && q >= 3) return; // repaso anticipado: no adelanta el calendario ni infla el intervalo
     if (q < 3) {
-      card.repetitions = 0;
-      card.interval = 1;
-      card.easeFactor = Math.max(1.3, +(card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(2));
+      card.repetitions = 0; card.interval = 1; // SM-2: con calidad < 3 el factor de facilidad no cambia
     } else {
       if (card.repetitions === 0) card.interval = 1;
       else if (card.repetitions === 1) card.interval = 6;
@@ -675,7 +680,7 @@
       $('#flashcard').innerHTML = '<div><b>Esta tarjeta no se pudo cargar.</b><br><span>Le falta la pregunta o la respuesta. Edítala para repararla, pospónla o elimínala.</span></div>';
       $('#reveal-card').hidden = true; return;
     }
-    $('#flashcard').innerHTML = `<div><small>${esc(activeCard.subject)} · EF ${activeCard.easeFactor.toFixed(2)}</small><br>${esc(activeCard.question)}</div>`;
+    $('#flashcard').innerHTML = `<div><small>${esc(activeCard.subject)}</small><br>${esc(activeCard.question)}</div>`;
   }
 
   function revealCard() {
@@ -712,6 +717,7 @@
     const pool = (Array.isArray(custom) ? custom : dueCards()).filter((c) => !c.corrupt);
     if (pool.length < 1) return toast('No hay tarjetas vencidas o de hoy para el examen.', 'error');
     exam = { cards: pool.slice(0, size), i: 0, score: 0, revealed: false, answers: [] };
+    document.dispatchEvent(new Event('learny:examstart'));
     toast(`Modo examen: ${exam.cards.length} tarjetas.`);
     renderExam();
   }
@@ -764,7 +770,7 @@
       <label>Respuesta<textarea id="card-answer" name="answer" required maxlength="1200">${esc(a0)}</textarea></label>
       <button id="generate-answer" class="outline-button" type="button">✨ Generar respuesta con IA</button>
       <button class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>`, (data) => {
-      const values = { subject: clean(data.get('subject'), 60), question: clean(data.get('question'), 500), answer: clean(data.get('answer'), 1200) };
+      const values = { subject: clean(data.get('subject'), 60), question: cleanMl(data.get('question'), 500), answer: cleanMl(data.get('answer'), 1200) };
       if (!values.question || !values.answer) return toast('Pregunta y respuesta no pueden estar vacías.', 'error');
       if (card) Object.assign(card, values, { corrupt: false });
       else state.cards.push(normalizeCard({ ...values, nextReview: today() }));
@@ -884,7 +890,7 @@
   }
 
   function exportReport() {
-    modal(`<h2>Informe semanal</h2><p>Elige formato. No incluye tu clave ni datos personales extra.</p>
+    modal(`<h2>Informe semanal</h2><p>Elige formato. Incluye minutos, etiquetas, intenciones y preguntas de tarjetas vencidas; no incluye tu clave.</p>
       <div class="actions"><button id="rep-json" class="primary-button" type="button">JSON</button>
       <button id="rep-csv" class="outline-button" type="button">CSV</button></div>`, () => closeModal());
     $('#rep-json').onclick = () => { download(`learny-semana-${today()}.json`, JSON.stringify(weekSlice(), null, 2), 'application/json'); closeModal(); toast('Informe JSON descargado.'); };
@@ -934,7 +940,7 @@ Consulta: ${query}`;
 
   async function askGemini(prompt) {
     if (!hasAi()) throw new Error('Falta la clave de Gemini. Añádela en Ajustes ⚙️ o usa Guía local.');
-    const text = clean(prompt, MAX_PROMPT);
+    const text = cleanMl(prompt, MAX_PROMPT);
     if (!text) throw new Error('El texto está vacío o es demasiado corto.');
     const proxy = state.settings.proxyUrl, who = proxy ? 'El proxy' : 'La clave de Gemini';
     const model = (state.settings.model || DEFAULT_MODEL).trim();
@@ -1023,6 +1029,7 @@ Consulta: ${query}`;
 
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-cancel-ai]')) { cancelAi(); return; }
+    if (e.target.closest('[data-feynman-cards]') && lastFey) { suggestCardsFromText(lastFey.topic, lastFey.text); return; }
     const f = e.target.closest('[data-ai-follow]')?.dataset.aiFollow;
     if (!f || !lastAi) return;
     const base = lastAi;
@@ -1032,6 +1039,12 @@ Consulta: ${query}`;
     else if (f === 'note') { state.notes.push({ id: uid(), date: today(), text: base.text.slice(0, 2000) }); save(); renderAll(); toast('Respuesta guardada en Notas rápidas.'); }
   });
 
+  function cloze(sentence, topic) {
+    const word = sentence.split(/\s+/).map((x) => x.replace(/[^\p{L}\p{N}-]/gu, '')).filter((x) => x.length >= 5).sort((a, b) => b.length - a.length)[0];
+    return word
+      ? { question: `Completa: ${sentence.replace(word, '_____').slice(0, 400)}`, answer: `${word}. ${sentence}`.slice(0, 1200) }
+      : { question: `¿Cómo explicarías esta idea de ${topic || 'tu tema'}?`, answer: sentence.slice(0, 1200) };
+  }
   function suggestCardsFromText(topic, text) {
     const parts = text.replace(/\*\*/g, '').split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 20).slice(0, 3);
     if (!parts.length) return toast('No encontré ideas suficientes para convertir en tarjetas.', 'error');
@@ -1040,12 +1053,14 @@ Consulta: ${query}`;
       ${parts.map((p, i) => `<label class="check"><input type="checkbox" name="c${i}" checked> ${esc(p.slice(0, 140))}</label>`).join('')}
       <button class="primary-button">Crear seleccionadas</button>`, (data) => {
       parts.forEach((p, i) => {
-        if (data.get(`c${i}`) === 'on') state.cards.push(normalizeCard({ subject: topic || 'Feynman', question: `Explica: ${p.slice(0, 80)}`, answer: p, nextReview: today() }));
+        if (data.get(`c${i}`) === 'on') state.cards.push(normalizeCard({ subject: topic || 'Feynman', ...cloze(p, topic), nextReview: today() }));
       });
       save(); closeModal(); renderAll(); toast('Tarjetas sugeridas guardadas.');
     });
   }
 
+  let lastFey = null;
+  const FEY_BTN = '<p><button class="outline-button" type="button" data-feynman-cards>Crear tarjetas con estas ideas</button></p>';
   async function feynman() {
     const topic = clean($('#feynman-topic').value, 80), text = clean($('#feynman-text').value, 4000), guide = $('#feynman-guide');
     if (!text) return toast('Escribe tu explicación.', 'error');
@@ -1053,7 +1068,7 @@ Consulta: ${query}`;
     guide.innerHTML = parseBlocks(local);
     if (!hasAi()) {
       toast('Modo local: sin clave también recibes guía socrática.');
-      suggestCardsFromText(topic, text);
+      lastFey = { topic, text }; guide.insertAdjacentHTML('beforeend', FEY_BTN);
       return;
     }
     guide.innerHTML += '<p><i>Consultando tutor…</i> <button class="text-button" type="button" data-cancel-ai>Cancelar</button></p>';
@@ -1061,7 +1076,7 @@ Consulta: ${query}`;
       const answer = await askGemini(socraticPrompt(`Evalúa esta explicación sobre ${topic || 'un tema'} y guía al estudiante.\n\n${text}`));
       guide.innerHTML = parseBlocks(answer);
       saveChat('user', text); saveChat('tutor', answer);
-      suggestCardsFromText(topic, text);
+      lastFey = { topic, text }; guide.insertAdjacentHTML('beforeend', FEY_BTN);
     } catch (error) {
       guide.innerHTML = parseBlocks(local) + `<p><i>${esc(error.message)}</i></p>`;
       toast(error.message, 'error');
@@ -1101,7 +1116,7 @@ Consulta: ${query}`;
     state.settings.recentTurns = [chosen, ...(state.settings.recentTurns || []).filter((x) => x !== chosen)].slice(0, 8); save();
     runRoulettePhase(chosen, 'preparación', state.settings.roulettePrepare, () => runRoulettePhase(chosen, 'explicación', state.settings.rouletteExplain, () => {
       closeModal(); showPage('practice'); $('#feynman-topic').value = chosen; $('#feynman-text').focus();
-      toast('Fase terminada. Ahora explica con Feynman.'); $('#feynman-feedback').click();
+      toast('Fase terminada. Ahora explica con Feynman.'); if ($('#feynman-text').value.trim()) $('#feynman-feedback').click();
     }));
   }
   function runRoulettePhase(topic, phase, minutes, next) {
@@ -1149,8 +1164,8 @@ Consulta: ${query}`;
 
   function exportDeck() {
     const deck = state.cards.filter((c) => !c.archived).map(({ subject, question, answer }) => ({ subject, question, answer }));
-    if (!deck.length) return toast('No hay tarjetas para compartir.', 'error');
-    download(`learny-mazo-${today()}.json`, JSON.stringify({ type: 'learny-deck', cards: deck }, null, 2), 'application/json');
+    if (!deck.length && !state.decks.length) return toast('No hay tarjetas para compartir.', 'error');
+    download(`learny-mazo-${today()}.json`, JSON.stringify({ type: 'learny-deck', cards: deck, decks: state.decks }, null, 2), 'application/json');
     toast('Mazo exportado sin progreso personal.');
   }
 
@@ -1159,7 +1174,9 @@ Consulta: ${query}`;
     if (data?.type === 'learny-deck') {
       if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
       const good = data.cards.filter((c) => c && typeof c.question === 'string' && typeof c.answer === 'string' && c.question.trim() && c.answer.trim());
-      return good.length ? { ok: true, deck: good, dropped: data.cards.length - good.length } : { ok: false, error: 'El mazo no tiene tarjetas válidas.' };
+      const decks = (Array.isArray(data.decks) ? data.decks : []).filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards))
+        .map((d) => ({ name: d.name.slice(0, 60), cards: d.cards.filter((c) => Array.isArray(c) && typeof c[0] === 'string' && typeof c[1] === 'string').map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => d.cards.length);
+      return good.length || decks.length ? { ok: true, deck: good, decks, dropped: data.cards.length - good.length } : { ok: false, error: 'El mazo no tiene tarjetas válidas.' };
     }
     if (!isLearnyBackup(data)) return { ok: false, error: 'Ese archivo no parece una copia de Learny.' };
     if (Number(data.version) > SCHEMA) return { ok: false, error: `La copia es de una versión más nueva de Learny (v${data.version}). Actualiza la app e inténtalo de nuevo.` };
@@ -1180,7 +1197,7 @@ Consulta: ${query}`;
         : `Esta copia REEMPLAZARÁ tus datos actuales por ${plural(check.cards, 'tarjeta', 'tarjetas')}, ${plural(check.deadlines, 'fecha', 'fechas')} y ${plural(check.sessions, 'sesión', 'sesiones')}.`;
       if (!(await confirmDialog({ title: check.deck ? 'Importar mazo' : 'Reemplazar tus datos', message: `${msg}\nAntes se guardará una copia automática en el navegador.`, ok: check.deck ? 'Importar' : 'Reemplazar', danger: !check.deck }))) return;
       snapshot('import');
-      if (check.deck) check.deck.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() })));
+      if (check.deck) { check.deck.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); (check.decks || []).forEach((d) => { if (!state.decks.some((x) => x.name === d.name)) state.decks.push(d); }); }
       else hydrate({ ...data, apiKey: state.apiKey });
       state.deadlines.forEach((d) => { if (!state.tasks.some((t) => t.deadlineId === d.id)) rebuildTasks(d, false); });
       save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos importados correctamente.');
@@ -1196,16 +1213,19 @@ Consulta: ${query}`;
   }
 
   function parseCsv(text) {
-    return text.split(/\r?\n/).map((line) => {
-      const cols = []; let cur = '', q = false;
-      for (const ch of line) {
-        if (ch === '"') { q = !q; continue; }
-        if (ch === ',' && !q) { cols.push(cur.trim()); cur = ''; continue; }
-        cur += ch;
-      }
-      cols.push(cur.trim());
-      return cols;
-    }).filter((r) => r.some(Boolean));
+    const first = text.split(/\r?\n/).find((l) => l && !l.startsWith('#')) || '';
+    const d = [['\t', first.split('\t').length], [';', first.split(';').length], [',', first.split(',').length]].sort((a, b) => b[1] - a[1])[0][0];
+    const rows = []; let row = [], cur = '', q = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === d) { row.push(cur.trim()); cur = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur.trim()); cur = ''; rows.push(row); row = []; }
+      else cur += ch;
+    }
+    row.push(cur.trim()); rows.push(row);
+    return rows.filter((r) => r.some(Boolean) && !String(r[0]).startsWith('#'));
   }
 
   function importCsv(file) {
@@ -1219,7 +1239,7 @@ Consulta: ${query}`;
       let n = 0;
       body.forEach((r) => {
         const question = r[0], answer = r[1], subject = r[2] || 'Importado';
-        if (question && answer) { state.cards.push(normalizeCard({ question, answer, subject, nextReview: today() })); n++; }
+        if (question && answer) { state.cards.push(normalizeCard({ question: question.slice(0, 500), answer: answer.slice(0, 1200), subject: subject.slice(0, 60), nextReview: today() })); n++; }
       });
       save(); closeModal(); renderAll(); toast(`Importadas ${plural(n, 'tarjeta', 'tarjetas')} desde CSV.`);
     }).catch(() => toast('CSV no válido. Usa pregunta,respuesta,materia', 'error'));
@@ -1247,7 +1267,7 @@ Consulta: ${query}`;
         <button id="export-data" class="outline-button" type="button">Descargar copia</button>
         <button id="export-deck" class="outline-button" type="button">Compartir mazo</button>
         <label class="outline-button" style="cursor:pointer">Importar JSON<input id="import-file" type="file" accept="application/json,.json" hidden></label>
-        <label class="outline-button" style="cursor:pointer">Importar CSV/Anki<input id="import-csv" type="file" accept=".csv,text/csv" hidden></label>
+        <label class="outline-button" style="cursor:pointer">Importar CSV / Anki (.csv, .txt)<input id="import-csv" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden></label>
         ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
         ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
         <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
@@ -1424,7 +1444,7 @@ Consulta: ${query}`;
   $('#ai-question').onkeydown = (e) => { if (e.key === 'Enter') $('#ask-ai').click(); };
 
   document.addEventListener('keydown', (e) => {
-    if (modalOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (modalOpen() || $('#confirm-modal').open || e.ctrlKey || e.metaKey || e.altKey) return;
     const t = e.target;
     if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPomodoro(); return; }
@@ -1444,7 +1464,7 @@ Consulta: ${query}`;
   const syncOnline = () => { const el = $('#offline-note'); if (el) el.hidden = navigator.onLine; };
   window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
 
-  window.Learny = { isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
   applyPreferences(); resetTimer('focus'); restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
