@@ -27,8 +27,21 @@
     const weak = live().filter((c) => c.history.some((h) => h.rating === 'again')), set = new Map();
     [...L.dueCards(), ...shuffle(weak), ...shuffle(live())].forEach((c) => set.set(c.id, c));
     const p = interleave([...set.values()].slice(0, 20));
-    p.length ? L.startExam(p, 20) : toast('Crea tarjetas para hacer un examen.', 'error');
+    p.length ? timedExam(p) : toast('Crea tarjetas para hacer un examen.', 'error');
   };
+  let rt = null;
+  function timedExam(p) {
+    L.startExam(p, 20);
+    const end = Date.now() + Math.min(20, p.length) * 90000;
+    const el = $('#exam-clock') || $('#card-count').insertAdjacentElement('afterend', Object.assign(document.createElement('span'), { id: 'exam-clock', className: 'tag', hidden: true }));
+    clearInterval(rt);
+    rt = setInterval(() => {
+      if (!L.isExam()) { clearInterval(rt); el.hidden = true; return; }
+      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      el.hidden = false; el.textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      if (!left) { clearInterval(rt); el.hidden = true; toast('Se acabó el tiempo. Examen terminado.', 'error'); L.endExam(); }
+    }, 500);
+  }
   document.addEventListener('learny:reveal', () => {
     const v = raw($('#recall-answer').value, 800);
     if (v) $('#flashcard').insertAdjacentHTML('beforeend', `<p class="recall-compare"><small>Tu respuesta</small><br>${esc(v)}</p>`);
@@ -105,11 +118,30 @@
     'Método científico': [['¿Qué es una hipótesis?', 'Una explicación provisional que se puede poner a prueba.'], ['¿Para qué sirve un grupo de control?', 'Para comparar y aislar el efecto de una sola variable.'], ['Diferencia entre correlación y causalidad', 'Que dos cosas varíen juntas no prueba que una cause la otra.']],
     'Programación': [['¿Qué es una función?', 'Un bloque reutilizable que recibe datos y devuelve un resultado.'], ['¿Qué es la recursión?', 'Una función que se llama a sí misma con un caso más pequeño hasta un caso base.'], ['¿Qué es un algoritmo?', 'Una secuencia finita de pasos para resolver un problema.']]
   };
-  $('#topic-library').innerHTML = Object.entries(DECKS).map(([n, c]) => `<button class="topic-chip" data-deck="${esc(n)}" type="button">${esc(n)} <small>· ${c.length} tarjetas</small></button>`).join('');
+  const allDecks = () => ({ ...DECKS, ...Object.fromEntries(state.decks.map((d) => [d.name, d.cards])) });
+  function renderDecks() {
+    $('#topic-library').innerHTML = Object.entries(allDecks()).map(([n, c]) => `<span class="topic-wrap"><button class="topic-chip" data-deck="${esc(n)}" type="button">${esc(n)} <small>· ${plural(c.length, 'tarjeta', 'tarjetas')}</small></button>${state.decks.some((d) => d.name === n) ? `<button class="chip-x" data-del-deck="${esc(n)}" type="button" aria-label="Quitar mazo ${esc(n)}">×</button>` : ''}</span>`).join('')
+      + '<button class="outline-button" data-new-deck type="button">+ Crear mazo</button>';
+  }
+  function newDeck() {
+    modal(`<h2>Crear mazo</h2><p>Escribe una tarjeta por línea con el formato <b>pregunta | respuesta</b>.</p>
+      <label>Nombre del mazo<input name="name" required maxlength="60"></label>
+      <label>Tarjetas<textarea name="rows" required maxlength="6000" placeholder="¿Capital de Francia? | París"></textarea></label>
+      <button class="primary-button">Guardar mazo</button>`, (d) => {
+      const name = clean(d.get('name'), 60);
+      const cards = String(d.get('rows')).split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((r) => r[0] && r[1]).map((r) => [r[0].slice(0, 500), r[1].slice(0, 1200)]);
+      if (!cards.length) return toast('Usa el formato pregunta | respuesta en cada línea.', 'error');
+      if (allDecks()[name]) return toast('Ya existe un mazo con ese nombre.', 'error');
+      state.decks.push({ name, cards }); save(); closeModal(); renderDecks(); toast(`Mazo «${name}» creado con ${plural(cards.length, 'tarjeta', 'tarjetas')}.`);
+    });
+  }
   $('#topic-library').onclick = (e) => {
+    const del = e.target.closest('[data-del-deck]')?.dataset.delDeck;
+    if (del) { state.decks = state.decks.filter((d) => d.name !== del); save(); renderDecks(); return toast(`Mazo «${del}» quitado. Tus tarjetas no se borran.`); }
+    if (e.target.closest('[data-new-deck]')) return newDeck();
     const n = e.target.closest('[data-deck]')?.dataset.deck; if (!n) return;
     let added = 0;
-    DECKS[n].forEach(([question, answer]) => { if (!state.cards.some((c) => c.question === question)) { state.cards.push(L.normalizeCard({ subject: n, question, answer, nextReview: today() })); added++; } });
+    allDecks()[n].forEach(([question, answer]) => { if (!state.cards.some((c) => c.question === question)) { state.cards.push(L.normalizeCard({ subject: n, question, answer, nextReview: today() })); added++; } });
     save(); L.renderAll(); toast(added ? `Mazo «${n}» añadido (${plural(added, 'tarjeta', 'tarjetas')}).` : 'Ese mazo ya está en tu colección.');
   };
 
@@ -128,7 +160,25 @@
     const errs = live().filter((c) => c.history.at(-1)?.rating === 'again').length;
     $('#auto-block').textContent = dl ? `Hoy: ${dl.dailyMinutes} min de ${dl.subject} + ${plural(L.dueCards().length, 'tarjeta', 'tarjetas')} + repaso de ${plural(errs, 'error', 'errores')}.` : 'Añade una fecha para que Learny arme tu bloque de estudio de hoy.';
   }
-  $('#smart-plan').onclick = () => { toast('Indica el examen y los minutos diarios: Learny arma las fases y las tareas.'); L.addDeadline(); };
+  const PH = { comprension: 'Comprensión', practica: 'Práctica', repaso: 'Repaso', simulacro: 'Simulacro', revision: 'Revisión final' };
+  const EXTRA = { comprension: 'crear tarjetas del tema', practica: 'práctica intercalada de 10 tarjetas', repaso: 'repaso de errores', simulacro: 'examen real cronometrado', revision: 'repaso de errores y tarjetas débiles' };
+  $('#smart-plan').onclick = () => modal(`<h2>Estudio inteligente</h2>
+    <p>Dime el examen y Learny reparte Pomodoros, tarjetas, práctica intercalada, simulacro y repaso de errores hasta la fecha.</p>
+    <label>Examen<input name="title" required maxlength="80" placeholder="Parcial de cálculo"></label>
+    <label>Materia<input name="subject" required maxlength="60" list="subject-list"></label>
+    <div class="form-row"><label>Fecha<input name="date" type="date" min="${today()}" required></label>
+    <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="60" required></label></div>
+    <label>Dificultad (1-5)<input name="difficulty" type="number" min="1" max="5" value="3"></label>
+    <button class="primary-button">Crear plan</button>`, (d) => {
+    const item = { id: uid(), title: clean(d.get('title'), 80), subject: clean(d.get('subject'), 60), date: d.get('date'),
+      difficulty: Math.min(5, Math.max(1, Number(d.get('difficulty')) || 3)), dailyMinutes: Math.min(240, Math.max(15, Number(d.get('mins')) || 60)) };
+    state.deadlines.push(item); L.rebuildTasks(item, false);
+    const pom = Math.max(1, Math.round(item.dailyMinutes / state.settings.focus)), mine = state.tasks.filter((t) => t.deadlineId === item.id);
+    mine.forEach((t) => { t.title += ` → ${plural(pom, 'Pomodoro', 'Pomodoros')} + ${EXTRA[t.phase]}.`; });
+    const rows = Object.keys(PH).map((k) => { const ds = mine.filter((t) => t.phase === k).map((t) => t.date).sort(); return ds.length ? `<p><b>${PH[k]}:</b> ${ds[0] === ds.at(-1) ? ds[0] : `${ds[0]} a ${ds.at(-1)}`} · ${EXTRA[k]}</p>` : ''; }).join('');
+    save(); closeModal(); L.renderAll();
+    modal(`<h2>Tu plan para ${esc(item.title)}</h2><p>${plural(mine.length, 'día', 'días')} de estudio, ${plural(pom, 'Pomodoro', 'Pomodoros')} al día.</p>${rows}<p class="modal-tip">Las tareas de cada día aparecen en Planificar y puedes marcarlas al terminarlas.</p><button class="primary-button">Entendido</button>`);
+  });
   $('#emergency-plan').onclick = () => {
     const dl = state.deadlines.filter((d) => L.daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date))[0];
     if (!dl) return toast('Añade primero una fecha de examen.', 'error');
@@ -168,7 +218,7 @@
     const mins = state.sessions.filter((s) => s.date >= from && !s.abandon).reduce((t, s) => t + s.minutes, 0);
     $('#weekly-digest').textContent = `Esta semana: ${mins} min de foco, ${plural(wr, 'repaso', 'repasos')} y ${plural(ex, 'examen', 'exámenes')}. Meta para la próxima: superar tus repasos de hoy.`;
   }
-  const renderExtras = () => { renderNotes(); renderPlanner(); renderMissions(); renderInsights(); };
+  const renderExtras = () => { renderDecks(); renderNotes(); renderPlanner(); renderMissions(); renderInsights(); };
   document.addEventListener('learny:render', renderExtras);
   renderExtras();
 })();

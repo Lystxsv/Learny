@@ -22,3 +22,4 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Novedades
 - Sección «Guía de uso», acento y densidad configurables, atajo `P`, caché con red primero.
 - `proxy-worker.example.js`: ejemplo para ocultar la clave de Gemini en producción.
+- Examen real con cronómetro, mazos propios («pregunta | respuesta») y Estudio inteligente que genera el plan completo.

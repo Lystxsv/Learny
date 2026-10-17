@@ -50,7 +50,7 @@
       recentTurns: [], dailyGoal: 2, notify: false, sound: true,
       tutor: { subject: '', level: '', known: '', goal: '' }
     },
-    notes: [], feynman: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: ''
+    notes: [], feynman: [], decks: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: ''
   });
   const state = defaults();
   let exam = null;
@@ -77,7 +77,7 @@
     state.settings = { ...base.settings, ...(src.settings || {}) };
     state.settings.tutor = { ...base.settings.tutor, ...(src.settings?.tutor || {}) };
     state.apiKey = typeof state.apiKey === 'string' ? state.apiKey : '';
-    ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman'].forEach((k) => {
+    ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks'].forEach((k) => {
       if (!Array.isArray(state[k])) state[k] = [];
     });
     if (!Array.isArray(state.settings.recentTurns)) state.settings.recentTurns = [];
@@ -1137,7 +1137,7 @@ Consulta: ${query}`;
     navigator.serviceWorker.register('./sw.js').catch(() => { /* sin PWA si se abre como archivo */ });
   }
 
-  window.Learny = { state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll };
+  window.Learny = { isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll };
   applyPreferences(); resetTimer('focus'); renderAll(); maybeRemind();
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ok */ }
 })();
