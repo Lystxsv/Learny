@@ -1,12 +1,16 @@
 {
+  "id": "./index.html",
   "name": "Learny",
   "short_name": "Learny",
   "description": "Estudia con intención: Pomodoro, flashcards y plan inverso. Datos locales.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0e1220",
   "theme_color": "#0e1220",
   "lang": "es",
+  "categories": ["education", "productivity"],
   "icons": [
     {
       "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%239db8ff'/%3E%3Cpath d='M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15' fill='none' stroke='%230e1220' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E",
@@ -14,5 +18,9 @@
       "type": "image/svg+xml",
       "purpose": "any"
     }
+  ],
+  "shortcuts": [
+    { "name": "Repasar tarjetas", "url": "./index.html#practice" },
+    { "name": "Plan de hoy", "url": "./index.html#planner" }
   ]
 }

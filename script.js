@@ -7,6 +7,10 @@
   const DEFAULT_MODEL = 'gemini-flash-latest';
   const MAX_PROMPT = 3500;
   const MAX_INTERVAL = 180;
+  const SCHEMA = 4;
+  const TIMER_KEY = 'learny.timer';
+  const MAX_REVIEWS = 5000;
+  let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0;
   const PHASES = [
     { id: 'comprension', label: 'Comprensión' },
     { id: 'practica', label: 'Práctica' },
@@ -42,21 +46,31 @@
   const parseJSON = (raw) => { try { return JSON.parse(raw || 'null'); } catch { return null; } };
   const qualityOf = (rating) => ({ again: 1, hard: 3, easy: 5 }[rating] ?? 3);
 
+  const debounce = (fn, ms = 150) => { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; };
+  function validProxy(u) {
+    const v = String(u || '').trim().slice(0, 200);
+    return /^https:\/\/[^\s]+$/i.test(v) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s]*)?$/i.test(v) ? v : '';
+  }
+  const memo = {};
+  const cached = (k, fn) => { const key = `${rev}|${today()}`; if (memo[k]?.key !== key) memo[k] = { key, v: fn() }; return memo[k].v; };
+
   const defaults = () => ({
-    version: 3,
+    version: SCHEMA,
     settings: {
       focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
       theme: 'dark', accent: 'sky', density: 'normal', reduceMotion: false, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
-      recentTurns: [], dailyGoal: 2, notify: false, sound: true,
+      recentTurns: [], dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
       tutor: { subject: '', level: '', known: '', goal: '' }
     },
-    notes: [], feynman: [], decks: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: ''
+    notes: [], feynman: [], decks: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
   });
   const state = defaults();
   let exam = null;
 
+  const isBrokenCard = (c) => typeof c.question !== 'string' || !c.question.trim() || typeof c.answer !== 'string' || !c.answer.trim();
   const normalizeCard = (c) => ({
     id: c.id || uid(),
+    corrupt: isBrokenCard(c),
     subject: String(c.subject || 'Sin materia'),
     question: String(c.question || ''),
     answer: String(c.answer || ''),
@@ -69,19 +83,66 @@
     history: Array.isArray(c.history) ? c.history.slice(-40) : []
   });
 
+  /* Migraciones: cada función recibe los datos de la versión N y devuelve los de N+1. */
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const isObj = (x) => x && typeof x === 'object' && !Array.isArray(x);
+  const MIGRATIONS = {
+    1(d) { // v1 → v2: nombres de campo antiguos
+      arr(d.cards).filter(isObj).forEach((c) => {
+        if (c.easeFactor == null && c.ease != null) c.easeFactor = c.ease;
+        if (c.repetitions == null && c.reps != null) c.repetitions = c.reps;
+        delete c.ease; delete c.reps;
+      });
+      arr(d.sessions).filter(isObj).forEach((s) => { if (s.label == null && s.subject != null) s.label = s.subject; });
+      return d;
+    },
+    2(d) { // v2 → v3: ids estables, tutor y valores por defecto de las fechas
+      ['cards', 'sessions', 'deadlines', 'topics', 'tasks'].forEach((k) => arr(d[k]).filter(isObj).forEach((x) => { if (!x.id) x.id = uid(); }));
+      arr(d.deadlines).filter(isObj).forEach((x) => { x.difficulty = num(x.difficulty, 1, 5, 3); x.dailyMinutes = num(x.dailyMinutes, 15, 240, 45); });
+      d.settings = { ...(isObj(d.settings) ? d.settings : {}) };
+      d.settings.tutor = { ...(isObj(d.settings.tutor) ? d.settings.tutor : {}) };
+      return d;
+    },
+    3(d) { // v3 → v4: ids únicos, tareas huérfanas, prefijos repetidos, borradores
+      const seen = new Set();
+      ['cards', 'sessions', 'deadlines', 'topics', 'tasks'].forEach((k) => arr(d[k]).filter(isObj).forEach((x) => {
+        if (!x.id || seen.has(x.id)) x.id = uid();
+        seen.add(x.id);
+      }));
+      const alive = new Set(arr(d.deadlines).filter(isObj).map((x) => x.id));
+      d.tasks = arr(d.tasks).filter((t) => isObj(t) && alive.has(t.deadlineId));
+      d.tasks.forEach((t) => { t.title = String(t.title || '').replace(/^(Recuperar:\s*)+/, 'Recuperar: '); });
+      if (!isObj(d.drafts)) d.drafts = {};
+      return d;
+    }
+  };
+  function migrate(src) {
+    let d = JSON.parse(JSON.stringify(src)), v = Number(d.version);
+    if (!Number.isInteger(v) || v < 1) v = 1;
+    const from = v;
+    while (v < SCHEMA) { d = MIGRATIONS[v](d); v++; d.version = v; }
+    if (Object.keys(src).length && from < SCHEMA) migratedFrom = from;
+    return d;
+  }
+
   function hydrate(raw) {
     const base = defaults();
-    const src = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    const src = migrate(raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {});
     Object.assign(state, base, src);
-    state.version = 3;
+    state.version = SCHEMA; // migración: copias <4 no necesitan transformación, solo ganan campos nuevos
+    rev++;
     state.settings = { ...base.settings, ...(src.settings || {}) };
     state.settings.tutor = { ...base.settings.tutor, ...(src.settings?.tutor || {}) };
     state.apiKey = typeof state.apiKey === 'string' ? state.apiKey : '';
+    state.settings.proxyUrl = validProxy(state.settings.proxyUrl);
+    if (!state.drafts || typeof state.drafts !== 'object' || Array.isArray(state.drafts)) state.drafts = {};
     ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks'].forEach((k) => {
       if (!Array.isArray(state[k])) state[k] = [];
     });
     if (!Array.isArray(state.settings.recentTurns)) state.settings.recentTurns = [];
-    state.cards = state.cards.filter((c) => c && typeof c === 'object' && c.question).map(normalizeCard);
+    const rawCards = state.cards;
+    state.cards = rawCards.filter((c) => c && typeof c === 'object' && !Array.isArray(c)).map(normalizeCard);
+    droppedCards += rawCards.length - state.cards.length;
     state.sessions = state.sessions.filter((s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s.date)).map((s) => ({
       ...s, id: s.id || uid(), minutes: Number(s.minutes) || 0, energy: s.energy ? Number(s.energy) : null,
       label: String(s.label || s.subject || ''), achieved: s.achieved !== false,
@@ -92,7 +153,7 @@
       difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45)
     }));
     state.topics = state.topics.filter((t) => t && t.name).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
-    state.reviews = state.reviews.filter((r) => r && r.date);
+    state.reviews = state.reviews.filter((r) => r && r.date).slice(-MAX_REVIEWS);
     state.tasks = state.tasks.filter((t) => t && t.deadlineId && t.date).map((t) => ({
       id: t.id || uid(), deadlineId: t.deadlineId, date: t.date, phase: t.phase || 'comprension',
       title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
@@ -113,16 +174,47 @@
     let merged = {};
     try {
       LEGACY_KEYS.slice().reverse().forEach((k) => { const p = parseJSON(localStorage.getItem(k)); if (p && typeof p === 'object') merged = { ...merged, ...p, settings: { ...(merged.settings || {}), ...(p.settings || {}) } }; });
-      const current = parseJSON(localStorage.getItem(KEY));
+      const rawCurrent = localStorage.getItem(KEY), current = parseJSON(rawCurrent);
+      if (rawCurrent && !current) { loadProblem = true; try { localStorage.setItem('learny.corrupt', rawCurrent); } catch { /* sin espacio */ } }
       if (current && typeof current === 'object') merged = { ...merged, ...current, settings: { ...(merged.settings || {}), ...(current.settings || {}) } };
     } catch { /* estado nuevo */ }
+    if (Object.keys(merged).length && !(Number(merged.version) >= SCHEMA)) {
+      try { const { apiKey, ...safe } = merged; localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: new Date().toISOString(), reason: `migración desde v${Number(merged.version) || 1}`, data: safe })); } catch { /* sin copia */ }
+    }
     hydrate(merged);
   })();
 
+  function confirmDialog({ title = '¿Seguro?', message = '', ok = 'Confirmar', danger = false } = {}) {
+    return new Promise((resolve) => {
+      const d = $('#confirm-modal'), okBtn = $('#confirm-ok');
+      $('#confirm-title').textContent = title; $('#confirm-message').textContent = message;
+      okBtn.textContent = ok; okBtn.className = danger ? 'danger-button' : 'primary-button';
+      d.returnValue = 'cancel';
+      d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
+      d.showModal(); (danger ? $('#confirm-cancel') : okBtn).focus();
+    });
+  }
+
+  function setSaved(ok) {
+    const el = $('#save-status'); if (!el) return;
+    el.textContent = ok ? `Guardado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}` : 'No guardado';
+    el.classList.toggle('bad', !ok);
+  }
   const save = () => {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); }
-    catch { toast('No se pudo guardar: el navegador bloqueó el almacenamiento.', 'error'); }
+    rev++;
+    if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
+    try { localStorage.setItem(KEY, JSON.stringify(state)); setSaved(true); return true; }
+    catch { setSaved(false); toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); return false; }
   };
+
+  const announce = (msg) => { const el = $('#sr-live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
+  const failedRenders = new Set();
+  function safe(fn, name) {
+    try { return fn(); } catch (error) {
+      console.error(`Learny · ${name}`, error);
+      if (!failedRenders.has(name)) { failedRenders.add(name); toast(`No se pudo mostrar «${name}». El resto de Learny sigue funcionando.`, 'error'); }
+    }
+  }
 
   function toast(message, type = 'ok') {
     const el = $('#toast');
@@ -133,12 +225,18 @@
   }
 
   function showPage(page) {
-    $$('.nav-button').forEach((b) => {
+    const changed = page !== currentPage;
+    currentPage = page;
+    $$('.nav-button[data-page]').forEach((b) => {
       const on = b.dataset.page === page;
       b.classList.toggle('active', on);
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
     $$('.page').forEach((p) => p.classList.toggle('active', p.id === page));
+    if (changed) { window.scrollTo(0, 0); $(`#${page} h1`)?.focus({ preventScroll: true }); }
+    renderPage(page);
+    renderTimer();
+    document.dispatchEvent(new Event('learny:page'));
   }
 
   let modalCloseHandler = null, rouletteId = null;
@@ -147,15 +245,17 @@
   function modal(html, onSubmit, onClose) {
     const dialog = $('#app-modal'), form = $('#modal-form');
     $('#modal-body').innerHTML = html;
+    $('#modal-body').removeAttribute('aria-live');
     modalCloseHandler = onClose || null;
     form.onsubmit = (event) => { event.preventDefault(); onSubmit ? onSubmit(new FormData(form)) : closeModal(); };
     if (!dialog.open) dialog.showModal();
   }
   $('#app-modal').addEventListener('close', () => {
-    clearInterval(rouletteId); rouletteId = null;
+    clearInterval(rouletteId); rouletteId = null; cancelAi();
     const handler = modalCloseHandler; modalCloseHandler = null; handler?.();
   });
   $('.modal-close').onclick = closeModal;
+  $('#app-modal').addEventListener('click', (e) => { if (e.target.closest('[data-close-modal]')) closeModal(); });
 
   function beep() {
     try {
@@ -164,7 +264,7 @@
         const ctx = new Ctx(), osc = ctx.createOscillator(), gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880;
         gain.gain.setValueAtTime(0.15, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-        osc.start(); osc.stop(ctx.currentTime + 0.8);
+        osc.start(); osc.stop(ctx.currentTime + 0.8); setTimeout(() => ctx.close?.(), 1200);
       }
       navigator.vibrate?.(200);
     } catch { /* sin sonido */ }
@@ -183,8 +283,8 @@
     return [...set];
   }
 
-  const dueCards = () => state.cards.filter((c) => !c.archived && c.nextReview <= today()).sort((a, b) => a.nextReview.localeCompare(b.nextReview) || a.easeFactor - b.easeFactor);
-  const overdueCards = () => state.cards.filter((c) => !c.archived && c.nextReview < today());
+  const dueCards = () => cached('due', () => state.cards.filter((c) => !c.archived && c.nextReview <= today()).sort((a, b) => a.nextReview.localeCompare(b.nextReview) || a.easeFactor - b.easeFactor));
+  const overdueCards = () => cached('overdue', () => state.cards.filter((c) => !c.archived && c.nextReview < today()));
 
   /* =========================================================
      Planificador inverso + tareas diarias
@@ -226,12 +326,17 @@
   }
 
   function redistributeIfBehind() {
+    let moved = 0;
     state.deadlines.forEach((d) => {
       if (daysUntil(d.date) < 0) return;
-      const pending = state.tasks.filter((t) => t.deadlineId === d.id && !t.done && t.date < today());
-      if (!pending.length) return;
-      pending.forEach((t) => { t.date = today(); t.title = `Recuperar: ${t.title}`; });
+      const late = state.tasks.filter((t) => t.deadlineId === d.id && !t.done && t.date < today()).sort((a, b) => b.date.localeCompare(a.date));
+      if (!late.length) return;
+      const keep = late.slice(0, 2), drop = new Set(late.slice(2).map((t) => t.id));
+      keep.forEach((t) => { t.date = today(); if (!t.title.startsWith('Recuperar:')) t.title = `Recuperar: ${t.title}`; });
+      if (drop.size) state.tasks = state.tasks.filter((t) => !drop.has(t.id));
+      moved += late.length;
     });
+    if (moved) { save(); toast('Moví tus tareas atrasadas a hoy (máximo 2 por examen) para que el plan siga siendo realista.'); }
   }
 
   function pendingHours(deadline) {
@@ -276,7 +381,7 @@
     modal(`<h2>Nueva fecha</h2>
       <label>Nombre<input name="title" required maxlength="80"></label>
       <label>Materia<input name="subject" required maxlength="60"></label>
-      <label>Fecha<input name="date" type="date" required></label>
+      <label>Fecha<input name="date" type="date" min="${today()}" required></label>
       <div class="form-row"><label>Dificultad (1-5)<input name="difficulty" type="number" min="1" max="5" value="3" required></label>
       <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="45" required></label></div>
       <button class="primary-button">Guardar y crear plan</button>`, (data) => {
@@ -298,7 +403,31 @@
 
   function resetTimer(mode = 'focus') {
     clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false;
-    timer.total = timer.remaining = phaseSeconds(mode); renderTimer();
+    timer.total = timer.remaining = phaseSeconds(mode); renderTimer(); persistTimer();
+  }
+
+  function persistTimer() {
+    try {
+      if (!timer.started) { localStorage.removeItem(TIMER_KEY); return; }
+      localStorage.setItem(TIMER_KEY, JSON.stringify({ mode: timer.mode, running: timer.running, endAt: timer.endAt, remaining: timer.remaining, total: timer.total, intention: timer.intention, label: timer.label }));
+    } catch { /* sin persistencia */ }
+  }
+
+  function restoreTimer(raw) {
+    const t = parseJSON(raw);
+    if (!t || !['focus', 'rest'].includes(t.mode)) return;
+    const total = num(t.total, 1, 10800, 0); if (!total) return;
+    Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), started: true });
+    if (t.running && Number(t.endAt) > 0) {
+      timer.endAt = Number(t.endAt); timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
+      if (timer.remaining <= 0) {
+        if (Date.now() - timer.endAt < 600000) { finishPhase(); return; }
+        resetTimer('focus'); toast('Un bloque anterior terminó mientras no estabas; no se contó.'); return;
+      }
+      timer.running = true; timer.id = setInterval(tick, 500);
+    } else timer.remaining = num(t.remaining, 0, total, total);
+    $('#intention-input').value = timer.intention; $('#pomodoro-label').value = timer.label;
+    renderTimer();
   }
 
   function renderTimer() {
@@ -314,9 +443,15 @@
       : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.';
     document.title = timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención';
     const goal = num(state.settings.dailyGoal, 1, 12, 2);
-    const done = state.sessions.filter((s) => s.date === today() && !s.abandon).length;
+    const done = cached('doneToday', () => state.sessions.filter((s) => s.date === today() && !s.abandon).length);
     $('#goal-progress').textContent = `Meta: ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de ${state.settings.focus} minutos · hoy ${done}/${goal}. Racha: ${calcStreak().streak} días.`;
     $('#notify-hint').hidden = !(state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'denied');
+    const mini = $('#mini-timer');
+    if (mini) {
+      const show = timer.started && currentPage !== 'study';
+      mini.hidden = !show;
+      if (show) mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`;
+    }
   }
 
   function tick() {
@@ -338,17 +473,17 @@
         intention: timer.intention, label: timer.label, energy: null, abandon: data.get('why'), achieved: false
       });
       save(); closeModal(); onContinue(); renderAll();
-    }, () => onContinue());
+    });
   }
 
   function startPomodoro() {
     if (timer.running) {
-      tick(); clearInterval(timer.id); timer.id = null; timer.running = false; renderTimer();
+      tick(); clearInterval(timer.id); timer.id = null; timer.running = false; renderTimer(); persistTimer(); announce('Temporizador en pausa.');
       return;
     }
     if (timer.mode === 'focus') {
       const intention = clean($('#intention-input').value, 140) || timer.intention;
-      if (!intention) { toast('Escribe un resultado concreto antes de empezar.', 'error'); $('#intention-input').focus(); return; }
+      if (!intention) { toast('Escribe un resultado concreto antes de empezar.', 'error'); showPage('study'); $('#intention-input').focus(); return; }
       timer.intention = intention;
       timer.label = clean($('#pomodoro-label').value, 60);
     }
@@ -356,7 +491,7 @@
     timer.endAt = Date.now() + timer.remaining * 1000;
     timer.running = true;
     timer.id = setInterval(tick, 500);
-    renderTimer();
+    renderTimer(); persistTimer(); announce(timer.mode === 'focus' ? 'Bloque de enfoque iniciado.' : 'Descanso iniciado.');
   }
 
   function finishPhase() {
@@ -369,6 +504,8 @@
     };
     state.sessions.push(session); save();
     resetTimer('rest'); renderAll();
+    const clockEl = $('#timer-clock'); clockEl.classList.remove('pulse'); void clockEl.offsetWidth; clockEl.classList.add('pulse');
+    announce('Bloque completado. Guarda cómo te fue.');
     modal(`<h2>¡Bloque completado!</h2>
       <p>Sumaste ${plural(session.minutes, 'minuto', 'minutos')}${session.label ? ` en ${esc(session.label)}` : ''}.</p>
       <fieldset class="choice-list"><legend>¿Lograste el resultado concreto?</legend>
@@ -383,7 +520,7 @@
       session.energy = data.get('energy') ? Number(data.get('energy')) : null;
       session.achieved = data.get('achieved') === 'yes';
       save(); closeModal(); renderAll();
-    }, () => renderAll());
+    }, () => { renderAll(); document.dispatchEvent(new Event('learny:pomodone')); });
   }
 
   function configurePomodoro() {
@@ -396,11 +533,12 @@
       state.settings.rest = num(data.get('rest'), 1, 60, 5);
       state.settings.dailyGoal = num(data.get('goal'), 1, 12, 2);
       $('#daily-goal-input').value = state.settings.dailyGoal;
-      save(); closeModal(); if (!timer.running) resetTimer(timer.mode); else renderTimer(); renderAll();
+      save(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll();
     });
   }
 
-  function calcStreak() {
+  function calcStreak() { return cached('streak', calcStreakRaw); }
+  function calcStreakRaw() {
     const studied = new Set(state.sessions.filter((s) => !s.abandon).map((s) => s.date));
     let streak = 0, graceUsed = false, cursor = today();
     if (!studied.has(cursor)) cursor = addDays(cursor, -1);
@@ -427,21 +565,68 @@
     renderTimer();
   }
 
-  function renderTodayQueue() {
-    const due = dueCards();
+  function weakSubject() {
+    return cached('weak', () => {
+      const a = Object.entries(subjectStats()).filter(([, v]) => v.total >= 3).map(([name, v]) => ({ name, pct: Math.round((v.ok * 100) / v.total) })).sort((x, y) => x.pct - y.pct)[0];
+      return a && a.pct < 60 ? a : null;
+    });
+  }
+
+  function nextAction() {
+    const due = dueCards(), overdue = overdueCards().length;
     const tasks = state.tasks.filter((t) => t.date === today() && !t.done);
-    const overdue = overdueCards().length;
+    const deadline = tasks.length ? state.deadlines.find((d) => d.id === tasks[0].deadlineId) : null;
+    const weak = weakSubject();
+    if (due.length) return { id: 'review', title: `Repasar ${plural(due.length, 'tarjeta', 'tarjetas')}`, minutes: Math.max(2, Math.ceil(due.length * 0.7)), cta: 'Repasar ahora', why: overdue ? `${plural(overdue, 'vencida', 'vencidas')}: repásalas antes de que se olviden.` : 'Son pocos minutos y mantienen tus tarjetas al día.' };
+    if (tasks.length && deadline) return { id: 'plan', title: `Continuar plan de ${deadline.subject}`, minutes: deadline.dailyMinutes, cta: 'Ver plan de hoy', why: tasks[0].title };
+    if (weak) return { id: 'weak', title: `Mini quiz de ${weak.name}`, minutes: 5, cta: 'Empezar quiz', why: `${weak.pct}% de aciertos: es tu materia más débil.` };
+    if (!state.cards.some((c) => !c.archived)) return { id: 'create', title: 'Crea tu primera tarjeta', minutes: 3, cta: 'Crear tarjeta', why: 'Con tarjetas, Learny agenda tus repasos por ti.' };
+    return { id: 'focus', title: 'Haz un bloque de enfoque', minutes: state.settings.focus, cta: 'Ir al Pomodoro', why: 'No tienes repasos pendientes: avanza con material nuevo.' };
+  }
+
+  function renderGreeting() {
+    const h = new Date().getHours(), name = state.settings.name;
+    $('#greeting').textContent = `${h < 6 ? 'Buenas noches' : h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches'}${name ? `, ${name}` : ''}`;
+    const due = dueCards().length, overdue = overdueCards().length;
+    const exam = state.deadlines.filter((d) => daysUntil(d.date) >= 0 && daysUntil(d.date) <= 14).sort((a, b) => a.date.localeCompare(b.date))[0];
+    const parts = [];
+    if (due) parts.push(`${plural(due, 'tarjeta', 'tarjetas')} para hoy${overdue ? ` (${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'})` : ''}`);
+    if (exam) { const n = daysUntil(exam.date); parts.push(`${esc(exam.title)} ${n === 0 ? 'hoy' : `en ${plural(n, 'día', 'días')}`}`); }
+    $('#home-summary').innerHTML = parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.';
+    const last = [...state.sessions].reverse().find((s) => !s.abandon);
+    if (last) {
+      const ago = -daysUntil(last.date);
+      $('#home-last').textContent = `Última vez: ${plural(last.minutes, 'minuto', 'minutos')}${last.label ? ` de ${last.label}` : ''} ${ago === 0 ? 'hoy' : ago === 1 ? 'ayer' : `hace ${ago} días`}.`;
+    } else $('#home-last').textContent = 'Aún no has completado ningún bloque. Tu primer Pomodoro desbloquea tu progreso.';
+  }
+
+  function startSubjectQuiz(name, size = 8) {
+    const pool = state.cards.filter((c) => !c.archived && !c.corrupt && c.subject === name);
+    if (!pool.length) return toast(`No hay tarjetas activas de ${name}.`, 'error');
+    const errs = pool.filter((c) => c.history.some((h) => h.rating === 'again'));
+    showPage('practice'); startExam([...errs, ...pool.filter((c) => !errs.includes(c))].slice(0, size), size);
+  }
+
+  function renderTodayQueue() {
+    renderGreeting();
+    const a = nextAction();
     $('#today-queue').innerHTML = `
-      <div class="card-head"><div><h2>Hoy</h2><p class="lead">Cola diaria, sin buscar qué toca.</p></div>
-        <span class="tag">${plural(due.length, 'tarjeta', 'tarjetas')}</span></div>
-      <p><b>Tienes ${due.length} tarjetas para hoy</b>${overdue ? ` (${overdue} vencidas)` : ''}.</p>
-      <p class="lead">${tasks.length ? `${plural(tasks.length, 'tarea pendiente', 'tareas pendientes')} del plan inverso.` : 'Sin tareas de examen: añade una fecha en Planificar.'}</p>
+      <div class="card-head"><div><h2>Siguiente mejor acción</h2><p class="lead">${esc(a.why)}</p></div><span class="tag">≈ ${a.minutes} min</span></div>
+      <p class="next-title">${esc(a.title)}</p>
       <div class="actions tight">
-        <button id="jump-review" class="primary-button" type="button">Repasar ahora</button>
-        <button id="jump-plan" class="outline-button" type="button">Ver plan de hoy</button>
+        <button id="next-action" class="primary-button" type="button">${esc(a.cta)}</button>
+        <button id="smart-session" class="outline-button" type="button">Empezar sesión inteligente</button>
+        <button id="jump-feynman" class="outline-button" type="button">Explicar un tema (Feynman)</button>
       </div>`;
-    $('#jump-review').onclick = () => { showPage('practice'); $('#flashcard').scrollIntoView({ behavior: 'smooth', block: 'center' }); };
-    $('#jump-plan').onclick = () => showPage('planner');
+    $('#next-action').onclick = () => {
+      if (a.id === 'review') { showPage('practice'); $('#flashcard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      else if (a.id === 'plan') showPage('planner');
+      else if (a.id === 'weak') startSubjectQuiz(weakSubject()?.name);
+      else if (a.id === 'create') { showPage('practice'); cardForm(); }
+      else $('#intention-input').focus();
+    };
+    $('#smart-session').onclick = () => document.dispatchEvent(new Event('learny:smart'));
+    $('#jump-feynman').onclick = () => { showPage('practice'); $('#feynman-topic').value ||= weakSubject()?.name || ''; $('#feynman-topic').focus(); };
   }
 
   /* =========================================================
@@ -478,19 +663,24 @@
     $('#reveal-card').hidden = !activeCard;
     $('#card-tools').hidden = !activeCard;
     $('#card-count').textContent = `${due.length} para hoy`;
+    $('#exam-exit').hidden = true;
     if (!activeCard) {
       const has = state.cards.some((c) => !c.archived);
       $('#flashcard').innerHTML = has
-        ? 'No hay tarjetas pendientes hoy.<br><span>Vuelve en tu próxima fecha de repaso o crea más en comprensión.</span>'
-        : 'Crea tu primera tarjeta para activar el repaso inteligente.';
+        ? '<div><b>No tienes repasos hoy.</b><br><span>Puedes adelantar 5 tarjetas o crear nuevas.</span><div class="actions center"><button class="outline-button" data-empty="advance" type="button">Adelantar 5 tarjetas</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>'
+        : '<div><b>Aún no tienes tarjetas.</b><br><span>Crea una desde tus apuntes, pide 5 al tutor o añade un mazo de ejemplo.</span><div class="actions center"><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button><button class="outline-button" data-empty="ai" type="button">Pedir 5 al tutor</button><button class="outline-button" data-empty="deck" type="button">Mazo de ejemplo</button></div></div>';
       return;
+    }
+    if (activeCard.corrupt) {
+      $('#flashcard').innerHTML = '<div><b>Esta tarjeta no se pudo cargar.</b><br><span>Le falta la pregunta o la respuesta. Edítala para repararla, pospónla o elimínala.</span></div>';
+      $('#reveal-card').hidden = true; return;
     }
     $('#flashcard').innerHTML = `<div><small>${esc(activeCard.subject)} · EF ${activeCard.easeFactor.toFixed(2)}</small><br>${esc(activeCard.question)}</div>`;
   }
 
   function revealCard() {
     if (exam) { exam.revealed = true; renderExam(); document.dispatchEvent(new Event('learny:reveal')); return; }
-    if (!activeCard || revealed) return;
+    if (!activeCard || revealed || activeCard.corrupt) return;
     revealed = true;
     $('#flashcard').innerHTML = `<div><small>Pregunta</small><br>${esc(activeCard.question)}<hr><small>Respuesta</small><br>${esc(activeCard.answer)}</div>`;
     $('#reveal-card').hidden = true; $('#rating-row').hidden = false;
@@ -500,11 +690,16 @@
   function rateCard(rating) {
     if (exam) return examRate(rating);
     if (!activeCard || !revealed || answered) return;
-    answered = true;
+    answered = true; flashFeedback(rating);
     schedule(activeCard, rating);
     state.reviews.push({ date: today(), cardId: activeCard.id, subject: activeCard.subject || 'Sin materia', rating, quality: qualityOf(rating) });
     document.dispatchEvent(new Event('learny:rated'));
     save(); toast(`Volverá en ${plural(activeCard.interval, 'día', 'días')}.`); renderAll();
+  }
+
+  function flashFeedback(rating) {
+    const el = $('#flashcard'); el.classList.remove('fb-good', 'fb-soft'); void el.offsetWidth;
+    el.classList.add(rating === 'easy' ? 'fb-good' : 'fb-soft');
   }
 
   function snoozeCard() {
@@ -514,7 +709,7 @@
   }
 
   function startExam(custom, size = 20) {
-    const pool = Array.isArray(custom) ? custom : dueCards();
+    const pool = (Array.isArray(custom) ? custom : dueCards()).filter((c) => !c.corrupt);
     if (pool.length < 1) return toast('No hay tarjetas vencidas o de hoy para el examen.', 'error');
     exam = { cards: pool.slice(0, size), i: 0, score: 0, revealed: false, answers: [] };
     toast(`Modo examen: ${exam.cards.length} tarjetas.`);
@@ -524,7 +719,7 @@
   function renderExam() {
     const item = exam.cards[exam.i];
     $('#card-count').textContent = `Examen ${exam.i + 1}/${exam.cards.length}`;
-    $('#card-tools').hidden = true;
+    $('#card-tools').hidden = true; $('#exam-exit').hidden = false;
     if (!exam.revealed) {
       $('#flashcard').innerHTML = `<div><small>Modo examen · ${esc(item.subject)}</small><br>${esc(item.question)}</div>`;
       $('#reveal-card').hidden = false; $('#rating-row').hidden = true;
@@ -539,7 +734,7 @@
     const item = exam.cards[exam.i];
     const ok = rating === 'easy';
     if (ok) exam.score++;
-    exam.answers.push({ id: item.id, rating });
+    exam.answers.push({ id: item.id, rating }); flashFeedback(rating);
     schedule(item, rating);
     state.reviews.push({ date: today(), cardId: item.id, subject: item.subject, rating, quality: qualityOf(rating), exam: true });
     exam.i++; exam.revealed = false;
@@ -547,6 +742,7 @@
       const pct = Math.round((exam.score * 100) / exam.cards.length);
       state.exams.push({ date: today(), score: exam.score, total: exam.cards.length });
       exam = null; save();
+      document.dispatchEvent(new Event('learny:examend'));
       $('#rating-row').hidden = true;
       toast(`Examen: ${pct}% (${state.exams.at(-1).score}/${state.exams.at(-1).total}).`);
       renderAll();
@@ -570,7 +766,7 @@
       <button class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>`, (data) => {
       const values = { subject: clean(data.get('subject'), 60), question: clean(data.get('question'), 500), answer: clean(data.get('answer'), 1200) };
       if (!values.question || !values.answer) return toast('Pregunta y respuesta no pueden estar vacías.', 'error');
-      if (card) Object.assign(card, values);
+      if (card) Object.assign(card, values, { corrupt: false });
       else state.cards.push(normalizeCard({ ...values, nextReview: today() }));
       save(); closeModal(); renderAll(); toast(card ? 'Tarjeta actualizada.' : 'Tarjeta creada.');
     });
@@ -581,7 +777,7 @@
     $('#generate-answer').onclick = async () => {
       const question = clean($('[name="question"]').value, 500), button = $('#generate-answer');
       if (!question) return toast('Escribe primero una pregunta.', 'error');
-      if (!state.apiKey) return toast('Añade tu clave de Gemini en Ajustes ⚙️ o usa una plantilla.', 'error');
+      if (!hasAi()) return toast('Añade tu clave de Gemini en Ajustes ⚙️ o usa una plantilla.', 'error');
       button.disabled = true; button.textContent = 'Generando…';
       try {
         const text = await askGemini(`Responde en español, máximo 3 frases, útil para flashcard. Pregunta: ${question}`);
@@ -591,14 +787,27 @@
     };
   }
 
+  let libLimit = 40;
   function renderLibrary() {
-    const cards = state.cards.filter((c) => c.archived);
-    $('#library-count').textContent = plural(cards.length, 'tarjeta', 'tarjetas');
-    $('#library-list').innerHTML = cards.length ? cards.map((c) => `<article class="library-card"><b>${esc(c.question)}</b><p>${esc(c.answer)}</p><span>${esc(c.subject)}</span><div class="row-actions"><button class="text-button" data-return-card="${esc(c.id)}" type="button">Devolver a rotación</button><button class="text-button" data-edit-card="${esc(c.id)}" type="button">Editar</button><button class="text-button danger" data-delete-card="${esc(c.id)}" type="button">Eliminar</button></div></article>`).join('') : '<p class="empty">Aún no hay archivo. Envía aquí las tarjetas que ya dominas.</p>';
+    const q = clean($('#library-search')?.value || '', 60).toLowerCase();
+    const all = state.cards.filter((c) => c.archived);
+    const cards = q ? all.filter((c) => `${c.question} ${c.answer} ${c.subject}`.toLowerCase().includes(q)) : all;
+    $('#library-count').textContent = q ? `${cards.length} de ${plural(all.length, 'tarjeta', 'tarjetas')}` : plural(all.length, 'tarjeta', 'tarjetas');
+    const shown = cards.slice(0, libLimit);
+    const html = shown.map((c) => {
+      try {
+        if (c.corrupt) return `<article class="library-card"><b>Esta tarjeta no se pudo cargar.</b><p>Le falta la pregunta o la respuesta.</p><span>${esc(c.subject)}</span><div class="row-actions"><button class="text-button" data-edit-card="${esc(c.id)}" type="button">Editar</button><button class="text-button danger" data-delete-card="${esc(c.id)}" type="button">Eliminar</button></div></article>`;
+        return `<article class="library-card"><b>${esc(c.question)}</b><p>${esc(c.answer)}</p><span>${esc(c.subject)}</span><div class="row-actions"><button class="text-button" data-return-card="${esc(c.id)}" type="button">Devolver a rotación</button><button class="text-button" data-edit-card="${esc(c.id)}" type="button">Editar</button><button class="text-button danger" data-delete-card="${esc(c.id)}" type="button">Eliminar</button></div></article>`;
+      } catch { return '<article class="library-card"><p>Esta tarjeta no se pudo cargar.</p></article>'; }
+    }).join('');
+    $('#library-list').innerHTML = shown.length
+      ? html + (cards.length > shown.length ? `<button class="outline-button" id="library-more" type="button">Mostrar más (${cards.length - shown.length})</button>` : '')
+      : `<p class="empty">${q ? 'Ninguna tarjeta coincide con tu búsqueda.' : 'Aún no hay archivo. Envía aquí las tarjetas que ya dominas.'}</p>`;
   }
 
-  function deleteCard(card) {
-    if (!card || !confirm('¿Eliminar esta tarjeta definitivamente? Se guardará una copia automática.')) return;
+  async function deleteCard(card) {
+    if (!card) return;
+    if (!(await confirmDialog({ title: 'Eliminar tarjeta', message: `“${clean(card.question, 80) || 'Tarjeta sin pregunta'}” se eliminará. Se guardará una copia automática.`, ok: 'Eliminar', danger: true }))) return;
     snapshot('delete-card');
     state.cards = state.cards.filter((c) => c.id !== card.id); save(); renderAll(); toast('Tarjeta eliminada. Hay copia automática.');
   }
@@ -637,19 +846,22 @@
     }
     const max = Math.max(30, ...days.map((d) => d.mins));
     $('#focus-chart').innerHTML = days.map((d) => `<div class="bar-col" title="${d.date}: ${d.mins} min"><div class="bar-area"><div class="bar" style="height:${d.mins ? Math.max(4, (d.mins / max) * 100) : 0}%"></div></div><span>${d.label}<br>${d.mins}</span></div>`).join('');
-    $('#focus-summary').textContent = `Total de la semana: ${days.reduce((t, d) => t + d.mins, 0)} min. Objetivo semanal: ${state.settings.dailyGoal * 7} bloques.`;
+    const weekMin = days.reduce((t, d) => t + d.mins, 0), goalMin = state.settings.dailyGoal * state.settings.focus * 7;
+    $('#focus-summary').textContent = state.sessions.some((x) => !x.abandon)
+      ? `Esta semana: ${weekMin} min de ${goalMin} min.${weekMin >= goalMin ? ' ¡Meta cumplida!' : ` Te faltan ${goalMin - weekMin} min.`}`
+      : 'Completa tu primer Pomodoro para ver tu progreso.';
 
     const stats = subjectStats();
     const areas = Object.entries(stats).map(([name, s]) => ({ name, pct: Math.round((s.ok * 100) / s.total), again: s.again })).sort((a, b) => a.pct - b.pct);
     if (!areas.length) {
-      $('#weak-topics').innerHTML = '<p class="empty">Repasa tarjetas para ver retención por materia y sugerencias concretas.</p>';
+      $('#weak-topics').innerHTML = '<p class="empty">Aún no hay repasos. Repasa tus primeras tarjetas para ver qué materias reforzar.</p>';
       return;
     }
     $('#weak-topics').innerHTML = areas.map((a) => {
       const weakCards = state.cards.filter((c) => c.subject === a.name && (c.history || []).some((h) => h.rating === 'again')).slice(0, 5);
       const extra = weakCards.length ? `<small>Revisa: ${weakCards.map((c) => esc(c.question.slice(0, 40))).join(' · ')}</small>` : '';
       const tip = a.pct < 60 ? `${esc(a.name)} tiene ${a.pct}% de aciertos; priorízala mañana.` : `${esc(a.name)}: ${a.pct}% de aciertos.`;
-      return `<div class="weak-topic"><span>${tip}<br>${extra}</span><b>${a.pct}%</b></div>`;
+      return `<div class="weak-topic"><span>${tip}<br>${extra}<button class="text-button" data-quiz-subject="${esc(a.name)}" type="button">Mini quiz de ${esc(a.name)}</button></span><b>${a.pct}%</b></div>`;
     }).join('');
   }
 
@@ -716,34 +928,41 @@ Estilo de explicación: ${({ 12: 'como a alguien de 12 años', uni: 'nivel unive
 Consulta: ${query}`;
   }
 
+  let aiController = null;
+  const hasAi = () => !!(state.apiKey || state.settings.proxyUrl);
+  const cancelAi = () => { if (aiController) aiController.abort(); };
+
   async function askGemini(prompt) {
-    if (!state.apiKey) throw new Error('Falta la clave de Gemini. Añádela en Ajustes ⚙️ o usa Guía local.');
+    if (!hasAi()) throw new Error('Falta la clave de Gemini. Añádela en Ajustes ⚙️ o usa Guía local.');
     const text = clean(prompt, MAX_PROMPT);
     if (!text) throw new Error('El texto está vacío o es demasiado corto.');
+    const proxy = state.settings.proxyUrl, who = proxy ? 'El proxy' : 'La clave de Gemini';
     const model = (state.settings.model || DEFAULT_MODEL).trim();
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 30000);
+    const controller = new AbortController(); aiController = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      const response = await fetch(proxy || `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': state.apiKey },
-        body: JSON.stringify({ contents: [{ parts: [{ text }] }] })
+        headers: proxy ? { 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json', 'x-goog-api-key': state.apiKey },
+        body: JSON.stringify(proxy ? { prompt: text } : { contents: [{ parts: [{ text }] }], generationConfig: { maxOutputTokens: 1500 } })
       });
       let data = {}; try { data = await response.json(); } catch { /* sin cuerpo */ }
       if (!response.ok) {
         const raw = data.error?.message || `Error ${response.status}`;
-        if (response.status === 400 || response.status === 401 || response.status === 403) throw new Error(`La clave de Gemini no es válida o no tiene permiso. (${raw})`);
+        if (response.status === 400 || response.status === 401 || response.status === 403) throw new Error(`${who} no es válido o no tiene permiso. (${raw})`);
         if (response.status === 404) throw new Error(`El modelo “${model}” no existe. Cámbialo en Ajustes ⚙️. (${raw})`);
-        if (response.status === 429) throw new Error('Se agotó la cuota de Gemini. Espera un rato e inténtalo de nuevo.');
+        if (response.status === 429) throw new Error('Se agotó la cuota de la IA. Espera un rato e inténtalo de nuevo.');
         throw new Error(raw);
       }
       const out = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
-      if (!out) throw new Error('Gemini no devolvió texto para esta consulta.');
+      if (!out) throw new Error('La IA no devolvió texto para esta consulta.');
       return out;
     } catch (error) {
-      if (error.name === 'AbortError') throw new Error('Gemini tardó demasiado. Inténtalo de nuevo.');
-      if (error instanceof TypeError) throw new Error('No hay conexión. Revisa tu internet o usa Guía local.');
+      if (error.name === 'AbortError') { const e = new Error(timedOut ? 'La IA tardó demasiado. Inténtalo de nuevo.' : 'Consulta cancelada.'); e.cancelled = !timedOut; throw e; }
+      if (error instanceof TypeError) throw new Error('No hay conexión o el servicio no respondió. Puedes usar las preguntas guía locales.');
       throw error;
-    } finally { clearTimeout(timeout); }
+    } finally { clearTimeout(timeout); if (aiController === controller) aiController = null; }
   }
 
   function chatTopic() {
@@ -771,33 +990,51 @@ Consulta: ${query}`;
     $('#use-local').onclick = () => { state.settings.skipAi = true; save(); closeModal(); onLocal(); };
   }
 
+  let lastAi = null;
+  const closeButton = '<button class="primary-button" type="button" data-close-modal>Cerrar</button>';
+  const aiActions = '<div class="actions"><button class="outline-button" type="button" data-ai-follow="simple">Explicar más simple</button><button class="outline-button" type="button" data-ai-follow="exercise">Dame un ejercicio</button><button class="outline-button" type="button" data-ai-follow="cards">Crear tarjetas</button><button class="text-button" type="button" data-ai-follow="note">Guardar en notas</button></div>';
+
   async function gemini(prompt, title, fallback) {
     const showLocal = (note = '') => {
       const text = fallback?.() || localGuide(title);
-      modal(`<h2>${esc(title)}</h2>${parseBlocks(text)}${note ? `<p class="modal-tip">${esc(note)}</p>` : ''}<button class="primary-button" type="button" onclick="this.closest('dialog').close()">Cerrar</button>`);
+      modal(`<h2>${esc(title)}</h2>${parseBlocks(text)}${note ? `<p class="modal-tip">${esc(note)}</p>` : ''}${closeButton}`);
       return { text, fromAi: false };
     };
-    if (!state.apiKey) {
+    if (!hasAi()) {
       if (modalOpen()) { toast('Añade tu clave de Gemini en Ajustes ⚙️ o elige Guía local.', 'error'); return { text: fallback?.() || localGuide(title), fromAi: false }; }
       if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback)), () => resolve(showLocal('Modo local activo.'))));
       return showLocal('Guía local. Añade tu clave en Ajustes ⚙️ para IA.');
     }
-    modal(`<h2>${esc(title)}</h2><p class="lead">Pensando…</p>`);
+    modal(`<h2>${esc(title)}</h2><div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor…</p><button class="outline-button" type="button" data-cancel-ai>Cancelar</button>`);
+    $('#modal-body').setAttribute('aria-live', 'polite');
     try {
       const text = await askGemini(prompt);
-      $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}<button class="primary-button" type="button" onclick="this.closest('dialog').close()">Cerrar</button>`;
+      lastAi = { prompt, title, text };
+      $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`;
       return { text, fromAi: true };
     } catch (error) {
+      if (error.cancelled) { closeModal(); toast('Consulta cancelada.'); return { text: '', fromAi: false }; }
       const text = fallback?.() || localGuide(title);
-      $('#modal-body').innerHTML = `<h2>Usamos la guía local</h2><p>${esc(error.message)}</p>${parseBlocks(text)}<button class="primary-button" type="button" onclick="this.closest('dialog').close()">Cerrar</button>`;
+      $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Puedes usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}${closeButton}`;
       toast(error.message, 'error');
       return { text, fromAi: false };
     }
   }
 
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-cancel-ai]')) { cancelAi(); return; }
+    const f = e.target.closest('[data-ai-follow]')?.dataset.aiFollow;
+    if (!f || !lastAi) return;
+    const base = lastAi;
+    if (f === 'simple') gemini(`Explica esto de forma más simple, con una analogía cotidiana, en máximo 120 palabras:\n${base.text}`, 'Explicación más simple', () => base.text);
+    else if (f === 'exercise') gemini(`Crea un ejercicio práctico (solo el enunciado) para practicar lo siguiente:\n${base.text}`, 'Ejercicio de práctica', () => '**Siguiente reto**\nInventa un problema nuevo sobre este tema y resuélvelo sin mirar tus apuntes.');
+    else if (f === 'cards') suggestCardsFromText(base.title === 'Tutor Learny' ? clean($('#tutor-subject').value, 60) || 'Tutor' : base.title, base.text);
+    else if (f === 'note') { state.notes.push({ id: uid(), date: today(), text: base.text.slice(0, 2000) }); save(); renderAll(); toast('Respuesta guardada en Notas rápidas.'); }
+  });
+
   function suggestCardsFromText(topic, text) {
-    const parts = text.split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 20).slice(0, 3);
-    if (!parts.length) return;
+    const parts = text.replace(/\*\*/g, '').split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 20).slice(0, 3);
+    if (!parts.length) return toast('No encontré ideas suficientes para convertir en tarjetas.', 'error');
     modal(`<h2>¿Guardar conceptos como tarjetas?</h2>
       <p>Detecté ${parts.length} ideas de tu explicación sobre ${esc(topic || 'el tema')}.</p>
       ${parts.map((p, i) => `<label class="check"><input type="checkbox" name="c${i}" checked> ${esc(p.slice(0, 140))}</label>`).join('')}
@@ -814,12 +1051,12 @@ Consulta: ${query}`;
     if (!text) return toast('Escribe tu explicación.', 'error');
     const local = localGuide(topic, text);
     guide.innerHTML = parseBlocks(local);
-    if (!state.apiKey) {
+    if (!hasAi()) {
       toast('Modo local: sin clave también recibes guía socrática.');
       suggestCardsFromText(topic, text);
       return;
     }
-    guide.innerHTML += '<p><i>Pidiendo feedback al tutor…</i></p>';
+    guide.innerHTML += '<p><i>Consultando tutor…</i> <button class="text-button" type="button" data-cancel-ai>Cancelar</button></p>';
     try {
       const answer = await askGemini(socraticPrompt(`Evalúa esta explicación sobre ${topic || 'un tema'} y guía al estudiante.\n\n${text}`));
       guide.innerHTML = parseBlocks(answer);
@@ -849,7 +1086,7 @@ Consulta: ${query}`;
     const subject = clean($('#topic-search').value, 80);
     const randomTopic = () => { const pick = worldPool[Math.floor(Math.random() * worldPool.length)]; addTopic(pick, 'Mundial'); toast(`Tema añadido: ${pick}`); };
     if (!subject) return randomTopic();
-    if (!state.apiKey) { toast('Sin clave te sugerimos un tema al azar.'); return randomTopic(); }
+    if (!hasAi()) { toast('Sin clave te sugerimos un tema al azar.'); return randomTopic(); }
     const result = await gemini(`Sugiere tres subtemas concretos y estudiables sobre: ${subject}. Una línea por subtema.`, 'Sugerencias de estudio', () => 'Añade tus propios temas con el botón “Añadir”.');
     if (!result.fromAi) return;
     result.text.split('\n').map((x) => x.replace(/^[-•*\d.)\s]+/, '').replace(/\*\*/g, '').trim()).filter(Boolean).slice(0, 3).forEach((x) => addTopic(x, subject));
@@ -903,10 +1140,11 @@ Consulta: ${query}`;
     return ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'settings', 'tasks'].some((k) => k in data);
   }
 
-  function exportData() {
+  function exportData(auto = false) {
     const { apiKey, ...safe } = state;
     download(`learny-copia-${today()}.json`, JSON.stringify(safe, null, 2), 'application/json');
-    toast('Copia descargada (sin clave API).');
+    state.settings.lastExport = today(); save();
+    if (!auto) toast('Copia descargada (sin clave API).');
   }
 
   function exportDeck() {
@@ -916,18 +1154,45 @@ Consulta: ${query}`;
     toast('Mazo exportado sin progreso personal.');
   }
 
+  const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks'];
+  function validateBackup(data) {
+    if (data?.type === 'learny-deck') {
+      if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
+      const good = data.cards.filter((c) => c && typeof c.question === 'string' && typeof c.answer === 'string' && c.question.trim() && c.answer.trim());
+      return good.length ? { ok: true, deck: good, dropped: data.cards.length - good.length } : { ok: false, error: 'El mazo no tiene tarjetas válidas.' };
+    }
+    if (!isLearnyBackup(data)) return { ok: false, error: 'Ese archivo no parece una copia de Learny.' };
+    if (Number(data.version) > SCHEMA) return { ok: false, error: `La copia es de una versión más nueva de Learny (v${data.version}). Actualiza la app e inténtalo de nuevo.` };
+    const bad = BACKUP_LISTS.filter((k) => k in data && !Array.isArray(data[k]));
+    if (bad.length) return { ok: false, error: `Estos campos tienen un formato inválido: ${bad.join(', ')}.` };
+    if ('settings' in data && (!data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings))) return { ok: false, error: 'Los ajustes de la copia no son válidos.' };
+    return { ok: true, cards: (data.cards || []).length, deadlines: (data.deadlines || []).length, sessions: (data.sessions || []).length };
+  }
+
   function importData(file) {
-    file.text().then((text) => {
-      const data = JSON.parse(text);
-      if (!isLearnyBackup(data) && data.type !== 'learny-deck') throw new Error('formato');
-      if (!confirm('Esto puede reemplazar o añadir datos. Se guardará una copia automática. ¿Continuar?')) return;
+    if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
+    file.text().then(async (text) => {
+      let data; try { data = JSON.parse(text); } catch { throw new Error('El archivo no es un JSON válido.'); }
+      const check = validateBackup(data);
+      if (!check.ok) throw new Error(check.error);
+      const msg = check.deck
+        ? `Se añadirán ${plural(check.deck.length, 'tarjeta', 'tarjetas')} a tu colección${check.dropped ? ` (${check.dropped} inválidas se omiten)` : ''}.`
+        : `Esta copia REEMPLAZARÁ tus datos actuales por ${plural(check.cards, 'tarjeta', 'tarjetas')}, ${plural(check.deadlines, 'fecha', 'fechas')} y ${plural(check.sessions, 'sesión', 'sesiones')}.`;
+      if (!(await confirmDialog({ title: check.deck ? 'Importar mazo' : 'Reemplazar tus datos', message: `${msg}\nAntes se guardará una copia automática en el navegador.`, ok: check.deck ? 'Importar' : 'Reemplazar', danger: !check.deck }))) return;
       snapshot('import');
-      if (data.type === 'learny-deck' && Array.isArray(data.cards)) {
-        data.cards.forEach((c) => { if (c.question && c.answer) state.cards.push(normalizeCard({ ...c, nextReview: today() })); });
-      } else hydrate({ ...data, apiKey: state.apiKey });
+      if (check.deck) check.deck.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() })));
+      else hydrate({ ...data, apiKey: state.apiKey });
       state.deadlines.forEach((d) => { if (!state.tasks.some((t) => t.deadlineId === d.id)) rebuildTasks(d, false); });
-      save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos importados. Había copia de seguridad automática.');
-    }).catch(() => toast('Ese archivo no es una copia válida de Learny.', 'error'));
+      save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos importados correctamente.');
+    }).catch((error) => toast(error.message || 'Ese archivo no es una copia válida de Learny.', 'error'));
+  }
+
+  async function restoreBackup() {
+    const b = parseJSON(localStorage.getItem(BACKUP_KEY));
+    if (!b?.data) return toast('No hay copia automática para restaurar.', 'error');
+    if (!(await confirmDialog({ title: 'Restaurar copia automática', message: `Copia del ${String(b.at || '').slice(0, 10)} (${b.reason || 'manual'}). Reemplazará tus datos actuales.`, ok: 'Restaurar', danger: true }))) return;
+    hydrate({ ...b.data, apiKey: state.apiKey });
+    save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Copia automática restaurada.');
   }
 
   function parseCsv(text) {
@@ -962,6 +1227,7 @@ Consulta: ${query}`;
 
   function openSettings() {
     modal(`<h2>Ajustes</h2>
+      <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
       <label>Tema<select name="theme"><option value="dark">Oscuro</option><option value="sepia">Sepia</option><option value="contrast">Alto contraste</option></select></label>
       <label>Fuente<select name="font"><option value="sans">Sans-serif legible</option><option value="dyslexic">Lectura fácil</option></select></label>
       <div class="form-row"><label>Color de acento<select name="accent"><option value="mint">Menta</option><option value="violet">Violeta</option><option value="amber">Ámbar</option><option value="sky">Cielo</option><option value="rose">Rosa</option></select></label>
@@ -976,16 +1242,21 @@ Consulta: ${query}`;
       <label>Clave de Gemini (opcional)<input name="apikey" type="password" autocomplete="off" maxlength="200" placeholder="${state.apiKey ? 'Clave guardada (vacío = conservar)' : 'Pega aquí tu clave'}"></label>
       <p class="modal-tip">Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.</p>
       <label>Modelo de Gemini<input name="model" value="${esc(state.settings.model)}"></label>
+      <label>URL de tu proxy (opcional, para no exponer la clave)<input name="proxy" type="url" inputmode="url" maxlength="200" placeholder="https://tu-worker.workers.dev" value="${esc(state.settings.proxyUrl)}"></label>
       <div class="actions">
         <button id="export-data" class="outline-button" type="button">Descargar copia</button>
         <button id="export-deck" class="outline-button" type="button">Compartir mazo</button>
         <label class="outline-button" style="cursor:pointer">Importar JSON<input id="import-file" type="file" accept="application/json,.json" hidden></label>
         <label class="outline-button" style="cursor:pointer">Importar CSV/Anki<input id="import-csv" type="file" accept=".csv,text/csv" hidden></label>
+        ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
+        ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
         <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
       </div>
       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
       <button class="primary-button">Guardar preferencias</button>`, (data) => {
+      if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
       Object.assign(state.settings, {
+        name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')),
         theme: data.get('theme'), accent: data.get('accent'), density: data.get('density'), font: data.get('font'), reduceMotion: data.get('reduce') === 'on',
         sound: data.get('sound') === 'on', notify: data.get('notify') === 'on',
         focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
@@ -994,22 +1265,24 @@ Consulta: ${query}`;
       });
       const key = clean(data.get('apikey'), 200); if (key) { state.apiKey = key; state.settings.skipAi = false; }
       if (state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
-      save(); applyPreferences(); closeModal(); if (!timer.running) resetTimer(timer.mode); renderAll(); toast('Preferencias guardadas.');
+      save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
     });
     const form = $('#modal-form');
     form.theme.value = state.settings.theme; form.accent.value = state.settings.accent; form.density.value = state.settings.density; form.font.value = state.settings.font;
     form.reduce.checked = !!state.settings.reduceMotion;
     form.sound.checked = state.settings.sound !== false;
     form.notify.checked = !!state.settings.notify;
-    $('#export-data').onclick = exportData;
+    $('#export-data').onclick = () => exportData();
+    if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); closeModal(); toast('Clave eliminada de este navegador.'); };
+    if ($('#restore-backup')) $('#restore-backup').onclick = restoreBackup;
     $('#export-deck').onclick = exportDeck;
     $('#import-file').onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); };
     $('#import-csv').onchange = (e) => { if (e.target.files[0]) importCsv(e.target.files[0]); };
-    $('#reset-data').onclick = () => {
-      if (!confirm('Se borrarán tarjetas, sesiones y fechas. Se guardará una copia automática. ¿Seguro?')) return;
-      snapshot('reset');
+    $('#reset-data').onclick = async () => {
+      if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
+      exportData(true); snapshot('reset');
       try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
-      hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos borrados. Puedes restaurar desde learny.backup si hace falta.');
+      hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.');
     };
   }
 
@@ -1020,6 +1293,15 @@ Consulta: ${query}`;
     const soon = state.deadlines.filter((d) => daysUntil(d.date) >= 0 && daysUntil(d.date) <= 3);
     if (due) notify('Learny', `Tienes ${plural(due, 'tarjeta', 'tarjetas')} para hoy.`);
     soon.forEach((d) => notify('Learny', `Examen: ${d.title} en ${plural(daysUntil(d.date), 'día', 'días')}.`));
+  }
+
+  function backupNag() {
+    const s = state.settings;
+    if (state.cards.length < 10 || s.backupNag === today()) return;
+    const last = s.lastExport;
+    if (last && -daysUntil(last) < 14) return;
+    s.backupNag = today(); save();
+    setTimeout(() => toast('Hace tiempo que no descargas una copia. Ajustes ⚙️ → Descargar copia.'), 2500);
   }
 
   function fillTutor(silent = false) {
@@ -1036,12 +1318,27 @@ Consulta: ${query}`;
   /* =========================================================
      Eventos
      ========================================================= */
+  const LAZY = { library: () => renderLibrary(), planner: () => renderDeadlines(), analysis: () => renderAnalysis(), practice: () => renderTopics() };
+  const renderPage = (page) => { const fn = LAZY[page]; if (fn) safe(fn, page); };
   const renderAll = () => {
-    subjects(); renderFocus(); renderDeadlines(); renderCard(); renderAnalysis(); renderLibrary(); renderTopics(); renderTodayQueue();
+    safe(redistributeIfBehind, 'plan'); safe(subjects, 'materias'); safe(renderFocus, 'Hoy'); safe(renderCard, 'tarjetas'); safe(renderTodayQueue, 'siguiente acción');
+    renderPage(currentPage);
     document.dispatchEvent(new Event('learny:render'));
   };
 
-  $$('.nav-button').forEach((b) => { b.onclick = () => showPage(b.dataset.page); });
+  $$('[data-page]').forEach((b) => { b.onclick = () => showPage(b.dataset.page); });
+  $$('.page-heading h1').forEach((h) => { h.tabIndex = -1; });
+  $('#mini-timer').onclick = () => showPage('study');
+  $('#exam-exit').onclick = () => { window.Learny.endExam(); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
+  $('#flashcard').onclick = (e) => {
+    const k = e.target.closest('[data-empty]')?.dataset.empty; if (!k) return;
+    if (k === 'create') cardForm();
+    else if (k === 'ai') document.dispatchEvent(new Event('learny:gen-cards'));
+    else if (k === 'deck') { showPage('library'); toast('Elige un mazo de ejemplo en «Biblioteca de temas».'); }
+    else if (k === 'advance') { const next = state.cards.filter((c) => !c.archived).sort((a, b) => a.nextReview.localeCompare(b.nextReview)).slice(0, 5); startExam(next, 5); }
+  };
+  $('#weak-topics').onclick = (e) => { const n = e.target.dataset.quizSubject; if (n) startSubjectQuiz(n); };
+  $('#library-search').oninput = debounce(() => { libLimit = 40; renderLibrary(); }, 150);
   $('#pomodoro-button').onclick = startPomodoro;
   $('#pomodoro-skip').onclick = () => resetTimer('focus');
   $('#pomodoro-reset').onclick = () => {
@@ -1071,7 +1368,7 @@ Consulta: ${query}`;
     state.chats = state.chats.filter((c) => c.topic.toLowerCase() !== topic.toLowerCase());
     save(); toast(`Historial de “${topic}” borrado.`);
   };
-  $('#topic-search').oninput = renderTopics;
+  $('#topic-search').oninput = debounce(renderTopics, 120);
   $('#topic-search').onkeydown = (e) => { if (e.key === 'Enter') $('#add-topic').click(); };
   $('#add-topic').onclick = () => { if (addTopic($('#topic-search').value)) { $('#topic-search').value = ''; renderTopics(); toast('Tema añadido a tu ruleta.'); } else toast('Escribe cualquier tema primero.', 'error'); };
   $('#suggest-topic').onclick = suggestTopic;
@@ -1080,14 +1377,17 @@ Consulta: ${query}`;
     const chip = e.target.closest('[data-topic]'); if (chip) spin(chip.dataset.topic);
   };
   $('#library-list').onclick = (e) => {
+    if (e.target.id === 'library-more') { libLimit += 40; renderLibrary(); return; }
     const find = (attr) => state.cards.find((c) => c.id === e.target.dataset[attr]);
     const back = find('returnCard'); if (back) { back.archived = false; back.nextReview = today(); save(); renderAll(); toast('Tarjeta devuelta a la rotación.'); return; }
     const edit = find('editCard'); if (edit) { cardForm(edit); return; }
     const del = find('deleteCard'); if (del) deleteCard(del);
   };
-  $('#deadline-list').onclick = (e) => {
+  $('#deadline-list').onclick = async (e) => {
     const id = e.target.dataset.deleteDeadline;
     if (id) {
+      const dl = state.deadlines.find((d) => d.id === id);
+      if (!(await confirmDialog({ title: 'Eliminar fecha', message: `“${dl?.title || 'Fecha'}” y sus tareas del plan se eliminarán. Se guardará una copia automática.`, ok: 'Eliminar', danger: true }))) return;
       snapshot('delete-deadline');
       state.deadlines = state.deadlines.filter((d) => d.id !== id);
       state.tasks = state.tasks.filter((t) => t.deadlineId !== id);
@@ -1124,20 +1424,32 @@ Consulta: ${query}`;
   $('#ai-question').onkeydown = (e) => { if (e.key === 'Enter') $('#ask-ai').click(); };
 
   document.addEventListener('keydown', (e) => {
-    if (e.target !== document.body || modalOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (modalOpen() || e.ctrlKey || e.metaKey || e.altKey) return;
+    const t = e.target;
+    if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPomodoro(); return; }
-    if (!activeCard && !exam) return;
-    if (e.key === ' ' && !(exam ? exam.revealed : revealed)) { e.preventDefault(); revealCard(); return; }
+    if (currentPage !== 'practice' || (!activeCard && !exam)) return;
+    const shown = exam ? exam.revealed : revealed;
+    if (e.key === ' ' && !shown) { if (t.closest?.('button, a, summary')) return; e.preventDefault(); revealCard(); return; }
     const map = { 1: 'again', 2: 'hard', 3: 'easy' };
-    const open = exam ? exam.revealed : (revealed && !answered);
-    if (open && map[e.key]) rateCard(map[e.key]);
+    if ((exam ? exam.revealed : (revealed && !answered)) && map[e.key]) { e.preventDefault(); rateCard(map[e.key]); }
   });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* sin PWA si se abre como archivo */ });
+    let hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) toast('Learny se actualizó. Recarga la página para usar la última versión.'); hadController = true; });
   }
 
-  window.Learny = { isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll };
-  applyPreferences(); resetTimer('focus'); renderAll(); maybeRemind();
+  const syncOnline = () => { const el = $('#offline-note'); if (el) el.hidden = navigator.onLine; };
+  window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
+
+  window.Learny = { isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
+  applyPreferences(); resetTimer('focus'); restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
+  { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
+  if (migratedFrom) toast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
+  if (droppedCards) toast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
+  if (loadProblem) toast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ok */ }
 })();

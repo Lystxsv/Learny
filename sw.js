@@ -1,5 +1,6 @@
-const CACHE = 'learny-v5';
+const CACHE = 'learny-v7';
 const ASSETS = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
+const NETWORK_TIMEOUT = 4000;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -11,15 +12,31 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Red primero (siempre la versión más nueva); si falla o tarda, usa la caché.
+// Solo se guardan respuestas correctas, y sin red una navegación recibe index.html.
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  const url = new URL(event.request.url);
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-  event.respondWith(
-    caches.match(event.request).then((cached) => fetch(event.request).then((res) => {
+
+  const fromNetwork = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), NETWORK_TIMEOUT);
+    fetch(request).then((res) => { clearTimeout(timer); resolve(res); }, (err) => { clearTimeout(timer); reject(err); });
+  }).then((res) => {
+    if (res && res.ok && res.type === 'basic') {
       const copy = res.clone();
-      caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-      return res;
-    }).catch(() => cached))
+      caches.open(CACHE).then((cache) => cache.put(request, copy));
+    }
+    return res;
+  });
+
+  event.respondWith(
+    fromNetwork.catch(async () => {
+      const cached = await caches.match(request, { ignoreSearch: true });
+      if (cached) return cached;
+      if (request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
+      return Response.error();
+    })
   );
 });
