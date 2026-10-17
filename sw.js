@@ -1,9 +1,11 @@
-const CACHE = 'learny-v8';
-const ASSETS = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const CACHE = 'learny-v13';
+// Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
+const CORE = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
+const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(async (cache) => { await cache.addAll(CORE); await Promise.allSettled(OPTIONAL.map((u) => cache.add(u))); }).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

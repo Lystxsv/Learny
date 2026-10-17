@@ -5,6 +5,7 @@
   const $ = (s) => document.querySelector(s);
   const raw = (v, n = 2000) => String(v || '').trim().slice(0, n);
   const shuffle = (a) => a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  const last = (a) => a[a.length - 1];
   const live = () => state.cards.filter((c) => !c.archived && !c.corrupt);
   const interleave = (cards) => {
     const g = {}; cards.forEach((c) => (g[c.subject] ||= []).push(c));
@@ -56,7 +57,7 @@
       if (active) { active.stop(); return; }
       const R = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!R) return toast('Tu navegador no admite dictado. Prueba con Chrome o Edge.', 'error');
-      const r = new R(); r.lang = 'es-ES'; btn.textContent = '🎤 Escuchando… (pulsa para parar)';
+      const r = new R(); r.lang = /^es/i.test(navigator.language || '') ? navigator.language : 'es-ES'; btn.textContent = '🎤 Escuchando… (pulsa para parar)';
       r.onresult = (e) => { target().value = `${target().value} ${e.results[0][0].transcript}`.trim(); target().dispatchEvent(new Event('input')); };
       r.onend = () => { active = null; btn.textContent = label; };
       r.onerror = () => toast('No se pudo dictar. Revisa el permiso del micrófono.', 'error');
@@ -101,14 +102,14 @@
   };
   $('#source-analyze').onclick = async () => {
     const t = raw($('#source-text').value, 8000); if (t.length < 40) return toast('Pega un texto más largo (mínimo un párrafo).', 'error');
-    const sents = t.split(/(?<=[.!?])\s+/).filter((s) => s.length > 30);
+    const sents = (t.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || []).map((s) => s.trim()).filter((s) => s.length > 30);
     const top = sents.slice().sort((a, b) => b.length - a.length).slice(0, 3).sort((a, b) => sents.indexOf(a) - sents.indexOf(b));
     const out = $('#source-out');
     out.innerHTML = `<b>Resumen</b><br>${top.map(esc).join(' ')}<br><br><b>Preguntas para ti</b><br>${sents.slice(0, 3).map((s, i) => `${i + 1}. ¿Qué significa, con tus palabras: “${esc(s.slice(0, 70))}…”?`).join('<br>')}`;
     const localHtml = out.innerHTML;
     if (L.hasAi()) {
       out.innerHTML = '<div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor… <button class="text-button" type="button" data-cancel-ai>Cancelar</button></p>';
-      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { out.innerHTML = localHtml; toast(e.message, 'error'); }
+      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { if (e.stale) return; out.innerHTML = localHtml; toast(e.message, e.cancelled ? 'ok' : 'error'); }
     }
     out.insertAdjacentHTML('beforeend', '<p><button class="outline-button" type="button" id="source-cards">Crear tarjetas con estas ideas</button></p>');
     $('#source-cards').onclick = () => L.suggestCards(clean($('#tutor-subject').value, 60) || 'Lectura', top.join('. '));
@@ -162,7 +163,7 @@
     }
     $('#week-calendar').innerHTML = h;
     const t = state.tasks.find((x) => x.date === today() && !x.done), dl = t && state.deadlines.find((x) => x.id === t.deadlineId);
-    const errs = live().filter((c) => c.history.at(-1)?.rating === 'again').length;
+    const errs = live().filter((c) => last(c.history)?.rating === 'again').length;
     $('#auto-block').textContent = dl ? `Hoy: ${dl.dailyMinutes} min de ${dl.subject} + ${plural(L.dueCards().length, 'tarjeta', 'tarjetas')} + repaso de ${plural(errs, 'error', 'errores')}.` : 'Añade una fecha para que Learny arme tu bloque de estudio de hoy.';
   }
   const PH = { comprension: 'Comprensión', practica: 'Práctica', repaso: 'Repaso', simulacro: 'Simulacro', revision: 'Revisión final' };
@@ -181,17 +182,19 @@
     state.deadlines.push(item); L.rebuildTasks(item, false);
     const pom = Math.max(1, Math.round(item.dailyMinutes / state.settings.focus)), mine = state.tasks.filter((t) => t.deadlineId === item.id);
     mine.forEach((t) => { t.title += ` → ${plural(pom, 'Pomodoro', 'Pomodoros')} + ${EXTRA[t.phase]}.`; });
-    const rows = Object.keys(PH).map((k) => { const ds = mine.filter((t) => t.phase === k).map((t) => t.date).sort(); return ds.length ? `<p><b>${PH[k]}:</b> ${ds[0] === ds.at(-1) ? ds[0] : `${ds[0]} a ${ds.at(-1)}`} · ${EXTRA[k]}</p>` : ''; }).join('');
+    const rows = Object.keys(PH).map((k) => { const ds = mine.filter((t) => t.phase === k).map((t) => t.date).sort(); return ds.length ? `<p><b>${PH[k]}:</b> ${ds[0] === last(ds) ? ds[0] : `${ds[0]} a ${last(ds)}`} · ${EXTRA[k]}</p>` : ''; }).join('');
     save(); closeModal(); L.renderAll();
     modal(`<h2>Tu plan para ${esc(item.title)}</h2><p>${plural(mine.length, 'día', 'días')} de estudio, ${plural(pom, 'Pomodoro', 'Pomodoros')} al día.</p>${rows}<p class="modal-tip">Las tareas de cada día aparecen en Planificar y puedes marcarlas al terminarlas.</p><button class="primary-button">Entendido</button>`);
   });
   $('#emergency-plan').onclick = () => {
     const dl = state.deadlines.filter((d) => L.daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date))[0];
     if (!dl) return toast('Añade primero una fecha de examen.', 'error');
-    const n = Math.min(3, Math.max(0, L.daysUntil(dl.date))), blocks = Math.min(8, Math.max(2, Math.ceil((dl.dailyMinutes * 2) / 25)));
-    const phase = (i) => (i === n ? 'simulacro cronometrado y revisión de errores' : i === 0 ? 'lo esencial del temario y 10 tarjetas clave' : 'problemas y práctica de lo de mayor peso');
-    const rows = Array.from({ length: n + 1 }, (_, i) => `<p><b>${i === 0 ? 'Hoy' : `Día ${i + 1}`}:</b> ${blocks} bloques de 25 min (≈${((blocks * 25) / 60).toFixed(1)} h): ${phase(i)}.</p>`).join('');
-    modal(`<h2>Plan de emergencia: ${esc(dl.title)}</h2>${rows}<p class="modal-tip">Duerme bien la noche anterior: consolidas lo estudiado.</p><button class="primary-button">Entendido</button>`);
+    const left = L.daysUntil(dl.date), blocks = Math.min(8, Math.max(2, Math.ceil((dl.dailyMinutes * 2) / 25)));
+    if (left === 0) return modal(`<h2>Plan de emergencia: ${esc(dl.title)}</h2><p>El examen es hoy. Haz un repaso ligero de 2 bloques de 25 min sobre los conceptos débiles, come algo, llega con tiempo y confía en lo que ya estudiaste.</p><button class="primary-button">Entendido</button>`);
+    const n = Math.min(3, left); // los últimos días de estudio, siempre antes del día del examen
+    const phase = (i) => (i === n - 1 ? 'simulacro cronometrado y revisión de errores' : i === 0 && n > 1 ? 'lo esencial del temario y 10 tarjetas clave' : 'problemas y práctica de lo de mayor peso');
+    const rows = Array.from({ length: n }, (_, i) => { const date = L.addDays(dl.date, -(n - i)); return `<p><b>${i === 0 && date === L.today() ? 'Hoy' : date}:</b> ${blocks} bloques de 25 min (≈${((blocks * 25) / 60).toFixed(1)} h): ${phase(i)}.</p>`; }).join('');
+    modal(`<h2>Plan de emergencia: ${esc(dl.title)}</h2>${rows}<p class="modal-tip">El día del examen, solo un repaso ligero. Duerme bien la noche anterior: consolidas lo estudiado.</p><button class="primary-button">Entendido</button>`);
   };
   $('#recovery-plan').onclick = () => {
     const s = clean($('#recovery-subject').value, 60), m = clean($('#recovery-miss').value, 600);
@@ -204,7 +207,7 @@
 
 
   /* ---- Borradores: no pierdas lo que escribes si recargas ---- */
-  ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input'].forEach((sel) => {
+  ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input', '#ai-question'].forEach((sel) => {
     const el = $(sel); if (!el) return;
     if (state.drafts[sel] && !el.value) el.value = state.drafts[sel];
     el.addEventListener('input', L.debounce(() => {
@@ -216,22 +219,28 @@
   /* ---- Crear tarjetas con IA ---- */
   function genCards() {
     if (!L.hasAi()) { toast('Para generar con IA añade tu clave en Ajustes ⚙️. Mientras tanto, prueba un mazo de ejemplo.', 'error'); L.showPage('library'); return; }
+    const prefill = raw($('#source-text').value, 3000) || raw($('#quick-note').value, 3000);
     modal(`<h2>Crear tarjetas con IA</h2>
       <label>Tema<input name="topic" required maxlength="80" value="${esc(subj() === 'el tema' ? '' : subj())}"></label>
+      <label>Tus apuntes (opcional)<textarea name="notes" maxlength="3000" placeholder="Pega tus apuntes para que las tarjetas salgan de ellos y puedas comprobar la fuente.">${esc(prefill)}</textarea></label>
+      <p class="lead">Con apuntes, cada tarjeta cita el fragmento del que sale y te avisamos si añade algo que no está en ellos. Sin apuntes, la IA usa solo el tema y tendrás que verificarlas.</p>
       <button class="primary-button">Generar 5 tarjetas</button>`, async (d) => {
-      const topic = clean(d.get('topic'), 80);
+      const topic = clean(d.get('topic'), 80), notes = raw(d.get('notes'), 3000);
       modal(`<h2>Generando tarjetas…</h2><div class="skeleton" aria-hidden="true"></div><button class="outline-button" type="button" data-cancel-ai>Cancelar</button>`);
       $('#modal-body').setAttribute('aria-live', 'polite');
       try {
-        const text = await L.askGemini(`Genera 5 flashcards de estudio en español sobre "${topic}". Una por línea con el formato: pregunta | respuesta. Sin numeración, sin títulos y sin texto adicional. Respuestas de máximo 2 frases.`);
+        const prompt = notes
+          ? `Crea 5 flashcards de estudio en español usando SOLO la información de estos apuntes sobre "${topic}". Una por línea con el formato: pregunta | respuesta | fragmento. «fragmento» es una cita literal y corta (máximo 150 caracteres) copiada de los apuntes que respalda la respuesta. No inventes datos que no estén en los apuntes. Sin numeración, sin títulos y sin texto adicional. Respuestas de máximo 2 frases.\nApuntes:\n${notes}`
+          : `Genera 5 flashcards de estudio en español sobre "${topic}". Una por línea con el formato: pregunta | respuesta. Sin numeración, sin títulos y sin texto adicional. Respuestas de máximo 2 frases.`;
+        const text = await L.askGemini(prompt);
         const rows = text.split('\n').map((l) => l.replace(/^[-•*\d.)\s]+/, '').replace(/\*\*/g, '').split('|').map((x) => x.trim())).filter((r) => r.length >= 2 && r[0] && r[1]).slice(0, 5);
         if (!rows.length) throw new Error('La IA no devolvió tarjetas con el formato esperado. Inténtalo de nuevo.');
-        modal(`<h2>Revisa las tarjetas</h2>${rows.map((r, i) => `<label class="check"><input type="checkbox" name="c${i}" checked> <span><b>${esc(r[0])}</b><br>${esc(r.slice(1).join(' | '))}</span></label>`).join('')}<button class="primary-button">Guardar seleccionadas</button>`, (f) => {
-          let n = 0;
-          rows.forEach((r, i) => { if (f.get(`c${i}`) === 'on') { state.cards.push(L.normalizeCard({ subject: topic, question: r[0].slice(0, 500), answer: r.slice(1).join(' | ').slice(0, 1200), nextReview: today() })); n++; } });
-          save(); closeModal(); L.renderAll(); toast(n ? `${plural(n, 'tarjeta creada', 'tarjetas creadas')}.` : 'No seleccionaste ninguna tarjeta.');
-        });
+        const items = rows.map((r) => (notes && r.length >= 3
+          ? { question: r[0], answer: r.slice(1, -1).join(' | '), fragment: r[r.length - 1].slice(0, 200) }
+          : { question: r[0], answer: r.slice(1).join(' | '), fragment: '' }));
+        L.reviewCards(items, { topic, source: notes, origin: 'ia', intro: notes ? 'Generadas a partir de tus apuntes. Ninguna se guarda hasta que la aceptes; corrige lo que haga falta.' : 'La IA las generó solo con el tema, sin fuente. Verifica cada respuesta y acepta solo las correctas.' });
       } catch (e) {
+        if (e.stale) return; // otra consulta tomó el relevo
         if (e.cancelled) { closeModal(); toast('Consulta cancelada.'); return; }
         modal(`<h2>No se pudo completar</h2><p>${esc(e.message)}</p><button class="primary-button" type="button" data-close-modal>Cerrar</button>`);
       }
@@ -241,28 +250,28 @@
   document.addEventListener('learny:gen-cards', genCards);
 
   /* ---- Sesión inteligente: tarjetas → Pomodoro → Feynman ---- */
-  const smart = { step: null, topic: '' };
-  const errorCards = () => live().filter((c) => c.history.at(-1)?.rating === 'again');
+  const smart = { step: null, topic: '', armed: false };
+  const errorCards = () => live().filter((c) => last(c.history)?.rating === 'again');
   const feynmanPrompt = () => (smart.topic ? `Explica con tus palabras lo esencial de ${smart.topic}: una idea central, un ejemplo y una duda.` : 'Elige un tema de hoy y explícalo como a alguien de 12 años.');
   function smartSession() {
     const due = L.dueCards(), errs = errorCards().filter((c) => !due.includes(c));
     const pool = interleave([...due, ...shuffle(errs)].slice(0, 12));
     smart.topic = L.weakSubject()?.name || pool[0]?.subject || clean($('#tutor-subject').value, 60) || '';
-    smart.step = 'cards';
+    smart.step = 'cards'; smart.armed = false;
     if (pool.length) { L.showPage('practice'); L.startExam(pool, 12); toast(`Sesión inteligente · paso 1 de 3: ${plural(pool.length, 'tarjeta', 'tarjetas')}.`); }
     else smartNext('exam');
   }
   function smartNext(from) {
     if (from === 'exam' && smart.step === 'cards') {
-      smart.step = 'focus';
+      smart.step = 'focus'; smart.armed = false;
       modal(`<h2>Paso 2 de 3: bloque de enfoque</h2><p>Un Pomodoro${smart.topic ? ` sobre ${esc(smart.topic)}` : ''} para consolidar lo repasado.</p><button class="primary-button">Empezar enfoque</button>`, () => {
-        closeModal(); L.showPage('study');
+        smart.armed = true; closeModal(); L.showPage('study');
         if (L.timerStarted()) { toast('Ya tienes un bloque en marcha: continúa con ese.'); return; }
         const i = $('#intention-input'); if (!i.value.trim()) i.value = smart.topic ? `Practicar ${smart.topic}: resolver mis errores` : 'Avanzar en mi material de hoy';
         $('#pomodoro-button').click();
-      });
-    } else if (from === 'pomo' && smart.step === 'focus') {
-      smart.step = null;
+      }, () => { if (!smart.armed) smart.step = null; });
+    } else if (from === 'pomo' && smart.step === 'focus' && smart.armed) {
+      smart.step = null; smart.armed = false;
       modal(`<h2>Paso 3 de 3: explícalo con Feynman</h2><p>${esc(feynmanPrompt())}</p><button class="primary-button">Ir a Feynman</button>`, () => {
         closeModal(); L.showPage('practice'); $('#feynman-topic').value = smart.topic || $('#feynman-topic').value; $('#feynman-text').focus();
       });
@@ -279,12 +288,12 @@
     const rv = state.reviews;
     if (rv.length >= 5) {
       const pct = Math.round((rv.filter((r) => r.rating === 'easy').length * 100) / rv.length), errs = errorCards().length;
-      rows.push([`Retención ${pct}%`, errs ? `Repasa ${errs === 1 ? 'la tarjeta' : `las ${errs} tarjetas`} con errores recientes.` : 'Sin errores recientes: sigue con tu plan.', errs ? btn('Repasar errores', 'errors') : '']);
+      rows.push([`Recuerdo declarado: ${rv.filter((r) => r.rating === 'easy').length} de ${rv.length} (${pct}%)`, errs ? `Repasa ${errs === 1 ? 'la tarjeta' : `las ${errs} tarjetas`} con errores recientes.` : 'Sin errores recientes: sigue con tu plan.', errs ? btn('Repasar errores', 'errors') : '']);
     }
     const from = addDays(today(), -6), mins = state.sessions.filter((s) => s.date >= from && !s.abandon).reduce((t, s) => t + s.minutes, 0), goal = state.settings.dailyGoal * state.settings.focus * 7;
     if (state.sessions.some((s) => !s.abandon)) rows.push([`${mins} min esta semana`, mins >= goal ? '¡Meta semanal cumplida!' : `Estás a ${goal - mins} min de tu meta semanal.`, mins >= goal ? '' : btn('Iniciar enfoque', 'focus')]);
     const weak = L.weakSubject();
-    if (weak) rows.push([`${esc(weak.name)}: ${weak.pct}% de aciertos`, 'Un mini quiz de 8 tarjetas empieza por tus errores.', btn('Mini quiz', 'quiz', `data-subject="${esc(weak.name)}"`)]);
+    if (weak) rows.push([`${esc(weak.name)}: ${weak.pct}% sin fallar (${weak.ok} de ${weak.total} repasos)`, 'Un mini quiz de 8 tarjetas empieza por tus errores.', btn('Mini quiz', 'quiz', `data-subject="${esc(weak.name)}"`)]);
     const next = state.deadlines.filter((d) => L.daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date))[0];
     if (next) {
       const n = L.daysUntil(next.date), todo = state.tasks.filter((t) => t.date === today() && !t.done).length;
@@ -317,11 +326,11 @@
     state.reviews.forEach((r) => { const b = by[r.subject]; if (b) { b.tot++; if (r.rating !== 'again') b.ok++; } });
     const subs = Object.entries(by), none = '<p class="empty">Crea tarjetas para ver este panel.</p>';
     $('#concept-map').innerHTML = subs.length ? subs.map(([n, b]) => `<div class="node" style="--s:${Math.min(1.5, 0.85 + b.cards / 25)}"><b>${esc(n)}</b><small>${plural(b.cards, 'tarjeta', 'tarjetas')}</small></div>`).join('') : none;
-    const master = subs.filter(([, b]) => b.cards >= 30 && b.tot && b.ok / b.tot >= 0.8);
-    $('#badges-list').innerHTML = master.length ? master.map(([n]) => `<p>🏅 Dominio básico de ${esc(n)}</p>`).join('') : '<p class="empty">Insignia de dominio: 80 % de aciertos en 30 tarjetas de una materia.</p>';
-    $('#levels-list').innerHTML = subs.length ? subs.map(([n, b]) => `<p class="level"><span>${esc(n)}</span><b>Nivel ${1 + Math.floor(Math.sqrt(b.tot))}</b></p>`).join('') : '';
-    const weak = subs.filter(([, b]) => b.tot >= 3).map(([n, b]) => [n, Math.round((b.ok * 100) / b.tot)]).sort((a, b) => a[1] - b[1])[0];
-    $('#adaptive-route').innerHTML = weak && weak[1] < 60 ? `<b>Ruta sugerida</b><br>Repasa <b>${esc(weak[0])}</b> (${weak[1]} % de aciertos), practica con ejercicios y avanza cuando pases del 70 %.` : '<b>Ruta sugerida</b><br>Sin huecos claros: sigue con tu plan y añade tarjetas nuevas.';
+    const master = subs.filter(([, b]) => b.tot >= 30 && b.ok / b.tot >= 0.8);
+    $('#badges-list').innerHTML = master.length ? master.map(([n, b]) => `<p>🏅 Buen resultado en ${esc(n)}: ${b.ok} de ${b.tot} repasos sin fallar. Falta comprobarlo en próximos repasos.</p>`).join('') : '<p class="empty">Un resultado destacado aparece con 30 repasos de una materia y al menos 80 % sin fallar.</p>';
+    $('#levels-list').innerHTML = subs.length ? subs.map(([n, b]) => `<p class="level"><span>${esc(n)}</span><b>Práctica nivel ${1 + Math.floor(Math.sqrt(b.tot))} · ${plural(b.tot, 'repaso', 'repasos')}</b></p>`).join('') : '';
+    const weak = subs.filter(([, b]) => b.tot >= 5).map(([n, b]) => [n, Math.round((b.ok * 100) / b.tot), b.ok, b.tot]).sort((a, b) => a[1] - b[1])[0];
+    $('#adaptive-route').innerHTML = weak && weak[1] < 60 ? `<b>Ruta sugerida</b><br>Repasa <b>${esc(weak[0])}</b> (${weak[1]} % sin fallar: ${weak[2]} de ${weak[3]} repasos), practica con ejercicios y avanza cuando pases del 70 %.` : '<b>Ruta sugerida</b><br>Sin huecos claros: sigue con tu plan y añade tarjetas nuevas.';
     const from = addDays(today(), -6), wr = state.reviews.filter((r) => r.date >= from).length, ex = state.exams.filter((e) => e.date >= from).length;
     $('#challenge-tag').textContent = `Reto: ${Math.min(wr, 30)}/30 repasos · ${Math.min(ex, 3)}/3 exámenes`;
     const mins = state.sessions.filter((s) => s.date >= from && !s.abandon).reduce((t, s) => t + s.minutes, 0);

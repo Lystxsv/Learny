@@ -18,7 +18,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v8`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v13`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -72,6 +72,44 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 180 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Novedades (v13 · etapa 4: bandeja de revisión de tarjetas)
+- Las tarjetas generadas con IA (y las sugeridas desde una explicación o una respuesta del tutor) pasan por una **bandeja de revisión**: pregunta y respuesta editables, y cada tarjeta se **acepta o descarta** explícitamente. Nada se guarda por defecto.
+- «Crear con IA» admite **tus apuntes**: cada tarjeta cita el fragmento del que sale. Se avisa (⚠) cuando el fragmento citado no está en tus apuntes o cuando parte de la respuesta no aparece en ellos (se vuelve a comprobar al editar). Sin apuntes se indica «sin fuente: verifícala».
+- Las tarjetas aceptadas desde IA llevan la marca «generada con IA y revisada» en la Biblioteca.
+
+## Novedades (v12 · etapa 3: tutor y Feynman)
+- **Modo del tutor** persistente (Contexto del tutor): «Guíame con preguntas» o «Dame una explicación directa». Además, cada respuesta ofrece «Explícamelo directamente» y el tutor socrático da la explicación si la pides.
+- **Feynman con comentarios concretos:** la IA responde en cuatro bloques (lo que explicaste bien, afirmación a revisar con cita de tu texto, concepto que falta, pregunta para comprobar), sin nota numérica.
+- **Errores recuperables:** si la IA falla, tu pregunta o explicación se conservan (la pregunta del tutor se borra solo tras una respuesta correcta y se guarda como borrador), hay botón **Reintentar** y el historial solo guarda respuestas reales de la IA, no las guías locales de emergencia.
+- **Cancelar de verdad:** una consulta cancelada o sustituida por otra nunca escribe una respuesta tardía ni cierra la ventana de la consulta nueva.
+
+## Novedades (v11 · etapa 2: estadísticas honestas)
+- «Retención» pasa a **Recuerdo declarado** (repasos marcados «Fácil»): es autoevaluación, no una medida de retención.
+- Cada cifra muestra su muestra («7 de 10 repasos») y avisa de «muestra pequeña» con menos de 10 intentos.
+- **Periodo** seleccionable (7 días, 30 días, todo el historial; por defecto 30) y un bloque «Cómo se calculan estos números».
+- Seis indicadores: recuerdo declarado, repasos sin fallar, exámenes, constancia (días con actividad), tiempo registrado y tarjetas vencidas.
+- Una materia no se califica con menos de 5 repasos; la antigua insignia «Dominio básico» pasa a «Buen resultado» (30 repasos y 80 % sin fallar) con aviso de que falta comprobarlo. El informe semanal exporta `recuerdoDeclarado` con su muestra.
+
+## Novedades (v10 · etapa 1: protección contra errores)
+- **Deshacer** (botón en el aviso o tecla `Z`, ~8 s) al calificar una tarjeta (también en exámenes), eliminarla, posponerla, enviarla a la Biblioteca, completar/reabrir una tarea y eliminar una fecha con su plan. Sustituye a las ventanas de confirmación en esas acciones; las confirmaciones se conservan para importar, restaurar y «Borrar todo».
+- **Dobles pulsaciones:** una calificación ignora repeticiones en menos de 350 ms y, en el examen, no se puede calificar sin haber revelado la respuesta.
+- No se puede eliminar una tarjeta que forma parte de un examen en curso.
+
+## Correcciones (v9)
+- **iPhone con iOS < 16.4:** `extras.js` ya no se rompe (se quitó una expresión regular y `.at()` que ese Safari no entiende).
+- **Importar copias:** los ajustes se validan (tipos, rangos, valores permitidos) y una copia ajena nunca cambia tu URL de proxy.
+- **Tutor:** el historial se guarda por materia (máx. 20 temas), «Borrar historial» borra lo que se ve, las copias automáticas no incluyen el historial, y estilo/carrera del tutor se conservan.
+- **Avisos:** en Android se muestran vía service worker; el recordatorio diario sale una vez al día, no en cada recarga.
+- **Plan de emergencia:** usa los últimos 3 días *antes* del examen (el simulacro es el día previo); si el examen es hoy, solo repaso ligero.
+- **Sesión inteligente:** cerrar una ventana cancela el flujo y ya no aparece «Paso 3 de 3» tras un Pomodoro normal.
+- **Adelantar 5 tarjetas** ya no repite las que repasaste hoy; el calendario semanal se actualiza al tachar tareas o borrar fechas.
+- **CSV / Anki:** sin duplicados al importar dos veces, límite de 5 MB, confirmación previa, `#separator`, detección de tabuladores y limpieza de HTML (`<br>` → salto de línea).
+- **Compartir mazo** incluye también las tarjetas de la Biblioteca. El CSV semanal neutraliza celdas que empiezan por `=`, `+`, `-` o `@`.
+- **IA:** tope de respuesta 4096 tokens y mensaje claro si el modelo lo agota.
+- **Sin conexión:** los iconos son opcionales; si falta uno ya no falla toda la caché.
+- **Privacidad:** el pie de página avisa de que el dictado usa el servicio de tu navegador; el idioma de dictado sigue el del navegador.
+- **Detalles:** «Reiniciar a mitad de bloque» (antes «Guardar y pausar»), bloques sin cerrar ya no cuentan como logrados, la respuesta de la tarjeta no se oculta al terminar un Pomodoro, importar/borrar/restaurar cierra un examen en curso, y el color de acento se desactiva en Sepia y Alto contraste.
 
 ## Correcciones (v8)
 - Sin `Notification` (p. ej. Safari de iPhone) ya no se rompe el fin de bloque ni el arranque.

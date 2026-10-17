@@ -35,7 +35,7 @@
       <p class="nav-label">Ayuda</p>
       <button class="nav-button" data-page="guide"><span aria-hidden="true">📖</span> Guía de uso</button>
     </nav>
-    <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy). No guardes tu clave en un equipo compartido.</div>
+    <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy) o el dictado por voz, que usa el servicio de tu navegador (en Chrome, Google). No guardes tu clave en un equipo compartido.</div>
   </aside>
 
   <main class="main" id="main">
@@ -81,6 +81,12 @@
         </label>
         <label>Carrera / contexto<input id="tutor-career" maxlength="60" placeholder="p. ej. medicina, programación"></label>
       </div>
+      <label>Cómo quieres que te ayude
+        <select id="tutor-mode">
+          <option value="socratic">Guíame con preguntas</option>
+          <option value="direct">Dame una explicación directa</option>
+        </select>
+      </label>
       <div class="actions">
         <button id="save-tutor-context" class="outline-button" type="button">Guardar contexto</button>
         <button id="tutor-voice" class="outline-button" type="button">🎤 Dictar</button>
@@ -190,7 +196,7 @@
             <button class="text-button" id="card-archive" type="button">Enviar a Biblioteca</button>
             <button class="text-button danger" id="card-delete" type="button">Eliminar</button>
           </div>
-          <p class="hint">Atajos: Espacio revela; 1/2/3 califican; P pausa el Pomodoro. SM-2: No lo sabía = 0–2, Dudé = 3, Fácil = 4–5.</p>
+          <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P pausa el Pomodoro. SM-2: No lo sabía = 0–2, Dudé = 3, Fácil = 4–5.</p>
         </article>
 
         <article class="card">
@@ -284,13 +290,30 @@
     <!-- ===== ANÁLISIS ===== -->
     <section class="page" id="analysis">
       <div class="page-heading"><p class="eyebrow">Análisis personal</p><h1>Qué reforzar mañana.</h1></div>
-      <div class="grid metrics stats-five">
-        <div class="metric"><b id="retention-stat">0%</b><span>Retención (Fácil)</span></div>
-        <div class="metric"><b id="accuracy-stat">0%</b><span>Aciertos</span></div>
-        <div class="metric"><b id="reviewed-stat">0</b><span>Repasos</span></div>
-        <div class="metric"><b id="overdue-stat">0</b><span>Vencidas</span></div>
-        <div class="metric"><b id="grace-stat">1</b><span>Día de gracia</span></div>
+      <div class="stats-bar">
+        <label class="field inline">Periodo
+          <select id="stats-period"><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="all">Todo el historial</option></select></label>
+        <span id="stats-period-note" class="lead"></span>
       </div>
+      <div class="grid metrics">
+        <div class="metric"><b id="retention-stat">—</b><span>Recuerdo declarado</span><small id="retention-note"></small></div>
+        <div class="metric"><b id="accuracy-stat">—</b><span>Repasos sin fallar</span><small id="accuracy-note"></small></div>
+        <div class="metric"><b id="exam-stat">—</b><span>Exámenes (Fácil)</span><small id="exam-note"></small></div>
+        <div class="metric"><b id="consistency-stat">0 días</b><span>Constancia</span><small id="consistency-note"></small></div>
+        <div class="metric"><b id="time-stat">0 min</b><span>Tiempo registrado</span><small id="time-note"></small></div>
+        <div class="metric"><b id="overdue-stat">0</b><span>Tarjetas vencidas</span><small>pendientes de repaso ahora</small></div>
+      </div>
+      <details class="card how-calc">
+        <summary>Cómo se calculan estos números</summary>
+        <ul class="steps">
+          <li><b>Recuerdo declarado:</b> repasos que marcaste «Fácil» entre todos los repasos del periodo. Es tu autoevaluación; no demuestra por sí solo cuánto retuviste.</li>
+          <li><b>Repasos sin fallar:</b> repasos en que no marcaste «No lo sabías», entre todos los del periodo.</li>
+          <li><b>Exámenes (Fácil):</b> respuestas «Fácil» entre las respondidas en modo examen. También son autoevaluadas.</li>
+          <li><b>Constancia:</b> días distintos con un bloque de enfoque completado o un repaso, entre los días del periodo.</li>
+          <li><b>Tiempo registrado:</b> minutos de bloques de enfoque completados (los abandonados no cuentan). Mide dedicación, no aprendizaje.</li>
+          <li>Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.</li>
+        </ul>
+      </details>
       <article class="card" id="insight-actions" aria-live="polite"></article>
       <div class="grid planner-grid spaced">
         <article class="card">
@@ -313,7 +336,7 @@
           <div id="concept-map" class="concept-map" role="img" aria-label="Relación entre materias y tarjetas"></div>
         </article>
         <article class="card">
-          <div class="card-head"><h2>Dominio y hábitos</h2><span id="challenge-tag" class="tag">Reto semanal</span></div>
+          <div class="card-head"><h2>Resultados y práctica</h2><span id="challenge-tag" class="tag">Reto semanal</span></div>
           <div id="badges-list"></div>
           <div id="levels-list"></div>
           <p id="weekly-digest" class="lead"></p>
