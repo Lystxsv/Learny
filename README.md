@@ -18,3 +18,7 @@ Abre `index.html` con doble clic.
 Cada persona puede pegar su propia clave gratuita de Gemini en Ajustes ⚙️
 (https://aistudio.google.com/apikey). La clave nunca se sube a GitHub: queda solo en el navegador.
 Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el código.
+
+## Novedades
+- Sección «Guía de uso», acento y densidad configurables, atajo `P`, caché con red primero.
+- `proxy-worker.example.js`: ejemplo para ocultar la clave de Gemini en producción.

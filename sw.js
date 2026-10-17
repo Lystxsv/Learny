@@ -1,5 +1,5 @@
-const CACHE = 'learny-v3';
-const ASSETS = ['./', './index.html', './style.css', './script.js', './manifest.json'];
+const CACHE = 'learny-v5';
+const ASSETS = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -16,7 +16,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).then((res) => {
+    caches.match(event.request).then((cached) => fetch(event.request).then((res) => {
       const copy = res.clone();
       caches.open(CACHE).then((cache) => cache.put(event.request, copy));
       return res;
