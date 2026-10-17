@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Learny: Pomodoro, flashcards con repaso espaciado, método Feynman y planificador de exámenes. Privado y local.">
+  <meta name="theme-color" content="#101114">
+  <title>Learny · Estudia con intención</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23a7f3d0'/%3E%3Cpath d='M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15' fill='none' stroke='%23101114' stroke-width='4' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<noscript><p style="padding:1rem">Learny necesita JavaScript activado para funcionar.</p></noscript>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-label="Logo Learny">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff"/><path d="M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15" fill="none" stroke="#101114" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="51" cy="48" r="3" fill="#101114"/></svg>
+      </div>
+      <div><strong>Learny</strong><span>Estudia con intención</span></div>
+    </div>
+    <nav class="nav" aria-label="Secciones">
+      <p class="nav-label">Tu espacio</p>
+      <button class="nav-button active" data-page="study" aria-current="page">🧠 Espacio de aprendizaje</button>
+      <button class="nav-button" data-page="planner">📅 Planificador</button>
+      <button class="nav-button" data-page="analysis">📊 Análisis personal</button>
+    </nav>
+    <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si añades tu clave de Gemini.</div>
+  </aside>
+
+  <main class="main" id="main">
+    <header class="topbar">
+      <div class="ai-input">
+        <span aria-hidden="true">✦</span>
+        <select id="search-engine" aria-label="Buscador o tutor">
+          <option value="gemini">Gemini</option>
+          <option value="google">Google</option>
+          <option value="wikipedia">Wikipedia</option>
+          <option value="perplexity">Perplexity</option>
+        </select>
+        <input id="ai-question" placeholder="Pregunta a tu tutor socrático…" aria-label="Tu pregunta">
+        <button id="ask-ai" class="ask-button">Consultar</button>
+      </div>
+      <div class="topbar-tools">
+        <button id="font-down" class="icon-button" aria-label="Reducir tamaño de texto">A−</button>
+        <button id="font-up" class="icon-button" aria-label="Aumentar tamaño de texto">A+</button>
+        <button id="settings-button" class="icon-button" aria-label="Ajustes">⚙️</button>
+      </div>
+    </header>
+
+    <!-- ===== ESPACIO DE APRENDIZAJE ===== -->
+    <section class="page active" id="study">
+      <div class="page-heading">
+        <p class="eyebrow">Espacio de aprendizaje</p>
+        <h1>Enfócate, recuerda y explica.</h1>
+        <p class="lead">Elige una intención y combina métodos de estudio activos.</p>
+        <p class="fact"><span aria-hidden="true">💡</span> <span id="daily-fact"></span></p>
+      </div>
+
+      <article class="card pomodoro-card">
+        <div class="card-head"><h2>Pomodoro</h2><span id="pomodoro-profile" class="tag">25/5 · Foco</span></div>
+        <div class="timer" role="timer" aria-live="off"><span id="timer-clock">25:00</span><small id="timer-note">Define tu intención antes de iniciar.</small></div>
+        <input id="intention-input" class="intention" placeholder="Mi intención: terminar los ejercicios 1 al 5" aria-label="Intención del bloque" maxlength="140">
+        <div class="actions">
+          <button id="pomodoro-button" class="primary-button">▶ Iniciar enfoque</button>
+          <button id="pomodoro-skip" class="outline-button" hidden>Saltar descanso</button>
+          <button id="pomodoro-reset" class="outline-button">Reiniciar</button>
+          <button id="pomodoro-config" class="outline-button">Ajustar tiempos</button>
+        </div>
+      </article>
+
+      <div class="grid metrics">
+        <div class="metric"><b id="focus-today">0 min</b><span>Foco hoy</span></div>
+        <div class="metric"><b id="current-streak">0 días</b><span>Racha actual</span></div>
+        <div class="metric"><b id="average-energy">—</b><span>Concentración media</span></div>
+      </div>
+      <p id="daily-rhythm" class="lead rhythm"></p>
+
+      <article class="card library-inline">
+        <div class="card-head">
+          <div><h2>Biblioteca</h2><p class="lead">Tarjetas guardadas para consultar cuando quieras.</p></div>
+          <span id="library-count" class="tag">0 tarjetas</span>
+        </div>
+        <div id="library-list" class="library-list"></div>
+      </article>
+
+      <div class="grid study-grid">
+        <article class="card">
+          <div class="card-head">
+            <div class="head-inline"><h2>Flashcards activas</h2><span id="card-count" class="tag">0 pendientes</span></div>
+            <button id="add-card" class="outline-button">+ Crear tarjeta</button>
+          </div>
+          <div id="flashcard" class="flashcard" aria-live="polite"></div>
+          <button id="reveal-card" class="outline-button card-reveal">Ver respuesta</button>
+          <div id="rating-row" class="rating-row" hidden>
+            <button class="option-button" data-rating="again">1 · No lo sabía</button>
+            <button class="option-button" data-rating="hard">2 · Dudé</button>
+            <button class="option-button easy" data-rating="easy">3 · Fácil</button>
+          </div>
+          <div id="card-tools" class="card-tools" hidden>
+            <button class="text-button" id="card-edit" type="button">Editar</button>
+            <button class="text-button" id="card-archive" type="button">Enviar a Biblioteca</button>
+            <button class="text-button danger" id="card-delete" type="button">Eliminar</button>
+          </div>
+          <p class="hint">Atajos: Espacio muestra la respuesta; 1, 2 y 3 la califican.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Método Feynman</h2><span aria-hidden="true">✍️</span></div>
+          <input id="feynman-topic" class="intention" placeholder="Tema que estás explicando" aria-label="Tema que estás explicando">
+          <textarea id="feynman-text" placeholder="Explícalo como a alguien de 12 años; incluye un ejemplo y una duda." aria-label="Tu explicación"></textarea>
+          <div class="actions"><button id="feynman-feedback" class="primary-button">Analizar mi explicación</button></div>
+          <div id="feynman-guide" class="guided-feedback" aria-live="polite">Escribe una explicación para recibir preguntas socráticas.</div>
+        </article>
+      </div>
+
+      <article class="card roulette-panel">
+        <div class="card-head">
+          <div><h2>Ruleta temática</h2><p class="lead">Elige un tema al azar, estúdialo y luego explícalo: recuperación activa en dos fases.</p></div>
+          <button id="spin-roulette" class="roulette primary-button">🎲 Girar tema</button>
+        </div>
+        <div class="roulette-tools">
+          <input id="topic-search" class="intention" placeholder="Añade cualquier tema o concepto" aria-label="Tema o concepto">
+          <button id="add-topic" class="outline-button">Añadir</button>
+          <button id="suggest-topic" class="outline-button">✨ Sugerir con IA</button>
+        </div>
+        <div id="topic-results" class="topic-results"></div>
+      </article>
+    </section>
+
+    <!-- ===== PLANIFICADOR ===== -->
+    <section class="page" id="planner">
+      <div class="page-heading"><p class="eyebrow">Planificador inteligente</p><h1>Convierte fechas en pasos.</h1></div>
+      <div class="grid planner-grid">
+        <article class="card">
+          <div class="card-head"><h2>Próximas fechas</h2><button id="add-deadline" class="primary-button">+ Añadir</button></div>
+          <div id="deadline-list" class="session-list"></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Próximo hito</h2><span class="tag">Plan inverso</span></div>
+          <div id="calendar-summary" class="empty"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ===== ANÁLISIS ===== -->
+    <section class="page" id="analysis">
+      <div class="page-heading"><p class="eyebrow">Análisis personal</p><h1>Progreso sin presión.</h1></div>
+      <div class="grid metrics stats-four">
+        <div class="metric"><b id="accuracy-stat">0%</b><span>Aciertos</span></div>
+        <div class="metric"><b id="reviewed-stat">0</b><span>Repasos</span></div>
+        <div class="metric"><b id="library-stat">0</b><span>En biblioteca</span></div>
+        <div class="metric"><b id="grace-stat">1</b><span>Día de gracia disponible</span></div>
+      </div>
+      <div class="grid planner-grid spaced">
+        <article class="card">
+          <h2>Tiempo de foco (últimos 7 días)</h2>
+          <div id="focus-chart" class="chart" role="img" aria-label="Minutos de foco por día en la última semana"></div>
+          <p id="focus-summary" class="lead"></p>
+        </article>
+        <article class="card"><h2>Conceptos / Áreas por explorar</h2><div id="weak-topics"></div></article>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="app-modal" class="modal" aria-label="Ventana de Learny">
+  <form id="modal-form" class="modal-content">
+    <button class="modal-close" type="button" aria-label="Cerrar">×</button>
+    <div id="modal-body"></div>
+  </form>
+</dialog>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="script.js"></script>
+</body>
+</html>
