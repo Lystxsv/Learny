@@ -297,7 +297,7 @@
   }
   document.addEventListener('learny:examstart', () => { if (!smart.launching) { smart.step = null; smart.armed = false; } }); // un examen ajeno a la sesión inteligente la cancela
   document.addEventListener('learny:smart', smartSession);
-  document.addEventListener('learny:examend', () => smartNext('exam'));
+  document.addEventListener('learny:examend', (e) => { if (e.detail?.aborted) { smart.step = null; smart.armed = false; return; } smartNext('exam'); }); // salir del examen a medias cancela la sesión inteligente
   document.addEventListener('learny:pomodone', () => smartNext('pomo'));
 
   /* ---- Estadísticas que proponen una acción ---- */

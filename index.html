@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="description" content="Learny: Pomodoro, flashcards con repaso espaciado, método Feynman y planificador de exámenes. Privado y local.">
   <meta name="theme-color" content="#0e1220">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Learny">
   <title>Learny · Estudia con intención</title>
   <link rel="manifest" href="manifest.json">
@@ -271,7 +272,7 @@
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
             </div>
           </div>
-          <div id="flashcard" class="flashcard" aria-live="polite" tabindex="-1"></div>
+          <div id="flashcard" class="flashcard" tabindex="-1"></div>
           <label class="recall-wrap">Tu respuesta (recuperación activa)
             <textarea id="recall-answer" maxlength="800" placeholder="Escríbela antes de ver la tarjeta. Compararemos al revelar."></textarea>
           </label>
@@ -298,7 +299,7 @@
             </div>
             <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b>Examen real:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
           </details>
-          <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P pausa el Pomodoro. SM-2: No lo sabía = 0–2, Dudé = 3, Fácil = 4–5.</p>
+          <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P inicia o pausa el Pomodoro. SM-2: No lo sabía = 1, Dudé = 3, Fácil = 5.</p>
         </article>
 
         <article class="card feynman-card">
@@ -420,14 +421,14 @@
         <summary>Cómo se calculan estos números</summary>
         <ul class="steps">
           <li><b>Recuerdo declarado:</b> repasos que marcaste «Fácil» entre todos los repasos del periodo. Es tu autoevaluación; no demuestra por sí solo cuánto retuviste.</li>
-          <li><b>Repasos sin fallar:</b> repasos en que no marcaste «No lo sabías», entre todos los del periodo.</li>
+          <li><b>Repasos sin fallar:</b> repasos en que no marcaste «No lo sabía», entre todos los del periodo.</li>
           <li><b>Exámenes (Fácil):</b> respuestas «Fácil» entre las respondidas en modo examen. También son autoevaluadas.</li>
           <li><b>Constancia:</b> días distintos con un bloque de enfoque completado o un repaso, entre los días del periodo.</li>
           <li><b>Tiempo registrado:</b> minutos de bloques de enfoque completados (los abandonados no cuentan). Mide dedicación, no aprendizaje.</li>
           <li>Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.</li>
         </ul>
       </details>
-      <article class="card" id="insight-actions" aria-live="polite"></article>
+      <article class="card" id="insight-actions"></article>
       <div class="grid planner-grid spaced">
         <article class="card">
           <div class="card-head">

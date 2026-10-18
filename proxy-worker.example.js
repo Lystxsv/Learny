@@ -18,7 +18,7 @@
  *
  * Contrato: POST { "prompt": "..." }  →  respuesta JSON de Gemini (generateContent).
  */
-const MAX_BODY = 24000;     // bytes aceptados
+const MAX_BODY = 24000;     // caracteres aceptados (como mide Learny; los acentos no cuentan doble)
 const MAX_PROMPT = 9000;    // caracteres enviados a Gemini (igual que Learny)
 const hits = new Map();     // límite de reserva por IP (por instancia; no sustituye a RATE_LIMITER)
 
@@ -52,9 +52,9 @@ export default {
       if (hits.size > 5000) hits.clear();
     }
 
-    if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413); // sin leer el cuerpo
+    if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY * 4) return json({ error: { message: 'Solicitud demasiado grande' } }, 413); // sin leer el cuerpo (un carácter ocupa hasta 4 bytes)
     const raw = await request.text();
-    if (new TextEncoder().encode(raw).length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
+    if (raw.length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
     let payload;
     try { payload = JSON.parse(raw); } catch { return json({ error: { message: 'JSON inválido' } }, 400); }
 
@@ -73,6 +73,6 @@ export default {
     } catch {
       return json({ error: { message: 'No se pudo contactar con Gemini' } }, 502);
     }
-    return new Response(await upstream.text(), { status: upstream.status, headers: { 'Content-Type': 'application/json', ...cors } });
+    return new Response(await upstream.text(), { status: upstream.status, headers: { ...cors, 'Content-Type': upstream.headers.get('Content-Type') || 'application/json' } });
   }
 };

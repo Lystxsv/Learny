@@ -18,7 +18,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v20`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v24`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -72,6 +72,17 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 265 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Novedades (v24 · etapas 5, 6 y 7, y revisión de fiabilidad)
+**Etapa 5 · bienvenida.** La primera vez, una guía corta pregunta tu nombre, qué estudias, tu meta y cuánto tiempo quieres por bloque (10, 25 o 45 min). Todo es opcional y se puede saltar. Además, el botón «Hoy me cuesta arrancar» ofrece acciones pequeñas (repasar hasta 3 tarjetas, una sesión breve de 5 minutos, hacer una pregunta, explicar una idea) y cerrarlo no cambia nada.
+**Etapa 6 · portada.** Quien nunca ha entrado (sin datos, sin bienvenida y sin enlace directo a una sección) ve primero una portada con «Probar Learny». Quien ya tiene datos entra directo a la app.
+**Etapa 7 · demostración.** Abre `index.html?demo` para ver Learny con datos de ejemplo. Todo ocurre en memoria: no toca tus datos reales, no vibra, no descarga informes y el título de la pestaña empieza por «Demostración ·». El aviso superior permite salir o empezar de cero.
+**Revisión de fiabilidad (fases 1 a 6).**
+- *Datos:* copias automáticas rotativas, copia del archivo dañado, estadísticas y fechas más estrictas, importación más segura.
+- *Avisos:* los avisos de arranque (migración, tarjetas omitidas, datos dañados) se muestran en cola sin pisarse; un aviso nuevo ya no cancela un «Deshacer» pendiente; Ajustes no se cierra si sueltas un arrastre fuera; Enter se ignora mientras se compone texto con IME; salir de un examen dentro de una sesión inteligente la cancela.
+- *Infraestructura:* `sw.js` (ahora `learny-v24`) borra solo cachés que empiezan por `learny-`; `viewport-fit=cover`, alturas `dvh` y cabecera pegajosa bajo el aviso de demostración en móvil; menos anuncios repetidos para lectores de pantalla; iconos en los accesos directos del manifest.
+- *Worker:* el límite se mide en caracteres, no en bytes, y devuelve el `Content-Type` de Google.
+- *Textos:* SM-2 se explica como No lo sabía = 1, Dudé = 3, Fácil = 5.
 
 ## Novedades (v16 · apariencia y tipografía)
 **Ajustes ⚙️ reorganizados** en bloques plegables: *Apariencia* (abierto), *Tipografía y lectura*, *Disposición*, *Estudio y avisos*, *Inteligencia artificial* y *Datos y copias*. No se quitó ningún ajuste.

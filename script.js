@@ -47,6 +47,7 @@
 
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
+  const composing = (e) => !!(e.isComposing || e.keyCode === 229); // Enter dentro de una composición IME (japonés, chino…) no debe enviar nada
   const pad = (n) => String(n).padStart(2, '0');
   const dateStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const today = () => dateStr();
@@ -379,8 +380,12 @@
   /* Deshacer de un nivel: cada acción reversible ofrece «Deshacer» ~8 s (botón o tecla Z). Una acción nueva sustituye a la anterior. */
   let undoRun = null;
   function toast(message, type = 'ok', action = null) {
-    const el = $('#toast'), isErr = type === 'error';
+    const el = $('#toast'), isErr = type === 'error', now = Date.now();
     el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
+    // Fase 4: un aviso posterior no cancela un «Deshacer» pendiente: muestra su mensaje y conserva el botón hasta que caduque.
+    if (action) toast.undo = { action, until: now + 8000 };
+    else if (toast.undo && now < toast.undo.until) action = toast.undo.action;
+    else toast.undo = null;
     undoRun = action ? action.run : null;
     el.className = `toast show ${type}`; // primero se hace visible y luego se escribe el texto: los lectores de pantalla solo anuncian cambios en regiones visibles
     clearTimeout(toast.fillId);
@@ -392,12 +397,21 @@
       }
     }, 40);
     clearTimeout(toast.id);
-    toast.id = setTimeout(() => { el.classList.remove('show'); undoRun = null; }, action ? 8000 : 4200);
+    toast.id = setTimeout(() => { el.classList.remove('show'); undoRun = null; toast.undo = null; }, action ? Math.max(1000, toast.undo.until - now) : 4200);
   }
+  /* Fase 4: los avisos de arranque (migración, tarjetas omitidas, datos dañados, plan reajustado…) esperan su turno en vez de pisarse. */
+  const toastQueue = []; let toastBusy = false;
+  function nextQueued() {
+    const n = toastQueue.shift();
+    if (!n) { toastBusy = false; return; }
+    toastBusy = true; toast(n[0], n[1], n[2]);
+    setTimeout(nextQueued, (n[2] ? 8000 : 4200) + 400);
+  }
+  function queueToast(message, type = 'ok', action = null) { toastQueue.push([message, type, action]); if (!toastBusy) nextQueued(); }
   function offerUndo(message, restore) {
     const run = () => {
       if (undoRun !== run) return; // ya caducó o la sustituyó otra acción
-      undoRun = null; lastRateAt = 0; restore(); toast('Acción deshecha.');
+      undoRun = null; toast.undo = null; lastRateAt = 0; restore(); toast('Acción deshecha.');
     };
     toast(message, 'ok', { label: 'Deshacer', run });
   }
@@ -476,7 +490,7 @@
         gain.gain.setValueAtTime(0.15, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
         osc.start(); osc.stop(ctx.currentTime + 0.8); setTimeout(() => ctx.close?.(), 1200);
       }
-      navigator.vibrate?.(200);
+      if (!DEMO) navigator.vibrate?.(200); // la demo no vibra
     } catch { /* sin sonido */ }
   }
 
@@ -513,7 +527,6 @@
     const doneMap = {};
     if (keepDone) state.tasks.filter((t) => t.deadlineId === deadline.id && t.done && (!fromToday || t.date >= today())).forEach((t) => { doneMap[t.date] = true; });
     state.tasks = state.tasks.filter((t) => t.deadlineId !== deadline.id || (fromToday && t.date < today())); // fromToday conserva lo anterior a hoy
-    const days = Math.max(1, daysUntil(deadline.date));
     const start = today();
     const span = Math.min(MAX_PLAN_DAYS, Math.max(1, daysUntil(deadline.date)));
     const cardTarget = Math.max(3, deadline.difficulty * 2);
@@ -566,10 +579,10 @@
     if (!moved && !dropped) return;
     const msg = `Plan reajustado: moví ${plural(moved, 'tarea atrasada', 'tareas atrasadas')} a hoy${dropped ? ` y descarté ${plural(dropped, 'tarea', 'tareas')} que ya no cabían` : ''}. El detalle está en Planificar → Cambios en tu plan.`;
     const undo = () => { // deshacer: vuelve a las tareas, el historial y las deudas de antes; hoy no se reajusta otra vez
-      const b = JSON.parse(before); state.tasks = b.tasks; state.planLog = b.planLog; state.deadlines = b.deadlines;
+      undoRun = null; toast.undo = null; const b = JSON.parse(before); state.tasks = b.tasks; state.planLog = b.planLog; state.deadlines = b.deadlines;
       state.settings.lastRollover = today(); save(); renderAll();
     };
-    setTimeout(() => toast(msg, 'ok', { label: 'Deshacer', run: undo }), delay);
+    queueToast(msg, 'ok', { label: 'Deshacer', run: undo }); // en cola: espera a los demás avisos de arranque
   }
 
   /* ¿Cabe lo que queda? Trabajo pendiente (tareas abiertas de hoy en adelante + las descartadas) frente al tiempo disponible hasta el examen. */
@@ -735,7 +748,7 @@
     $('#timer-note').textContent = focusMode
       ? (timer.intention ? `Intención: ${timer.intention}${timer.label ? ` · ${timer.label}` : ''}` : '¿Qué resultado concreto quieres lograr?')
       : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.';
-    document.title = timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención';
+    document.title = (DEMO ? 'Demostración · ' : '') + (timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención');
     applySessionMode(); renderDistractions();
     const goal = num(state.settings.dailyGoal, 1, 12, 2);
     const done = cached('doneToday', () => state.sessions.filter((s) => s.date === today() && !s.abandon).length);
@@ -804,7 +817,10 @@
     }
     if (timer.mode === 'focus') {
       const intention = clean($('#intention-input').value, 140) || timer.intention;
-      if (!intention) { toast('Escribe un resultado concreto antes de empezar.', 'error'); showPage('study'); newUserPomo = true; applySessionMode(); $('#intention-input').focus(); return; }
+      if (!intention) {
+        if (currentPage !== 'study') { toast('Escribe un resultado concreto en «Hoy» antes de empezar un bloque.', 'error'); return; } // Fase 4: la tecla P no te saca de la sección en la que estás
+        toast('Escribe un resultado concreto antes de empezar.', 'error'); newUserPomo = true; applySessionMode(); $('#intention-input').focus(); return;
+      }
       timer.intention = intention;
       timer.label = clean($('#pomodoro-label').value, 60);
     }
@@ -893,7 +909,7 @@
     lastSavedRaw = raw;
     hydrate(data);
     if (exam) { exam.cards = exam.cards.map((c) => state.cards.find((x) => x.id === c.id)).filter(Boolean); if (exam.i >= exam.cards.length) exam = null; }
-    undoRun = null; // las acciones de deshacer apuntan a objetos que ya no son los actuales
+    undoRun = null; toast.undo = null; // las acciones de deshacer apuntan a objetos que ya no son los actuales
     applyAppearance(); renderAll();
     const el = $('#save-status'); if (el) { el.textContent = `Sincronizado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; el.classList.remove('bad'); }
   }
@@ -908,7 +924,7 @@
     if (e.key === TIMER_KEY) { lastTimerRaw = e.newValue; restoreTimer(e.newValue || JSON.stringify({ started: false, mode: 'focus' })); }
     else if (e.key === KEY && e.newValue) adoptRemoteState(e.newValue);
     else if ((e.key === KEY && !e.newValue) || e.key === null) { // otra pestaña borró todo (o limpió el almacenamiento): no resucitar los datos
-      exam = null; undoRun = null; lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
+      exam = null; undoRun = null; toast.undo = null; lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
     }
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullFromStorage(); if (timer.running) tick(); } });
@@ -1465,6 +1481,7 @@
   }
 
   function exportReport() {
+    if (DEMO) return toast('En la demostración no se descargan informes.', 'error');
     modal(`<h2>Informe semanal</h2><p>Elige formato. Incluye minutos, etiquetas, intenciones y preguntas de tarjetas vencidas; no incluye tu clave.</p>
       <div class="actions"><button id="rep-json" class="primary-button" type="button">JSON</button>
       <button id="rep-csv" class="outline-button" type="button">CSV</button></div>`, () => closeModal());
@@ -1482,7 +1499,7 @@
      ========================================================= */
   function localGuide(topic, extra = '') {
     const g = LOCAL_GUIDES[Math.abs([...`${topic}${extra}`].reduce((a, c) => a + c.charCodeAt(0), 0)) % LOCAL_GUIDES.length];
-    return `**Pregunta guía**\n${g.pregunta}\n\n**Pista**\n${g.pista}\n\n**Explicación**\nSobre “${topic || 'este tema'}”: di la idea central, un ejemplo propio y una duda.\n\n**Ejemplo**\nSi estudias ${topic || 'el tema'}, compara un caso típico con un caso límite.\n\n**Siguiente reto**\n${g.reto}${extra ? `\n\nTu texto: ${extra.slice(0, 180)}…` : ''}`;
+    return `**Pregunta guía**\n${g.pregunta}\n\n**Pista**\n${g.pista}\n\n**Explicación**\nSobre “${topic || 'este tema'}”: di la idea central, un ejemplo propio y una duda.\n\n**Ejemplo**\nSi estudias ${topic || 'el tema'}, compara un caso típico con un caso límite.\n\n**Siguiente reto**\n${g.reto}${extra ? `\n\nTu texto: ${extra.slice(0, 180)}${extra.length > 180 ? '…' : ''}` : ''}`;
   }
 
   const BLOCK_KEYS = ['Pregunta guía', 'Pista', 'Explicación', 'Ejemplo', 'Siguiente reto', 'Lo que explicaste bien', 'Revisa esta afirmación', 'Falta este concepto', 'Pregunta para comprobar'];
@@ -2164,10 +2181,10 @@ ${text}`;
       if (!DEMO && state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
       save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
     });
-    modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
+    modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; $('#app-modal').onpointerdown = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
     put(state.settings); f.fontSize.value = String(state.settings.fontSize); sync();
     $('#modal-body').oninput = $('#modal-body').onchange = preview;
-    { const dlg = $('#app-modal'); dlg.onclick = (e) => { if (e.target === dlg) closeModal(); }; } // clic fuera (solo en Ajustes): cierra y revierte la vista previa
+    { const dlg = $('#app-modal'); let down = false; dlg.onpointerdown = (e) => { down = e.target === dlg; }; dlg.onclick = (e) => { const ok = down && e.target === dlg; down = false; if (ok) closeModal(); }; } // Fase 4: solo cierra si el clic EMPEZÓ y terminó fuera (soltar un arrastre fuera no cierra) // clic fuera (solo en Ajustes): cierra y revierte la vista previa
     $$('#modal-body [data-qs]').forEach((b) => { b.onclick = () => { put(QS[b.dataset.qs]); preview(); }; });
     $('#reset-look').onclick = () => { const o = {}; APP_KEYS.filter((k) => k !== 'reduceMotion').forEach((k) => { o[k] = base[k]; }); put(o); preview(); toast('Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.'); };
     $('#export-data').onclick = () => exportData();
@@ -2211,7 +2228,7 @@ ${text}`;
     const last = s.lastExport;
     if (last && -daysUntil(last) < 14) return;
     s.backupNag = today(); save();
-    setTimeout(() => toast('Hace tiempo que no descargas una copia. Ajustes ⚙️ → Descargar copia.'), 2500);
+    queueToast('Hace tiempo que no descargas una copia. Ajustes ⚙️ → Descargar copia.');
   }
 
   function fillTutor(silent = false) {
@@ -2244,7 +2261,7 @@ ${text}`;
   $('#mini-timer').onclick = () => showPage('study');
   $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](b); };
   $('#modal-form').addEventListener('invalid', (e) => reveal(e.target), true); // un campo inválido dentro de «Avanzado» abre su bloque para poder corregirlo
-  $('#exam-exit').onclick = () => { window.Learny.endExam(); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
+  $('#exam-exit').onclick = () => { window.Learny.endExam(true); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
   $('#flashcard').onclick = (e) => {
     const k = e.target.closest('[data-empty]')?.dataset.empty; if (!k) return;
     if (k === 'create') cardForm();
@@ -2256,9 +2273,9 @@ ${text}`;
   $('#library-search').oninput = debounce(() => { libLimit = 40; renderLibrary(); }, 150);
   $('#pomodoro-button').onclick = startPomodoro;
   $('#distraction-add').onclick = addDistraction;
-  $('#distraction-input').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addDistraction(); } };
+  $('#distraction-input').onkeydown = (e) => { if (e.key === 'Enter' && !composing(e)) { e.preventDefault(); addDistraction(); } };
   $$('[data-ambient]').forEach((b) => { b.onclick = () => setAmbient(b.dataset.ambient); });
-  $('#intention-input').onkeydown = (e) => { if (e.key === 'Enter' && !timer.running) { e.preventDefault(); startPomodoro(); } }; // teclado: Enter en el resultado concreto inicia el bloque
+  $('#intention-input').onkeydown = (e) => { if (e.key === 'Enter' && !composing(e) && !timer.running) { e.preventDefault(); startPomodoro(); } }; // teclado: Enter en el resultado concreto inicia el bloque
   $('#pomodoro-skip').onclick = () => resetTimer('focus');
   $('#pomodoro-reset').onclick = () => {
     if (timer.started && timer.mode === 'focus' && timer.remaining < timer.total) askAbandon(() => resetTimer('focus'));
@@ -2290,7 +2307,7 @@ ${text}`;
     save(); toast(`Historial de “${topic}” borrado.`);
   };
   $('#topic-search').oninput = debounce(renderTopics, 120);
-  $('#topic-search').onkeydown = (e) => { if (e.key === 'Enter') $('#add-topic').click(); };
+  $('#topic-search').onkeydown = (e) => { if (e.key === 'Enter' && !composing(e)) $('#add-topic').click(); };
   $('#add-topic').onclick = () => { if (addTopic($('#topic-search').value)) { $('#topic-search').value = ''; renderTopics(); toast('Tema añadido a tu ruleta.'); } else toast('Escribe cualquier tema primero.', 'error'); };
   $('#suggest-topic').onclick = suggestTopic;
   $('#topic-results').onclick = (e) => {
@@ -2347,7 +2364,7 @@ ${text}`;
     const urls = { google: `https://www.google.com/search?q=${encodeURIComponent(query)}`, wikipedia: `https://es.wikipedia.org/w/index.php?search=${encodeURIComponent(query)}`, perplexity: `https://www.perplexity.ai/search?q=${encodeURIComponent(query)}` };
     window.open(urls[engine], '_blank', 'noopener');
   };
-  $('#ai-question').onkeydown = (e) => { if (e.key === 'Enter') $('#ask-ai').click(); };
+  $('#ai-question').onkeydown = (e) => { if (e.key === 'Enter' && !composing(e)) $('#ask-ai').click(); };
 
   document.addEventListener('keydown', (e) => {
     if (landingOn || modalOpen() || $('#confirm-modal').open || e.ctrlKey || e.metaKey || e.altKey) return; // Etapa 6: con la portada visible, los atajos no actúan
@@ -2376,7 +2393,7 @@ ${text}`;
   setInterval(checkNewDay, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
-  window.Learny = { stripBullet, noProto, isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { stripBullet, noProto, isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: (aborted = false) => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new CustomEvent('learny:examend', { detail: { aborted: aborted === true } })); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   /* Etapa 5: bienvenida opcional (4 pasos, todo opcional). Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola.
      Los pasos ya confirmados con «Siguiente» se conservan; lo escrito en el paso abierto al omitir no se guarda. */
   function welcomeFlow() {
@@ -2456,7 +2473,6 @@ ${text}`;
   if (DEMO) {
     state.deadlines.forEach((d) => rebuildTasks(d, false));
     document.body.classList.add('is-demo');
-    document.title = `Demostración · ${document.title}`;
     const bar = $('#demo-banner');
     if (bar) {
       bar.hidden = false;
@@ -2476,14 +2492,15 @@ ${text}`;
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
   // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
   if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.hash.slice(1)) showLanding();
-  if (migratedFrom) toast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
-  if (droppedCards) toast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
+  // Avisos de arranque en cola: ninguno pisa a otro (lo más grave primero)
   if (loadProblem) {
-    if (corruptKept) toast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
-    else toast('Tus datos guardados estaban dañados y NO pude guardar una copia (sin espacio o almacenamiento bloqueado). No los he tocado hasta que hagas un cambio: descarga el archivo original ahora.', 'error', { label: 'Descargar original', run: () => {
+    if (corruptKept) queueToast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
+    else queueToast('Tus datos guardados estaban dañados y NO pude guardar una copia (sin espacio o almacenamiento bloqueado). No los he tocado hasta que hagas un cambio: descarga el archivo original ahora.', 'error', { label: 'Descargar original', run: () => {
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([corruptRaw || ''], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     } });
   }
+  if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
+  if (migratedFrom) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
   bootHold = false;
   if (corruptKept || !loadProblem) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, no se pisa la clave principal en el arranque
   if (!state.settings.welcomed && !landingOn) setTimeout(welcomeFlow, 350); // Etapa 5 (con portada, la bienvenida abre al pulsar «Probar Learny»)
