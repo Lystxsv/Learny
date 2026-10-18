@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Birrete minimalista en blanco y negro">
+  <g stroke="#000" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Cap body: black silhouette with a white inset. -->
+    <path d="M151 183c2 30 7 66 22 89 17 26 45 43 83 56 38-13 66-30 83-56 15-23 20-59 22-89z" fill="#000" stroke-width="4"/>
+    <path d="M173 201c2 24 6 48 17 65 13 19 34 33 66 45 32-12 53-26 66-45 11-17 15-41 17-65z" fill="#fff" stroke="none"/>
+    <!-- Mortarboard: bold black rim around a clean white center. -->
+    <path d="M256 52 468 158 256 264 44 158z" fill="#000" stroke-width="4"/>
+    <path d="m256 82 151 76-151 76-151-76z" fill="#fff" stroke="none"/>
+    <!-- Tassel attached to the right corner. -->
+    <path d="M443 171c2 26 4 55 4 83" fill="none" stroke-width="12"/>
+    <path d="M434 254h26l-3 38-10 14-10-14z" fill="#000" stroke-width="3"/>
+  </g>
+</svg>
