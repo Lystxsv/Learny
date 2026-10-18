@@ -1,0 +1,336 @@
+--- a/script.js	2026-10-18 17:26:55.103532140 +0000
++++ b/script.js	2026-10-18 17:27:24.884056724 +0000
+@@ -1,6 +1,18 @@
+ (() => {
+   'use strict';
+ 
++  /* Etapa 7: demo aislada. Se decide por la URL (?demo) antes de tocar ningún almacenamiento.
++     En demo, `localStorage` (solo dentro de este archivo) es un almacén EN MEMORIA: ninguna clave real
++     (learny.v3, .timer, .backup, .corrupt…) se lee, escribe ni borra, y recargar reinicia la demo. */
++  const DEMO = /[?&]demo(?:[=&#]|$)/.test(location.search);
++  const localStorage = (() => {
++    if (DEMO) {
++      const m = new Map();
++      return { getItem: (k) => (m.has(String(k)) ? m.get(String(k)) : null), setItem: (k, v) => { m.set(String(k), String(v)); }, removeItem: (k) => { m.delete(String(k)); }, clear: () => m.clear() };
++    }
++    try { return window.localStorage; } catch { return null; }
++  })();
++
+   const KEY = 'learny.v3';
+   const LEGACY_KEYS = ['learny.v2', 'learny.v1'];
+   const BACKUP_KEY = 'learny.backup';
+@@ -217,6 +229,53 @@
+     } catch { /* sin copia */ }
+   }
+ 
++  /* Etapa 7: datos de ejemplo, creados en código y relativos a hoy. Se escriben solo en el almacén en memoria y pasan por load()/hydrate() como cualquier copia. */
++  function seedDemo() {
++    const off = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return dateStr(d); };
++    const Q = { again: 1, hard: 3, easy: 5 };
++    const mk = (i, subject, question, answer, next, last, ease, interval, reps, hist) => ({
++      id: `demo-c${i}`, subject, question, answer, nextReview: off(next), lastReviewed: last == null ? null : off(last),
++      archived: false, origin: '', easeFactor: ease, interval, repetitions: reps,
++      history: hist.map(([d, r]) => ({ date: off(d), rating: r, quality: Q[r] }))
++    });
++    const cards = [
++      mk(1, 'Biología', '¿Qué orgánulo produce la mayor parte del ATP en la célula?', 'La mitocondria, mediante la respiración celular.', -2, -8, 2.5, 6, 2, [[-14, 'easy'], [-8, 'easy']]),
++      mk(2, 'Biología', '¿Qué ocurre en la fase luminosa de la fotosíntesis?', 'La luz se convierte en energía química (ATP y NADPH) y se libera O₂.', -1, -7, 2.36, 6, 2, [[-13, 'hard'], [-7, 'easy']]),
++      mk(3, 'Biología', '¿Cuál es la diferencia entre mitosis y meiosis?', 'La mitosis da 2 células idénticas; la meiosis da 4 células con la mitad de cromosomas.', 0, -1, 2.18, 1, 1, [[-1, 'again'], [-1, 'hard']]),
++      mk(4, 'Biología', '¿Qué es el ADN y dónde se encuentra en una célula eucariota?', 'La molécula que guarda la información genética; está sobre todo en el núcleo.', 4, -2, 2.6, 6, 2, [[-8, 'easy'], [-2, 'easy']]),
++      mk(5, 'Biología', '¿Qué función tiene el ribosoma?', 'Sintetizar proteínas a partir del ARN mensajero.', 9, -5, 2.7, 14, 3, [[-19, 'easy'], [-12, 'easy'], [-5, 'easy']]),
++      mk(6, 'Historia', '¿En qué año comenzó la Revolución Francesa?', '1789, con la toma de la Bastilla el 14 de julio.', -3, -9, 2.2, 1, 1, [[-10, 'again'], [-9, 'hard']]),
++      mk(7, 'Historia', '¿Qué fue el Tratado de Versalles (1919)?', 'El acuerdo que puso fin a la Primera Guerra Mundial e impuso duras condiciones a Alemania.', 0, -4, 2.04, 1, 0, [[-6, 'again'], [-4, 'again']]),
++      mk(8, 'Historia', '¿Qué causó la caída del Imperio romano de Occidente?', 'Varias causas: crisis económica, presión de pueblos germánicos y debilidad política (476 d. C.).', 0, null, 2.5, 0, 0, []),
++      mk(9, 'Historia', '¿Qué fue la Guerra Fría?', 'Una rivalidad política e ideológica entre EE. UU. y la URSS, sin combate directo entre ambos.', 3, -3, 2.5, 6, 2, [[-9, 'hard'], [-3, 'easy']]),
++      mk(10, 'Inglés', '¿Cuál es el pasado simple de «go»?', '«Went».', -1, -7, 2.5, 6, 2, [[-13, 'easy'], [-7, 'easy']]),
++      mk(11, 'Inglés', 'Completa: «If I ___ more time, I would travel.»', '«had» (segundo condicional).', 5, -1, 2.6, 6, 2, [[-7, 'easy'], [-1, 'easy']]),
++      mk(12, 'Inglés', '¿Qué significa «although»?', 'Aunque / a pesar de que.', 12, -10, 2.7, 22, 4, [[-30, 'easy'], [-22, 'easy'], [-14, 'easy'], [-10, 'easy']]),
++      mk(13, 'Inglés', '¿Cuándo se usa el present perfect?', 'Para acciones pasadas con relación al presente: «I have lived here for 3 years».', 0, null, 2.5, 0, 0, [])
++    ];
++    const pattern = [['Biología', 'easy'], ['Historia', 'again'], ['Inglés', 'easy'], ['Biología', 'hard'], ['Historia', 'hard'], ['Inglés', 'easy'], ['Biología', 'easy'], ['Historia', 'again']];
++    const first = { Biología: 1, Historia: 6, Inglés: 10 };
++    const reviews = [];
++    for (let d = 12; d >= 1; d--) for (let k = 0; k < 2 + (d % 3); k++) {
++      const [subject, rating] = pattern[(d * 3 + k) % pattern.length];
++      reviews.push({ date: off(-d), cardId: `demo-c${first[subject] + (k % 3)}`, subject, rating, quality: Q[rating] });
++    }
++    const ses = (n, date, minutes, intention, label, energy, achieved) => ({ id: `demo-s${n}`, date: off(date), minutes, intention, label, energy, abandon: null, achieved, distractions: [] });
++    const sessions = [
++      ses(1, -5, 25, 'Repasar la fotosíntesis', 'Biología', 4, true), ses(2, -4, 25, 'Línea de tiempo de la Revolución Francesa', 'Historia', 3, true),
++      ses(3, -3, 25, 'Verbos irregulares', 'Inglés', 4, true), ses(4, -2, 25, 'Mitosis y meiosis', 'Biología', 3, false),
++      ses(5, -1, 25, 'Tratado de Versalles', 'Historia', 2, true)
++    ];
++    const deadlines = [{ id: 'demo-d1', title: 'Parcial de Biología', subject: 'Biología', date: off(9), difficulty: 3, dailyMinutes: 40, skipped: 0, debtMin: 0 }];
++    const data = {
++      version: SCHEMA,
++      settings: { name: 'Ejemplo', welcomed: true, engine: 'local', skipAi: true, sound: false, notify: false, proxyUrl: '', lastRemind: off(0), backupNag: off(0), tutor: { subject: 'Biología', goal: 'Aprobar el parcial', mode: 'socratic' } },
++      cards, reviews, sessions, deadlines, topics: [{ id: 'demo-t1', name: 'Biología', category: 'Ciencias' }], apiKey: ''
++    };
++    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* en memoria: no falla */ }
++  }
++  if (DEMO) seedDemo();
++
+   (function load() {
+     let merged = {};
+     try {
+@@ -246,6 +305,7 @@
+ 
+   function setSaved(ok) {
+     const el = $('#save-status'); if (!el) return;
++    if (DEMO) { el.textContent = 'Demo: no se guarda'; el.classList.remove('bad'); return; }
+     el.textContent = ok ? `Guardado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}` : 'No guardado';
+     el.classList.toggle('bad', !ok);
+   }
+@@ -363,7 +423,7 @@
+ 
+   function beep() {
+     try {
+-      if (state.settings.sound !== false) {
++      if (state.settings.sound !== false && !DEMO) {
+         const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+         const ctx = new Ctx(), osc = ctx.createOscillator(), gain = ctx.createGain();
+         osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880;
+@@ -375,7 +435,7 @@
+   }
+ 
+   function notify(title, body) {
+-    if (!state.settings.notify || typeof Notification === 'undefined') return;
++    if (DEMO || !state.settings.notify || typeof Notification === 'undefined') return;
+     if (Notification.permission !== 'granted') return;
+     try { new Notification(title, { body, silent: false }); }
+     catch { // Chrome para Android solo admite avisos desde el service worker
+@@ -700,7 +760,7 @@
+   async function claimFinish(id) {
+     const take = () => { try { if (localStorage.getItem(DONE_KEY) === id) return false; localStorage.setItem(DONE_KEY, id); } catch { /* sin almacenamiento: seguimos */ } return true; };
+     if (document.hidden) await new Promise((r) => setTimeout(r, 1200));
+-    if (navigator.locks?.request) { try { return await navigator.locks.request('learny-finish', take); } catch { /* sin Web Locks */ } }
++    if (navigator.locks?.request) { try { return await navigator.locks.request(DEMO ? 'learny-finish-demo' : 'learny-finish', take); } catch { /* sin Web Locks */ } }
+     return take();
+   }
+   function finishPhase() {
+@@ -1418,7 +1478,7 @@
+   }
+ 
+   let aiController = null;
+-  const hasAi = () => !!(state.apiKey || state.settings.proxyUrl);
++  const hasAi = () => !DEMO && !!(state.apiKey || state.settings.proxyUrl); // Etapa 7: la demo nunca usa IA
+   const cancelAi = () => { if (aiController) aiController.abort(); };
+ 
+   async function askGemini(prompt) {
+@@ -1468,6 +1528,7 @@
+   }
+ 
+   function requestKey(onKey, onLocal) {
++    if (DEMO) { toast('La demostración no usa IA: tienes la guía local.'); state.settings.skipAi = true; return onLocal(); } // Etapa 7
+     modal(`<h2>Conecta Gemini</h2>
+       <p>Consigue una clave gratuita en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+       <p class="modal-tip"><b>Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido.</b> Cualquiera con DevTools podría verla. En producción usa un proxy (ver proxy-worker.example.js).</p>
+@@ -1731,6 +1792,7 @@
+   }
+ 
+   function exportData(auto = false) {
++    if (DEMO) { if (!auto) toast('En la demostración no se descargan copias.', 'error'); return; } // Etapa 7
+     const { apiKey, ...safe } = state;
+     download(`learny-copia-${today()}.json`, JSON.stringify(safe, null, 2), 'application/json');
+     state.settings.lastExport = today(); save();
+@@ -1738,6 +1800,7 @@
+   }
+ 
+   function exportDeck() {
++    if (DEMO) return toast('En la demostración no se comparten mazos.', 'error'); // Etapa 7
+     const deck = state.cards.filter((c) => !c.corrupt).map(({ subject, question, answer }) => ({ subject, question, answer }));
+     if (!deck.length && !state.decks.length) return toast('No hay tarjetas para compartir.', 'error');
+     download(`learny-mazo-${today()}.json`, JSON.stringify({ type: 'learny-deck', cards: deck, decks: state.decks }, null, 2), 'application/json');
+@@ -1803,6 +1866,7 @@
+   };
+ 
+   function importData(file) {
++    if (DEMO) return toast('En la demostración no se importan archivos.', 'error'); // Etapa 7
+     if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
+     file.text().then(async (text) => {
+       let data; try { data = JSON.parse(text); } catch { throw new Error('El archivo no es un JSON válido.'); }
+@@ -1836,6 +1900,7 @@
+   }
+ 
+   async function restoreBackup() {
++    if (DEMO) return toast('En la demostración no hay copias que restaurar.', 'error'); // Etapa 7
+     const b = parseJSON(localStorage.getItem(BACKUP_KEY));
+     if (!b?.data) return toast('No hay copia automática para restaurar.', 'error');
+     if (!(await confirmDialog({ title: 'Restaurar copia automática', message: `Copia del ${String(b.at || '').slice(0, 10)} (${b.reason || 'manual'}). Reemplazará tus datos actuales.`, ok: 'Restaurar', danger: true }))) return;
+@@ -1873,6 +1938,7 @@
+   const stripHtml = (v) => String(v || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n').replace(/<!--[\s\S]*?-->/g, '').replace(/<\/?[A-Za-z][^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+ 
+   function importCsv(file) {
++    if (DEMO) return toast('En la demostración no se importan archivos.', 'error'); // Etapa 7
+     if (file.size > 5 * 1024 * 1024) return toast('El archivo es demasiado grande (máximo 5 MB).', 'error');
+     file.text().then(async (text) => {
+       const rows = parseCsv(text.replace(/^\uFEFF/, ''));
+@@ -1973,7 +2039,7 @@
+         <button id="import-csv-btn" class="outline-button" type="button">Importar CSV / Anki (.csv, .txt)</button><input id="import-csv" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden aria-label="Archivo CSV o Anki a importar">
+         ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
+         ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
+-        <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
++        <button id="reset-data" class="outline-button" type="button">${DEMO ? 'Reiniciar demo' : 'Borrar todo'}</button>
+         </div>
+       </details>
+       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
+@@ -1987,8 +2053,9 @@
+         model: clean(data.get('model'), 80) || DEFAULT_MODEL
+       });
+       sanitizeSettings(state.settings, base); // lo que llega del formulario también se valida
++      if (DEMO) { state.apiKey = ''; state.settings.proxyUrl = ''; state.settings.notify = false; } // Etapa 7
+       const key = clean(data.get('apikey'), 200); if (key) { state.apiKey = key; state.settings.skipAi = false; }
+-      if (state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
++      if (!DEMO && state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+       save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
+     });
+     modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
+@@ -2005,7 +2072,12 @@
+     $('#import-csv-btn').onclick = () => $('#import-csv').click();
+     $('#import-file').onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); };
+     $('#import-csv').onchange = (e) => { if (e.target.files[0]) importCsv(e.target.files[0]); };
++    if (DEMO) ['apikey', 'proxy', 'notify'].forEach((n) => { const el = $(`#modal-form [name="${n}"]`); if (el) el.disabled = true; }); // Etapa 7: sin IA ni avisos en demo
+     $('#reset-data').onclick = async () => {
++      if (DEMO) { // Etapa 7: «Reiniciar demo» solo recarga la demo; no toca ningún dato real
++        if (await confirmDialog({ title: 'Reiniciar demo', message: 'Se restauran los datos de ejemplo. Tus datos reales no se tocan.', ok: 'Reiniciar' })) location.reload();
++        return;
++      }
+       if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
+       exportData(true); snapshot('reset');
+       try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); ['learny.corrupt', 'learny.drafts', TIMER_KEY, DONE_KEY].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
+@@ -2016,6 +2088,7 @@
+   function changeFont(delta) { state.settings.fontSize = Math.min(24, Math.max(13, state.settings.fontSize + delta)); save(); applyAppearance(); }
+ 
+   function maybeRemind() {
++    if (DEMO) return; // Etapa 7
+     if (state.settings.lastRemind === today()) return; // una vez al día, no en cada recarga
+     state.settings.lastRemind = today(); save();
+     const due = dueCards().length;
+@@ -2025,6 +2098,7 @@
+   }
+ 
+   function backupNag() {
++    if (DEMO) return; // Etapa 7
+     const s = state.settings;
+     if (state.cards.length < 10 || s.backupNag === today()) return;
+     const last = s.lastExport;
+@@ -2195,11 +2269,11 @@
+   setInterval(checkNewDay, 60000);
+   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
+ 
+-  window.Learny = { reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
++  window.Learny = { isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+   /* Etapa 5: bienvenida opcional (4 pasos, todo opcional). Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola.
+      Los pasos ya confirmados con «Siguiente» se conservan; lo escrito en el paso abierto al omitir no se guarda. */
+   function welcomeFlow() {
+-    if (state.settings.welcomed || hasUserData() || modalOpen()) return;
++    if (DEMO || state.settings.welcomed || hasUserData() || modalOpen()) return; // Etapa 7: la demo nunca abre la bienvenida
+     const TIMES = [[10, '10 min', 'Algo corto'], [25, '25 min', 'Un Pomodoro'], [45, '45 min', 'Sesión larga']];
+     const a = { name: '', subject: '', goal: '', minutes: 0 }, body = $('#modal-body');
+     let i = 0, ended = false;
+@@ -2251,7 +2325,7 @@
+   /* Etapa 6: portada pública. Capa aparte (#landing) sobre la app: no cambia datos ni claves. «Probar Learny» la cierra y abre la bienvenida (etapa 5). */
+   let landingOn = false;
+   function showLanding() {
+-    const el = $('#landing'); if (!el) return;
++    const el = $('#landing'); if (!el || DEMO) return; // Etapa 7: la demo no muestra la portada
+     landingOn = true; el.hidden = false; document.body.classList.add('show-landing');
+     window.scrollTo(0, 0); $('#landing-title')?.focus({ preventScroll: true });
+   }
+@@ -2264,12 +2338,30 @@
+   $('#landing')?.addEventListener('click', (e) => {
+     const b = e.target.closest('[data-landing]'); if (!b) return;
+     if (b.dataset.landing === 'start') enterFromLanding();
++    else if (b.dataset.landing === 'demo') location.href = `${location.pathname}?demo`; // Etapa 7: entra a la demo (nueva carga, sin tocar datos reales)
+     else if (b.dataset.landing === 'tour') {
+       const t = $('#landing-tour'), calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+       t?.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' }); t?.focus({ preventScroll: true });
+     }
+   });
+ 
++  /* Etapa 7: banner permanente, plan del examen de ejemplo y salida. Salir recarga sin ?demo: el espacio real (o la portada) decide solo. */
++  if (DEMO) {
++    state.deadlines.forEach((d) => rebuildTasks(d, false));
++    document.body.classList.add('is-demo');
++    document.title = `Demostración · ${document.title}`;
++    const bar = $('#demo-banner');
++    if (bar) {
++      bar.hidden = false;
++      const fit = () => document.documentElement.style.setProperty('--demo-h', `${bar.offsetHeight}px`);
++      fit(); window.addEventListener('resize', fit); if (window.ResizeObserver) new ResizeObserver(fit).observe(bar);
++      $('#demo-exit').onclick = () => { location.href = location.pathname; };
++      $('#demo-reset').onclick = async () => {
++        if (await confirmDialog({ title: 'Reiniciar demo', message: 'Se restauran los datos de ejemplo. Tus datos reales no se tocan.', ok: 'Reiniciar' })) location.reload();
++      };
++    }
++  }
++
+   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
+   applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
+   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
+--- a/extras.js	2026-10-18 17:26:55.111749255 +0000
++++ b/extras.js	2026-10-18 17:27:24.885002072 +0000
+@@ -1,6 +1,11 @@
+ (() => {
+   'use strict';
+   const L = window.Learny; if (!L) return;
++  /* Etapa 7: en demo, los borradores viven en memoria (nunca en learny.drafts). */
++  const localStorage = (() => {
++    if (L.isDemo) { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, removeItem: (k) => { m.delete(k); } }; }
++    try { return window.localStorage; } catch { return null; }
++  })();
+   const { state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural } = L;
+   const $ = (s) => document.querySelector(s);
+   const raw = (v, n = 2000) => String(v || '').trim().slice(0, n);
+--- a/index.html	2026-10-18 17:26:55.116823020 +0000
++++ b/index.html	2026-10-18 17:27:24.886052506 +0000
+@@ -38,6 +38,7 @@
+         <div class="actions landing-cta">
+           <button id="landing-start" class="primary-button big" type="button" data-landing="start">Probar Learny</button>
+           <button class="outline-button" type="button" data-landing="tour">Ver el recorrido</button>
++          <button id="landing-demo" class="outline-button" type="button" data-landing="demo">Ver una demostración</button>
+         </div>
+         <p class="landing-note">Una vez cargada, funciona sin conexión. Puedes descargar una copia de tus datos cuando quieras.</p>
+       </div>
+@@ -83,6 +84,15 @@
+   <footer class="landing-foot">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></footer>
+ </div>
+ 
++<!-- Etapa 7: banner permanente de la demo (oculto salvo con ?demo). Sticky arriba: nunca tapa los controles ni la barra móvil inferior. -->
++<div id="demo-banner" class="demo-banner" role="region" aria-label="Modo demostración" hidden>
++  <p><b>Demostración</b> · Datos de ejemplo; nada de esto se guarda ni toca tus datos reales.</p>
++  <div class="demo-actions">
++    <button id="demo-reset" class="text-button" type="button">Reiniciar demo</button>
++    <button id="demo-exit" class="primary-button" type="button">Salir de la demo</button>
++  </div>
++</div>
++
+ <div class="app">
+   <aside class="sidebar">
+     <div class="brand">
+--- a/style.css	2026-10-18 17:26:55.120479641 +0000
++++ b/style.css	2026-10-18 17:27:38.588056411 +0000
+@@ -695,3 +695,15 @@
+   .landing-steps { grid-template-columns: minmax(0, 1fr); }
+   .landing-cta .primary-button, .landing-cta .outline-button { flex: 1 1 100%; }
+ }
++
++/* Etapa 7: demo aislada. Banner permanente (sticky arriba, en el flujo): no tapa controles ni la barra móvil inferior.
++   Colores propios y fijos para que el contraste no dependa del tema ni del acento del usuario. */
++.demo-banner { position: sticky; top: 0; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem var(--s2); padding: calc(.45rem + env(safe-area-inset-top, 0px)) calc(var(--s2) + env(safe-area-inset-right, 0px)) .45rem calc(var(--s2) + env(safe-area-inset-left, 0px)); background: #ffd166; color: #1f1600; border-bottom: 2px solid #1f1600; font-size: var(--fs-cap, .85rem); line-height: 1.35; }
++.demo-banner p { margin: 0; flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
++.demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
++.demo-banner .primary-button { min-height: 44px; background: #1f1600; color: #ffd166; }
++.demo-banner .text-button { min-height: 44px; margin: 0; padding: 0 .5rem; color: #1f1600; text-decoration: underline; }
++.demo-banner :focus-visible { outline: 3px solid #1f1600; outline-offset: 2px; }
++body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo-h, 0px)); }
++@media (max-width: 820px) { body.is-demo .sidebar { height: auto; } }
++@media (max-width: 600px) { body.is-demo .topbar-tools { top: var(--demo-h, 0px); } }
+--- a/sw.js	2026-10-18 17:26:55.123873381 +0000
++++ b/sw.js	2026-10-18 17:27:24.886246587 +0000
+@@ -1,4 +1,4 @@
+-const CACHE = 'learny-v22';
++const CACHE = 'learny-v23';
+ // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
+ const CORE = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
+ const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
