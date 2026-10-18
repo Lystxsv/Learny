@@ -66,9 +66,13 @@
   const num = (v, min, max, def) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def; };
   const time = (s) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  /* Fase 3: quita una viñeta («- », «• », «* ») o una numeración («1. », «2) ») al inicio, pero NUNCA dígitos que son parte del texto («1789 fue…», «3,14 es…»). */
+  const stripBullet = (line) => String(line || '').replace(/^\s*(?:[-•*–]\s+|•\s*|\d{1,3}[.)]\s+)/, '').replace(/^\s*(?:[-•*–]\s+|\d{1,3}[.)]\s+)/, '');
   const clean = (v, max = MAX_PROMPT) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
   const cleanMl = (v, max) => String(v || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
-  const parseJSON = (raw) => { try { return JSON.parse(raw || 'null'); } catch { return null; } };
+  /* Fase 3: toda lectura de JSON ajeno descarta la clave «__proto__» (Object.assign la trataría como un cambio de prototipo del estado). */
+  const noProto = (k, v) => (k === '__proto__' ? undefined : v);
+  const parseJSON = (raw) => { try { return JSON.parse(raw || 'null', noProto); } catch { return null; } };
   const qualityOf = (rating) => ({ again: 1, hard: 3, easy: 5 }[rating] ?? 3);
 
   const debounce = (fn, ms = 150) => { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; };
@@ -150,7 +154,7 @@
     }
   };
   function migrate(src) {
-    let d = JSON.parse(JSON.stringify(src)), v = Number(d.version);
+    let d = JSON.parse(JSON.stringify(src), noProto), v = Number(d.version);
     if (!Number.isInteger(v) || v < 1) v = 1;
     const from = v;
     while (v < SCHEMA) { d = MIGRATIONS[v](d); v++; d.version = v; }
@@ -181,6 +185,12 @@
       style: ['12', 'uni', 'carrera'].includes(t.style) ? t.style : 'uni', career: String(t.career || '').slice(0, 60), mode: t.mode === 'direct' ? 'direct' : 'socratic' };
   }
 
+  /* Fase 3: forma válida de cada lista del respaldo (las mismas reglas validan la vista previa y hydrate). */
+  const okNote = (n) => isObj(n) && typeof n.text === 'string' && n.text.trim() !== '';
+  const okExam = (e) => isObj(e) && isDay(e.date) && Number.isFinite(Number(e.score)) && Number.isFinite(Number(e.total)) && Number(e.total) >= 1 && Number(e.score) >= 0 && Number(e.score) <= Number(e.total);
+  const okDeckCards = (cs) => arr(cs).filter((c) => Array.isArray(c) && typeof c[0] === 'string' && typeof c[1] === 'string' && c[0].trim() && c[1].trim());
+  const okDeck = (d) => isObj(d) && typeof d.name === 'string' && d.name.trim() !== '' && okDeckCards(d.cards).length > 0;
+  const okReview = (r) => isObj(r) && isDay(r.date) && ['again', 'hard', 'easy'].includes(r.rating);
   function hydrate(raw) {
     const base = defaults();
     const src = migrate(raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {});
@@ -210,7 +220,7 @@
       difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0),
       debtMin: d.debtMin == null ? num(d.skipped, 0, 999, 0) * num(d.dailyMinutes, 15, 240, 45) : num(d.debtMin, 0, 240000, 0)
     }));
-    state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && d.name.trim() && Array.isArray(d.cards));
+    { const seenDeck = new Set(); state.decks = state.decks.filter(okDeck).map((d) => ({ name: d.name.trim().slice(0, 60), cards: okDeckCards(d.cards).slice(0, 500).map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => !seenDeck.has(d.name) && seenDeck.add(d.name)); }
     const dayOf = isDay;
     const taskRef = (m) => ({ phase: String(m?.phase || '').slice(0, 20), from: dayOf(m?.from) ? m.from : today() });
     state.planLog = state.planLog.filter((e) => e && dayOf(e.date)).slice(-30).map((e) => ({
@@ -218,7 +228,10 @@
       minutes: num(e.minutes, 0, 240, 0), moved: arr(e.moved).slice(0, 10).map(taskRef), dropped: arr(e.dropped).slice(0, 40).map(taskRef)
     }));
     state.topics = state.topics.filter((t) => t && String(t.name || '').trim()).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
-    state.reviews = state.reviews.filter((r) => r && isDay(r.date)).slice(-MAX_REVIEWS);
+    state.reviews = state.reviews.filter(okReview).slice(-MAX_REVIEWS).map((r) => ({ ...r, subject: String(r.subject || ''), cardId: String(r.cardId || ''), quality: qualityOf(r.rating) }));
+    state.notes = state.notes.filter(okNote).map((n) => ({ id: String(n.id || uid()), date: isDay(n.date) ? n.date : today(), text: n.text.trim().slice(0, 2000) })).slice(-500);
+    state.exams = state.exams.filter(okExam).map((e) => ({ date: e.date, score: Math.round(Number(e.score)), total: Math.round(Number(e.total)) })).slice(-500);
+    state.feynman = [...new Set(state.feynman.filter(isDay))].slice(-1000);
     state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
       id: t.id || uid(), deadlineId: t.deadlineId, date: t.date, phase: t.phase || 'comprension',
       title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
@@ -1013,10 +1026,10 @@
     return list;
   }
   function subjectList() {
-    const due = dueCards(), by = {};
-    state.cards.filter((c) => !c.archived && !c.corrupt).forEach((c) => { by[c.subject] = by[c.subject] || { name: c.subject, n: 0, due: 0 }; by[c.subject].n++; });
-    due.forEach((c) => { if (by[c.subject]) by[c.subject].due++; });
-    return Object.values(by).sort((a, b) => b.due - a.due || b.n - a.n).slice(0, 8);
+    const due = dueCards(), by = new Map(); // Map: una materia llamada «constructor» o «__proto__» no choca con el prototipo
+    state.cards.filter((c) => !c.archived && !c.corrupt).forEach((c) => { if (!by.has(c.subject)) by.set(c.subject, { name: c.subject, n: 0, due: 0 }); by.get(c.subject).n++; });
+    due.forEach((c) => { if (by.has(c.subject)) by.get(c.subject).due++; });
+    return [...by.values()].sort((a, b) => b.due - a.due || b.n - a.n).slice(0, 8);
   }
 
   /* Modo sesión: durante un bloque o un examen solo se ve la actividad actual y sus controles. */
@@ -1749,12 +1762,22 @@ ${text}`;
   }
   async function suggestTopic() {
     const subject = clean($('#topic-search').value, 80);
-    const randomTopic = () => { const pick = worldPool[Math.floor(Math.random() * worldPool.length)]; addTopic(pick, 'Mundial'); toast(`Tema añadido: ${pick}`); };
+    const have = new Set(state.topics.map((t) => t.name.toLowerCase()));
+    const randomTopic = () => { // sin IA: un tema de la lista que aún no tengas
+      const fresh = worldPool.filter((t) => !have.has(t.toLowerCase()));
+      if (!fresh.length) return toast('Ya tienes todos los temas de ejemplo. Añade los tuyos con el botón “Añadir”.');
+      const pick = fresh[Math.floor(Math.random() * fresh.length)]; addTopic(pick, 'Mundial'); toast(`Tema añadido: ${pick}`);
+    };
+    const localSubtopics = () => { // sin IA y con materia escrita: subtemas genéricos útiles para cualquier materia
+      const ideas = [`Conceptos clave de ${subject}`, `Ejemplos y casos de ${subject}`, `Errores comunes en ${subject}`, `Preguntas típicas de examen de ${subject}`].filter((t) => !have.has(t.toLowerCase()));
+      if (!ideas.length) return toast('Ya añadiste esas ideas. Escribe un tema más concreto con “Añadir”.');
+      ideas.slice(0, 3).forEach((t) => addTopic(t, subject)); toast(`Añadí ${plural(Math.min(3, ideas.length), 'idea de tema', 'ideas de tema')} sobre «${subject}» (sin IA).`);
+    };
     if (!subject) return randomTopic();
-    if (!hasAi()) { toast('Sin clave te sugerimos un tema al azar.'); return randomTopic(); }
+    if (!hasAi()) return localSubtopics();
     const result = await gemini(`Sugiere tres subtemas concretos y estudiables sobre: ${subject}. Una línea por subtema.`, 'Sugerencias de estudio', () => 'Añade tus propios temas con el botón “Añadir”.');
     if (!result.fromAi) return;
-    result.text.split('\n').map((x) => x.replace(/^[-•*\d.)\s]+/, '').replace(/\*\*/g, '').trim()).filter(Boolean).slice(0, 3).forEach((x) => addTopic(x, subject));
+    result.text.split('\n').map((x) => stripBullet(x).replace(/\*\*/g, '').trim()).filter(Boolean).slice(0, 3).forEach((x) => addTopic(x, subject));
     renderTopics();
   }
   function spin(topic) {
@@ -1866,8 +1889,8 @@ ${text}`;
     if (data?.type === 'learny-deck') {
       if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
       const good = data.cards.filter((c) => c && typeof c.question === 'string' && typeof c.answer === 'string' && c.question.trim() && c.answer.trim());
-      const decks = (Array.isArray(data.decks) ? data.decks : []).filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards))
-        .map((d) => ({ name: d.name.slice(0, 60), cards: d.cards.filter((c) => Array.isArray(c) && typeof c[0] === 'string' && typeof c[1] === 'string').map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => d.cards.length);
+      const decks = (Array.isArray(data.decks) ? data.decks : []).filter(okDeck)
+        .map((d) => ({ name: d.name.trim().slice(0, 60), cards: okDeckCards(d.cards).map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => d.cards.length);
       return { ok: true, deck: good, decks, dropped: data.cards.length - good.length }; // los errores se detallan en la vista previa
     }
     if (!isLearnyBackup(data)) return { ok: false, error: 'Ese archivo no parece una copia de Learny.' };
@@ -1923,7 +1946,7 @@ ${text}`;
     if (DEMO) return toast('En la demostración no se importan archivos.', 'error'); // Etapa 7
     if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
     file.text().then(async (text) => {
-      let data; try { data = JSON.parse(text); } catch { throw new Error('El archivo no es un JSON válido.'); }
+      let data; try { data = JSON.parse(text, noProto); } catch { throw new Error('El archivo no es un JSON válido.'); }
       const check = validateBackup(data);
       if (!check.ok) throw new Error(check.error);
       if (check.deck) {
@@ -1939,11 +1962,18 @@ ${text}`;
       }
       const brokenCards = arr(data.cards).map((c, i) => [c, i]).filter(([c]) => !isObj(c) || isBrokenCard(c)).map(([c, i]) => `Tarjeta ${i + 1}: ${isObj(c) ? 'le falta la pregunta o la respuesta' : 'no es una tarjeta'} (se importará marcada como dañada)`);
       const badDeadlines = arr(data.deadlines).map((d, i) => [d, i]).filter(([d]) => !(isObj(d) && String(d.title || '').trim() && isDay(d.date))).map(([, i]) => `Fecha ${i + 1}: sin nombre o con fecha no válida (se omitirá)`);
-      const problems = brokenCards.length + badDeadlines.length;
+      const listLines = [
+        ...arr(data.notes).map((n, i) => [n, i]).filter(([n]) => !okNote(n)).map(([, i]) => `Nota ${i + 1}: sin texto o con formato no válido (se omitirá)`),
+        ...arr(data.exams).map((e, i) => [e, i]).filter(([e]) => !okExam(e)).map(([, i]) => `Examen ${i + 1}: fecha o resultado no válido (se omitirá)`),
+        ...arr(data.feynman).map((f, i) => [f, i]).filter(([f]) => !isDay(f)).map(([, i]) => `Feynman ${i + 1}: fecha no válida (se omitirá)`),
+        ...arr(data.decks).map((d, i) => [d, i]).filter(([d]) => !okDeck(d)).map(([, i]) => `Mazo ${i + 1}: sin nombre o sin tarjetas válidas (se omitirá)`),
+        ...arr(data.reviews).filter((r) => !okReview(r)).length ? [`${plural(arr(data.reviews).filter((r) => !okReview(r)).length, 'repaso', 'repasos')} con fecha o valoración no válida (se omitirán)`] : []
+      ];
+      const problems = brokenCards.length + badDeadlines.length + listLines.length;
       if (!(await importPreview({
         title: 'Reemplazar tus datos', intro: 'Esta copia <b>reemplazará</b> tus datos actuales.',
         counts: [{ n: check.cards, label: `tarjetas (ahora: ${state.cards.length})` }, { n: check.deadlines, label: `fechas (ahora: ${state.deadlines.length})` }, { n: check.sessions, label: `sesiones (ahora: ${state.sessions.length})` }, ...(problems ? [{ n: problems, label: problems === 1 ? 'con error' : 'con errores', cls: 'err' }] : [])],
-        groups: [{ title: 'Revisar errores', lines: [...brokenCards, ...badDeadlines], cls: 'err' }], okLabel: 'Reemplazar mis datos', danger: true
+        groups: [{ title: 'Revisar errores', lines: [...brokenCards, ...badDeadlines, ...listLines], cls: 'err' }], okLabel: 'Reemplazar mis datos', danger: true
       }))) return;
       snapshot('import');
       const keepProxy = state.settings.proxyUrl; // una copia ajena nunca redirige tu IA
@@ -1975,24 +2005,37 @@ ${text}`;
   function detectDelimiter(text) {
     const m = text.match(/^#separator:\s*(\w+)/im);
     if (m) { const map = { tab: '\t', semicolon: ';', comma: ',', pipe: '|', space: ' ' }; if (map[m[1].toLowerCase()]) return map[m[1].toLowerCase()]; }
-    const first = text.split(/\r?\n/).find((l) => l.trim() && !l.startsWith('#')) || '';
-    const count = { '\t': 0, ';': 0, ',': 0 }; let q = false;
-    for (const ch of first) { if (ch === '"') q = !q; else if (!q && ch in count) count[ch]++; }
-    if (count['\t']) return '\t'; // Anki exporta con tabuladores
-    return count[';'] > count[','] ? ';' : ',';
+    const lines = text.split(/\r?\n/).filter((l) => l.trim() && !l.startsWith('#')).slice(0, 8);
+    const countIn = (line) => { const c = { '\t': 0, ';': 0, '|': 0, ',': 0 }; let q = false; for (const ch of line) { if (ch === '"') q = !q; else if (!q && ch in c) c[ch]++; } return c; };
+    const per = lines.map(countIn);
+    if (per[0]?.['\t']) return '\t'; // Anki exporta con tabuladores
+    for (const d of [';', '|', ',']) { // el separador es el que aparece el mismo número de veces (≥1) en todas las líneas de muestra
+      if (per.length && per.every((c) => c[d] >= 1 && c[d] === per[0][d])) return d;
+    }
+    const first = per[0] || { ';': 0, '|': 0, ',': 0 };
+    return first[';'] > first[','] ? ';' : first['|'] > first[','] ? '|' : ',';
   }
 
+  /* Una comilla solo abre un campo entre comillas si está al INICIO del campo y solo lo cierra si va seguida de separador o fin de línea;
+     una comilla suelta dentro del texto (5" de pantalla) es literal. Si un campo entre comillas nunca se cierra se avisa en vez de tragarse el resto del archivo. */
   function parseCsv(text) {
     const d = detectDelimiter(text);
-    const rows = []; let row = [], cur = '', q = false;
+    const rows = []; let row = [], cur = '', q = false, fieldStart = true, qLine = 0, line = 1;
     for (let i = 0; i < text.length; i++) {
       const ch = text[i];
-      if (q) { if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
-      else if (ch === '"') q = true;
-      else if (ch === d) { row.push(cur.trim()); cur = ''; }
-      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; row.push(cur.trim()); cur = ''; rows.push(row); row = []; }
-      else cur += ch;
+      if (q) {
+        if (ch === '"') {
+          const nx = text[i + 1];
+          if (nx === '"') { cur += '"'; i++; }
+          else if (nx === undefined || nx === d || nx === '\n' || nx === '\r') q = false;
+          else cur += '"'; // comilla suelta dentro de un campo entre comillas: literal
+        } else { if (ch === '\n') line++; cur += ch; }
+      } else if (ch === '"' && fieldStart) { q = true; qLine = line; fieldStart = false; }
+      else if (ch === d) { row.push(cur.trim()); cur = ''; fieldStart = true; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text[i + 1] === '\n') i++; line++; row.push(cur.trim()); cur = ''; rows.push(row); row = []; fieldStart = true; }
+      else { cur += ch; if (!/\s/.test(ch)) fieldStart = false; }
     }
+    if (q) throw Object.assign(new Error(`Hay unas comillas sin cerrar que empiezan en la línea ${qLine}. Ciérralas o quítalas y vuelve a importar.`), { user: true });
     row.push(cur.trim()); rows.push(row);
     return rows.filter((r) => r.some(Boolean) && !/^#[A-Za-z][\w ]*:/.test(String(r[0])));
   }
@@ -2014,7 +2057,7 @@ ${text}`;
       snapshot('import-csv');
       A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() })));
       save(); closeModal(); renderAll(); toast(`Importadas ${plural(A.fresh.length, 'tarjeta', 'tarjetas')} desde CSV.`);
-    }).catch((e) => { console.error(e); toast('Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma o tabulador).', 'error'); });
+    }).catch((e) => { console.error(e); toast(e.user ? e.message : 'Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma, barra | o tabulador).', 'error'); });
   }
 
   const APP_KEYS = ['theme', 'accent', 'accentCustom', 'radius', 'cardStyle', 'bgStyle', 'density', 'font', 'headFont', 'fontSize', 'lineHeight', 'letterSpacing', 'cardText', 'contentWidth', 'sidebar', 'showMissions', 'showFact', 'reduceMotion', 'immersiveDim'];
@@ -2333,7 +2376,7 @@ ${text}`;
   setInterval(checkNewDay, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
-  window.Learny = { isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { stripBullet, noProto, isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   /* Etapa 5: bienvenida opcional (4 pasos, todo opcional). Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola.
      Los pasos ya confirmados con «Siguiente» se conservan; lo escrito en el paso abierto al omitir no se guarda. */
   function welcomeFlow() {

@@ -13,8 +13,8 @@
   const last = (a) => a[a.length - 1];
   const live = () => state.cards.filter((c) => !c.archived && !c.corrupt);
   const interleave = (cards) => {
-    const g = {}; cards.forEach((c) => (g[c.subject] ||= []).push(c));
-    const q = Object.values(g).map(shuffle), out = [];
+    const g = new Map(); cards.forEach((c) => { if (!g.has(c.subject)) g.set(c.subject, []); g.get(c.subject).push(c); }); // Map: materias como «constructor» no chocan con el prototipo
+    const q = [...g.values()].map(shuffle), out = [];
     while (q.some((x) => x.length)) q.forEach((x) => x.length && out.push(x.shift()));
     return out;
   };
@@ -218,7 +218,7 @@
      no despierta a las otras pestañas y no viajan en las copias exportadas. */
   const DRAFT_KEY = 'learny.drafts';
   let drafts = {};
-  try { const p = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) drafts = p; } catch { /* sin borradores */ }
+  try { const p = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}', L.noProto); if (p && typeof p === 'object' && !Array.isArray(p)) drafts = p; } catch { /* sin borradores */ }
   if (state.drafts && Object.keys(state.drafts).length) { // migra los borradores antiguos que estaban dentro de los datos
     drafts = { ...state.drafts, ...drafts }; state.drafts = {};
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch { /* ignorar */ }
@@ -251,7 +251,7 @@
           ? `Crea 5 flashcards de estudio en español usando SOLO la información de estos apuntes sobre "${topic}". Una por línea con el formato: pregunta | respuesta | fragmento. «fragmento» es una cita literal y corta (máximo 150 caracteres) copiada de los apuntes que respalda la respuesta. No inventes datos que no estén en los apuntes. Sin numeración, sin títulos y sin texto adicional. Respuestas de máximo 2 frases.\nApuntes:\n${notes}`
           : `Genera 5 flashcards de estudio en español sobre "${topic}". Una por línea con el formato: pregunta | respuesta. Sin numeración, sin títulos y sin texto adicional. Respuestas de máximo 2 frases.`;
         const text = await L.askGemini(prompt);
-        const rows = text.split('\n').map((l) => l.replace(/^[-•*\d.)\s]+/, '').replace(/\*\*/g, '').split('|').map((x) => x.trim())).filter((r) => r.length >= 2 && r[0] && r[1]).slice(0, 5);
+        const rows = text.split('\n').map((l) => L.stripBullet(l).replace(/\*\*/g, '').split('|').map((x) => x.trim())).filter((r) => r.length >= 2 && r[0] && r[1]).slice(0, 5);
         if (!rows.length) throw new Error('La IA no devolvió tarjetas con el formato esperado. Inténtalo de nuevo.');
         const items = rows.map((r) => (notes && r.length >= 3
           ? { question: r[0], answer: r.slice(1, -1).join(' | '), fragment: r[r.length - 1].slice(0, 200) }
