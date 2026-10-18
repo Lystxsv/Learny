@@ -18,6 +18,81 @@
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <noscript><p style="padding:1rem">Learny necesita JavaScript activado para funcionar.</p></noscript>
 
+<!-- Etapa 6: portada pública. Capa aparte sobre la app (oculta por defecto); solo la ve quien aún no tiene datos ni pasó por la bienvenida. -->
+<div id="landing" class="landing" hidden>
+  <header class="landing-head">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff"/><path d="M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15" fill="none" stroke="#0e1220" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="51" cy="48" r="3" fill="#0e1220"/></svg>
+      </div>
+      <div><strong>Learny</strong><span>Estudia con intención</span></div>
+    </div>
+  </header>
+
+  <main class="landing-main" id="landing-main">
+    <section class="landing-hero" aria-labelledby="landing-title">
+      <div class="landing-copy">
+        <p class="eyebrow">Para estudiar con calma y constancia</p>
+        <h1 id="landing-title" tabindex="-1">Estudia con intención, un paso a la vez</h1>
+        <p class="lead">Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Sin cuenta ni registro: tus datos se quedan en este navegador.</p>
+        <div class="actions landing-cta">
+          <button id="landing-start" class="primary-button big" type="button" data-landing="start">Probar Learny</button>
+          <button class="outline-button" type="button" data-landing="tour">Ver el recorrido</button>
+          <button id="landing-demo" class="outline-button" type="button" data-landing="demo">Ver una demostración</button>
+        </div>
+        <p class="landing-note">Una vez cargada, funciona sin conexión. Puedes descargar una copia de tus datos cuando quieras.</p>
+      </div>
+
+      <figure class="landing-mock" aria-labelledby="landing-mock-cap">
+        <div class="landing-mock-ui" aria-hidden="true">
+          <div class="card landing-mock-card">
+            <div class="card-head"><div><p class="eyebrow">Recomendado para ahora</p><p class="next-title">Repasar 6 tarjetas</p></div><span class="tag">≈ 5 min</span></div>
+            <p class="landing-mock-why"><b>Por qué:</b> Te sugerimos repasar estas 6 tarjetas porque 2 están vencidas y 4 tocan hoy.</p>
+            <span class="landing-mock-btn">Repasar ahora</span>
+            <p class="landing-mock-alt"><b>Haz un bloque de enfoque</b> <span class="tag">≈ 25 min</span></p>
+          </div>
+          <div class="landing-flash">
+            <small>Química</small>
+            <p>¿Qué ocurre con la entropía de un sistema aislado?</p>
+            <div class="landing-mock-rate"><span class="landing-mock-btn out">1 · No lo sabía</span><span class="landing-mock-btn out">2 · Dudé</span><span class="landing-mock-btn out">3 · Fácil</span></div>
+          </div>
+        </div>
+        <figcaption id="landing-mock-cap">Así se ve «Hoy»: una acción recomendada con su motivo y, debajo, una tarjeta de repaso. Es un ejemplo ilustrativo; no son datos tuyos.</figcaption>
+      </figure>
+    </section>
+
+    <section class="landing-section" aria-labelledby="landing-tour">
+      <h2 id="landing-tour" tabindex="-1">Preparar, practicar, repasar</h2>
+      <ol class="landing-steps">
+        <li><h3>Preparar</h3><p>Pon la fecha de tu examen y Learny reparte el trabajo en tareas diarias, contando hacia atrás. Crea tarjetas desde tus apuntes o añade un mazo de ejemplo.</p></li>
+        <li><h3>Practicar</h3><p>Elige un resultado concreto y haz un bloque Pomodoro. Con las tarjetas, primero escribes tu respuesta y luego la comparas: recordar con esfuerzo suele ayudar más que releer.</p></li>
+        <li><h3>Repasar</h3><p>Valoras cada tarjeta (no lo sabía, dudé, fácil) y Learny programa cuándo volver a verla. Cada día, «Hoy» te propone una sola cosa para empezar.</p></li>
+      </ol>
+    </section>
+
+    <section class="landing-section landing-trust" aria-labelledby="landing-trust-title">
+      <h2 id="landing-trust-title">Tus datos, contigo</h2>
+      <ul>
+        <li>No hay cuenta ni registro.</li>
+        <li>Todo se guarda solo en este navegador; en Ajustes puedes descargar una copia.</li>
+        <li>La IA es opcional: solo se usa internet si añades tu propia clave o tu proxy.</li>
+      </ul>
+      <div class="actions landing-end"><button id="landing-start-2" class="primary-button big" type="button" data-landing="start">Probar Learny</button></div>
+    </section>
+  </main>
+
+  <footer class="landing-foot">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></footer>
+</div>
+
+<!-- Etapa 7: banner permanente de la demo (oculto salvo con ?demo). Sticky arriba: nunca tapa los controles ni la barra móvil inferior. -->
+<div id="demo-banner" class="demo-banner" role="region" aria-label="Modo demostración" hidden>
+  <p><b>Demostración</b> · Datos de ejemplo; nada de esto se guarda ni toca tus datos reales.</p>
+  <div class="demo-actions">
+    <button id="demo-reset" class="text-button" type="button">Reiniciar demo</button>
+    <button id="demo-exit" class="primary-button" type="button">Salir de la demo</button>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -112,6 +187,15 @@
         <div class="timer" role="timer" aria-live="off"><span id="timer-clock">25:00</span><small id="timer-note">¿Qué resultado concreto quieres lograr?</small></div>
         <label class="field">Resultado concreto de este bloque
           <input id="intention-input" class="intention" placeholder="Ej.: terminar los ejercicios 1 al 5" maxlength="140"></label>
+        <div id="distraction-zone" class="distraction-zone" hidden>
+          <label class="field" for="distraction-input">Anotar una distracción</label>
+          <div class="distraction-row">
+            <input id="distraction-input" maxlength="140" autocomplete="off" placeholder="Algo que te sacó del foco (lo miras después)">
+            <button id="distraction-add" class="outline-button" type="button">Anotar</button>
+          </div>
+          <ul id="distraction-list" class="distraction-list" aria-label="Últimas distracciones anotadas"></ul>
+          <p id="distraction-count" class="hint" aria-live="polite"></p>
+        </div>
         <div class="actions">
           <button id="pomodoro-button" class="primary-button">▶ Iniciar enfoque</button>
           <button id="pomodoro-skip" class="outline-button" hidden>Saltar descanso</button>
@@ -129,6 +213,10 @@
           </div>
           <p id="goal-progress" class="lead rhythm"></p>
           <p id="notify-hint" class="hint" hidden>Las notificaciones están bloqueadas: Learny avisará aquí y con sonido/vibración.</p>
+          <div class="ambient" role="group" aria-label="Ambiente de estudio">
+            <p class="hint"><b>Ambiente</b> · cambia tu apariencia (puedes deshacerlo); sin sonido.</p>
+            <div class="actions"><button class="outline-button" type="button" data-ambient="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-ambient="noche">Noche</button><button class="outline-button" type="button" data-ambient="enfoque">Minimalista</button></div>
+          </div>
           <div class="actions"><button id="pomodoro-config" class="outline-button" type="button">Ajustar tiempos</button></div>
         </details>
       </article>
@@ -384,13 +472,13 @@
         <li><b>Explicar.</b> Usa Feynman o la ruleta para explicar con tus palabras.</li>
         <li><b>Reforzar.</b> En <i>Reforzar</i> mira qué materias fallan y empieza ahí mañana.</li></ol></article>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas.</p></article>
+        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas. Al terminar un bloque o un examen, Learny muestra un cierre con solo los datos de esa sesión y te deja elegir entre <i>Terminar por hoy</i> y <i>Seguir un poco más</i>. Si el menú atenuado durante el bloque te molesta, apágalo en <i>Ajustes ⚙️ → Disposición</i>.</p></article>
         <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta. Las que dominas, envíalas a la Biblioteca.</p></article>
         <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
         <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
       </div>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
+        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i>Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
         <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → Informe de examen</i>. <i>Reforzar → Más datos</i>. <i>Ajustes ⚙️ → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
         <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes ⚙️ puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
       </div>

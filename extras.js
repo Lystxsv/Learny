@@ -1,6 +1,11 @@
 (() => {
   'use strict';
   const L = window.Learny; if (!L) return;
+  /* Etapa 7: en demo, los borradores viven en memoria (nunca en learny.drafts). */
+  const localStorage = (() => {
+    if (L.isDemo) { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, removeItem: (k) => { m.delete(k); } }; }
+    try { return window.localStorage; } catch { return null; }
+  })();
   const { state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural } = L;
   const $ = (s) => document.querySelector(s);
   const raw = (v, n = 2000) => String(v || '').trim().slice(0, n);
@@ -218,6 +223,7 @@
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch { /* ignorar */ }
     save();
   }
+  document.addEventListener('learny:reset', () => { Object.keys(drafts).forEach((k) => delete drafts[k]); try { localStorage?.removeItem(DRAFT_KEY); } catch { /* ignorar */ } });
   ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input', '#ai-question'].forEach((sel) => {
     const el = $(sel); if (!el) return;
     if (drafts[sel] && !el.value) { el.value = drafts[sel]; L.reveal(el); } // un borrador guardado no queda escondido en un bloque plegado

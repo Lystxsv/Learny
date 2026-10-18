@@ -597,3 +597,117 @@ body.hide-missions #missions-card, body.hide-fact .fact { display: none; }
 @media (max-width: 820px) { .bottom-nav .nav-button small { font-size: clamp(9px, 2.6vw, 11px); letter-spacing: 0; } }
 @media (max-width: 600px) { .topbar-tools .icon-button { min-width: 44px; min-height: 44px; padding: .25rem .4rem; font-size: 16px; letter-spacing: 0; } .topbar-tools { gap: .35rem; } }
 @media (max-width: 600px) { .brand strong { font-size: 16px; letter-spacing: 0; } }
+
+/* ===== Etapa 1: inicio personal (selector de tiempo y accesos) ===== */
+.mode-picker { display: flex; flex-wrap: wrap; gap: var(--s1); margin-bottom: var(--s2); }
+.seg-btn { padding: var(--s1) var(--s2); border: 1px solid var(--border); border-radius: 999px; background: var(--surface2); color: var(--text); }
+.seg-btn:hover { border-color: var(--accent); }
+.seg-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.subject-chips { display: flex; flex-wrap: wrap; gap: var(--s1); margin: var(--s2) 0 var(--s1); }
+.quick-links { margin: var(--s2) 0 0; display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+.today-queue .hint { margin-top: var(--s1); }
+
+/* ===== Etapa 2: modo inmersivo (refina session-study / session-practice) y distracciones ===== */
+.distraction-zone { margin-top: var(--s2); padding: var(--s2); border: 1px dashed var(--border); border-radius: var(--r-ctl); background: var(--surface2); }
+.distraction-zone .field { margin: 0 0 var(--s1); }
+.distraction-row { display: flex; gap: var(--s1); }
+.distraction-row input { flex: 1; min-width: 0; }
+.distraction-list { list-style: none; margin: var(--s1) 0 0; padding: 0; color: var(--muted); font-size: var(--fs-cap); overflow-wrap: anywhere; }
+.distraction-list:empty { display: none; }
+.distraction-list li::before { content: "• "; }
+.distraction-zone .hint { margin-top: var(--s1); }
+.ambient { margin-top: var(--s2); }
+/* Durante un bloque o un examen, el menú y la barra superior se atenúan; vuelven al pasar el ratón o al enfocarlos con el teclado */
+body.session-study .sidebar, body.session-study .topbar, body.session-study .bottom-nav,
+body.session-practice .sidebar, body.session-practice .topbar, body.session-practice .bottom-nav { opacity: .3; transition: opacity .25s; }
+body.session-study .sidebar:hover, body.session-study .sidebar:focus-within, body.session-study .topbar:hover, body.session-study .topbar:focus-within, body.session-study .bottom-nav:hover, body.session-study .bottom-nav:focus-within,
+body.session-practice .sidebar:hover, body.session-practice .sidebar:focus-within, body.session-practice .topbar:hover, body.session-practice .topbar:focus-within, body.session-practice .bottom-nav:hover, body.session-practice .bottom-nav:focus-within { opacity: 1; }
+body.session-study #offline-note, body.session-study .fact { display: none; }
+body.session-study #study .pomodoro-card { max-width: 720px; margin-inline: auto; }
+@media (min-height: 641px) { body.session-study .pomodoro-card .timer { font-size: min(calc(var(--fs-num) * 1.15), 22vw); } }
+
+/* ===== Etapa 3: cierre de sesión · y ajuste «no atenuar» ===== */
+.closure-list { margin: 0; padding-left: var(--s3); display: grid; gap: var(--s1); color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.closure-list b { color: var(--text); }
+.modal-content .why { color: var(--muted); }
+.modal-content .why b { color: var(--text); }
+/* Si el usuario desactiva el atenuado inmersivo (Ajustes → Disposición), el menú y la barra no cambian */
+body.no-dim .sidebar, body.no-dim .topbar, body.no-dim .bottom-nav { opacity: 1; }
+
+/* ===== Etapa 4: «Hoy me cuesta arrancar» ===== */
+.stuck-list { display: grid; gap: var(--s1); }
+.stuck-opt { display: grid; gap: .2rem; text-align: left; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); color: var(--text); }
+.stuck-opt:hover { border-color: var(--accent); }
+.stuck-opt small { color: var(--muted); font-size: var(--fs-cap); }
+
+/* ===== Etapa 5: bienvenida opcional ===== */
+.welcome-actions { justify-content: flex-end; }
+.welcome-actions .text-button { margin: 0 auto 0 0; }
+.welcome-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s1); border: 0; padding: 0; margin: 0; min-width: 0; }
+.modal-content label.welcome-time { position: relative; display: block; color: var(--text); }
+.welcome-time input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.welcome-time span { display: grid; gap: .2rem; justify-items: center; min-height: 44px; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); text-align: center; cursor: pointer; }
+.welcome-time small { color: var(--muted); font-size: var(--fs-cap); }
+.welcome-time:hover span { border-color: var(--accent); }
+.welcome-time input:checked + span { border: 2px solid var(--accent); padding: calc(var(--s2) - 1px); font-weight: 700; }
+.welcome-time input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 480px) { .welcome-times { grid-template-columns: minmax(0, 1fr); } }
+
+/* ===== Etapa 6: portada pública (capa aparte; la app queda oculta mientras se ve) ===== */
+body.show-landing .app, body.show-landing .bottom-nav, body.show-landing .skip-link, body.show-landing #mini-timer { display: none !important; }
+.landing { min-height: 100vh; min-height: 100dvh; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) calc(var(--s4) + env(safe-area-inset-bottom, 0px)) env(safe-area-inset-left, 0px); }
+.landing-head, .landing-main, .landing-foot { width: min(1080px, 100%); margin-inline: auto; padding-inline: clamp(1rem, 4vw, 2rem); }
+.landing-head { padding-block: var(--s3) var(--s1); }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--s4); align-items: center; padding-block: var(--s4); }
+.landing h1 { margin: var(--s1) 0 var(--s2); font-size: var(--fs-title); line-height: 1.15; }
+.landing h1:focus, .landing h2:focus { outline: none; }
+.landing-cta { margin-top: var(--s3); }
+.landing-cta .primary-button, .landing-end .primary-button { min-height: 48px; }
+.landing-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--fs-cap); line-height: 1.5; }
+.landing-mock { margin: 0; min-width: 0; }
+.landing-mock-ui { display: grid; gap: var(--s2); pointer-events: none; user-select: none; }
+.landing-mock figcaption { margin-top: var(--s1); color: var(--muted); font-size: var(--fs-cap); line-height: 1.5; }
+.landing-mock-card .next-title { margin: 0; }
+.landing-mock-why { margin: var(--s1) 0 var(--s2); color: var(--muted); line-height: 1.5; }
+.landing-mock-why b { color: var(--text); }
+.landing-mock-btn { display: inline-block; padding: var(--s1) var(--s2); border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.landing-mock-btn.out { background: var(--surface2); color: var(--text); border: 1px solid var(--border); font-weight: 500; font-size: var(--fs-cap); }
+.landing-mock-alt { margin: var(--s2) 0 0; padding-top: var(--s2); border-top: 1px solid var(--border); color: var(--muted); }
+.landing-mock-alt b { color: var(--text); }
+.landing-flash { display: grid; gap: var(--s1); justify-items: center; text-align: center; padding: var(--s3); background: linear-gradient(135deg, var(--flash-a), var(--flash-b)); border: 1px solid var(--flash-border); border-radius: var(--radius); }
+.landing-flash small { color: var(--muted); }
+.landing-flash p { margin: 0; font-family: var(--serif); font-size: var(--fs-sub); line-height: 1.4; }
+.landing-mock-rate { display: flex; flex-wrap: wrap; gap: var(--s1); justify-content: center; margin-top: var(--s1); }
+.landing-section { padding-block: var(--s4); border-top: 1px solid var(--border); }
+.landing-section h2 { margin: 0; font-size: var(--fs-title); line-height: 1.2; }
+.landing-steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); padding: 0; margin: var(--s3) 0 0; }
+.landing-steps li { counter-increment: step; padding: var(--s3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.landing-steps li::before { content: counter(step); display: grid; place-items: center; width: 2rem; height: 2rem; margin-bottom: var(--s1); border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; }
+.landing-steps h3 { margin: 0 0 var(--s1); font-family: var(--serif); font-size: var(--fs-sub); }
+.landing-steps p { margin: 0; color: var(--muted); line-height: 1.55; }
+.landing-trust ul { margin: var(--s2) 0 0; padding-left: 1.2rem; display: grid; gap: var(--s1); color: var(--muted); line-height: 1.5; }
+.landing-trust li::marker { color: var(--accent); }
+.landing-end { margin-top: var(--s3); }
+.landing-foot { padding-block: var(--s2); color: var(--muted); font-size: var(--fs-cap); }
+.landing-foot a { color: var(--accent); }
+@media (max-width: 820px) {
+  .landing-hero { grid-template-columns: minmax(0, 1fr); gap: var(--s3); padding-block: var(--s3); }
+  .landing-steps { grid-template-columns: minmax(0, 1fr); }
+  .landing-cta .primary-button, .landing-cta .outline-button { flex: 1 1 100%; }
+}
+
+/* Etapa 7: demo aislada. Banner permanente (sticky arriba, en el flujo): no tapa controles ni la barra móvil inferior.
+   Colores propios y fijos para que el contraste no dependa del tema ni del acento del usuario. */
+.demo-banner { position: sticky; top: 0; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem var(--s2); padding: calc(.45rem + env(safe-area-inset-top, 0px)) calc(var(--s2) + env(safe-area-inset-right, 0px)) .45rem calc(var(--s2) + env(safe-area-inset-left, 0px)); background: #ffd166; color: #1f1600; border-bottom: 2px solid #1f1600; font-size: var(--fs-cap, .85rem); line-height: 1.35; }
+.demo-banner p { margin: 0; flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+.demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.demo-banner .primary-button { min-height: 44px; background: #1f1600; color: #ffd166; }
+.demo-banner .text-button { min-height: 44px; margin: 0; padding: 0 .5rem; color: #1f1600; text-decoration: underline; }
+.demo-banner :focus-visible { outline: 3px solid #1f1600; outline-offset: 2px; }
+body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo-h, 0px)); }
+@media (max-width: 820px) { body.is-demo .sidebar { height: auto; } }
+@media (max-width: 600px) { body.is-demo .topbar-tools { top: var(--demo-h, 0px); } }
+
+/* Fase 1: lista de copias automáticas */
+.backup-list { display: grid; gap: 8px; margin-top: 8px; }
+.backup-list button { text-align: left; }

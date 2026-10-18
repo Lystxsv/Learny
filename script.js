@@ -1,9 +1,22 @@
 (() => {
   'use strict';
 
+  /* Etapa 7: demo aislada. Se decide por la URL (?demo) antes de tocar ningún almacenamiento.
+     En demo, `localStorage` (solo dentro de este archivo) es un almacén EN MEMORIA: ninguna clave real
+     (learny.v3, .timer, .backup, .corrupt…) se lee, escribe ni borra, y recargar reinicia la demo. */
+  const DEMO = /[?&]demo(?:[=&#]|$)/.test(location.search);
+  const localStorage = (() => {
+    if (DEMO) {
+      const m = new Map();
+      return { getItem: (k) => (m.has(String(k)) ? m.get(String(k)) : null), setItem: (k, v) => { m.set(String(k), String(v)); }, removeItem: (k) => { m.delete(String(k)); }, clear: () => m.clear() };
+    }
+    try { return window.localStorage; } catch { return null; }
+  })();
+
   const KEY = 'learny.v3';
   const LEGACY_KEYS = ['learny.v2', 'learny.v1'];
   const BACKUP_KEY = 'learny.backup';
+  const MAX_BACKUPS = 3;
   const DEFAULT_MODEL = 'gemini-flash-latest';
   const MAX_PROMPT = 9000;
   const MAX_INTERVAL = 180;
@@ -13,7 +26,7 @@
   const MAX_REVIEWS = 5000;
   const MAX_CHATS = 20;
   const MIN_SAMPLE = 5; // con menos repasos no se afirma nada sobre una materia
-  let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0, lastSavedRaw = null, lastTimerRaw = null;
+  let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0, lastSavedRaw = null, lastTimerRaw = null, corruptRaw = null, corruptKept = true, bootHold = false, saveErrorShown = false;
   const PHASES = [
     { id: 'comprension', label: 'Comprensión' },
     { id: 'practica', label: 'Práctica' },
@@ -43,6 +56,7 @@
   const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   const esc = (v = '') => String(v).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
   const fmt = (v) => esc(v).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+  const cleanNotes = (a) => (Array.isArray(a) ? a : []).map((x) => String(x == null ? '' : x).trim().slice(0, 140)).filter(Boolean).slice(0, 20); // notas de distracción
   const num = (v, min, max, def) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def; };
   const time = (s) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -63,13 +77,20 @@
     version: SCHEMA,
     settings: {
       focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
-      theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
+      theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, immersiveDim: true, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
       recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
-      tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: ''
+      tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', welcomed: false
     },
     notes: [], feynman: [], decks: [], planLog: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
   });
   const state = defaults();
+  /* Etapa 5: ¿hay algo que el usuario ya haya creado o configurado? (función hoisted: se usa al cargar, antes de isNewUser) */
+  function hasUserData() {
+    const s = state.settings || {}, t = s.tutor || {};
+    return ['cards', 'sessions', 'deadlines', 'reviews', 'notes', 'feynman', 'decks', 'topics', 'tasks', 'planLog', 'chats', 'exams'].some((k) => Array.isArray(state[k]) && state[k].length > 0)
+      || !!(s.name || t.subject || t.goal || t.level || t.known || t.career || s.proxyUrl || s.lastExport || state.apiKey)
+      || (state.drafts && typeof state.drafts === 'object' && Object.keys(state.drafts).length > 0);
+  }
   let exam = null;
 
   const isBrokenCard = (c) => typeof c.question !== 'string' || !c.question.trim() || typeof c.answer !== 'string' || !c.answer.trim();
@@ -145,7 +166,7 @@
     s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose', 'custom'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
     s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
     s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
-    ['reduceMotion', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
+    ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
     ['name', 'model', 'lastExport', 'backupNag', 'lastRemind'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
     s.name = s.name.slice(0, 30); s.model = s.model.trim() || DEFAULT_MODEL;
     s.recentTurns = arr(s.recentTurns).filter((x) => typeof x === 'string').slice(0, 8);
@@ -176,7 +197,7 @@
     state.sessions = state.sessions.filter((s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s.date)).map((s) => ({
       ...s, id: s.id || uid(), minutes: Number(s.minutes) || 0, energy: s.energy ? Number(s.energy) : null,
       label: String(s.label || s.subject || ''), achieved: typeof s.achieved === 'boolean' ? s.achieved : null,
-      abandon: s.abandon || null, intention: String(s.intention || '')
+      abandon: s.abandon || null, intention: String(s.intention || ''), distractions: cleanNotes(s.distractions)
     }));
     state.deadlines = state.deadlines.filter((d) => d && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date)).map((d) => ({
       id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
@@ -202,25 +223,93 @@
     }));
   }
 
-  function snapshot(reason) {
-    try {
-      const { apiKey, chats, ...safe } = state;
-      localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: new Date().toISOString(), reason, data: safe }));
-    } catch { /* sin copia */ }
+  /* Fase 1: acceso a localStorage siempre protegido (puede ser null o lanzar) y copias automáticas ROTATIVAS (las últimas MAX_BACKUPS, de la más nueva a la más vieja). */
+  const store = {
+    get(k) { try { return localStorage ? localStorage.getItem(k) : null; } catch { return null; } },
+    set(k, v) { try { if (!localStorage) return false; localStorage.setItem(k, v); return true; } catch { return false; } },
+    del(k) { try { if (localStorage) localStorage.removeItem(k); } catch { /* ignorar */ } }
+  };
+  function readBackups() {
+    const p = parseJSON(store.get(BACKUP_KEY));
+    const list = Array.isArray(p) ? p : (p && typeof p === 'object' ? [p] : []); // acepta el formato antiguo (una sola copia)
+    return list.filter((b) => b && typeof b === 'object' && b.data && typeof b.data === 'object').slice(0, MAX_BACKUPS);
   }
+  function pushBackup(reason, data) {
+    const entry = { at: new Date().toISOString(), reason, data };
+    let list = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
+    while (list.length) { // si no cabe, se descartan las copias más viejas (nunca el archivo dañado ni tus datos)
+      if (store.set(BACKUP_KEY, JSON.stringify(list))) return true;
+      list = list.slice(0, -1);
+    }
+    return false;
+  }
+  function snapshot(reason) {
+    const { apiKey, chats, ...safe } = state;
+    return pushBackup(reason, safe);
+  }
+
+  /* Etapa 7: datos de ejemplo, creados en código y relativos a hoy. Se escriben solo en el almacén en memoria y pasan por load()/hydrate() como cualquier copia. */
+  function seedDemo() {
+    const off = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return dateStr(d); };
+    const Q = { again: 1, hard: 3, easy: 5 };
+    const mk = (i, subject, question, answer, next, last, ease, interval, reps, hist) => ({
+      id: `demo-c${i}`, subject, question, answer, nextReview: off(next), lastReviewed: last == null ? null : off(last),
+      archived: false, origin: '', easeFactor: ease, interval, repetitions: reps,
+      history: hist.map(([d, r]) => ({ date: off(d), rating: r, quality: Q[r] }))
+    });
+    const cards = [
+      mk(1, 'Biología', '¿Qué orgánulo produce la mayor parte del ATP en la célula?', 'La mitocondria, mediante la respiración celular.', -2, -8, 2.5, 6, 2, [[-14, 'easy'], [-8, 'easy']]),
+      mk(2, 'Biología', '¿Qué ocurre en la fase luminosa de la fotosíntesis?', 'La luz se convierte en energía química (ATP y NADPH) y se libera O₂.', -1, -7, 2.36, 6, 2, [[-13, 'hard'], [-7, 'easy']]),
+      mk(3, 'Biología', '¿Cuál es la diferencia entre mitosis y meiosis?', 'La mitosis da 2 células idénticas; la meiosis da 4 células con la mitad de cromosomas.', 0, -1, 2.18, 1, 1, [[-1, 'again'], [-1, 'hard']]),
+      mk(4, 'Biología', '¿Qué es el ADN y dónde se encuentra en una célula eucariota?', 'La molécula que guarda la información genética; está sobre todo en el núcleo.', 4, -2, 2.6, 6, 2, [[-8, 'easy'], [-2, 'easy']]),
+      mk(5, 'Biología', '¿Qué función tiene el ribosoma?', 'Sintetizar proteínas a partir del ARN mensajero.', 9, -5, 2.7, 14, 3, [[-19, 'easy'], [-12, 'easy'], [-5, 'easy']]),
+      mk(6, 'Historia', '¿En qué año comenzó la Revolución Francesa?', '1789, con la toma de la Bastilla el 14 de julio.', -3, -9, 2.2, 1, 1, [[-10, 'again'], [-9, 'hard']]),
+      mk(7, 'Historia', '¿Qué fue el Tratado de Versalles (1919)?', 'El acuerdo que puso fin a la Primera Guerra Mundial e impuso duras condiciones a Alemania.', 0, -4, 2.04, 1, 0, [[-6, 'again'], [-4, 'again']]),
+      mk(8, 'Historia', '¿Qué causó la caída del Imperio romano de Occidente?', 'Varias causas: crisis económica, presión de pueblos germánicos y debilidad política (476 d. C.).', 0, null, 2.5, 0, 0, []),
+      mk(9, 'Historia', '¿Qué fue la Guerra Fría?', 'Una rivalidad política e ideológica entre EE. UU. y la URSS, sin combate directo entre ambos.', 3, -3, 2.5, 6, 2, [[-9, 'hard'], [-3, 'easy']]),
+      mk(10, 'Inglés', '¿Cuál es el pasado simple de «go»?', '«Went».', -1, -7, 2.5, 6, 2, [[-13, 'easy'], [-7, 'easy']]),
+      mk(11, 'Inglés', 'Completa: «If I ___ more time, I would travel.»', '«had» (segundo condicional).', 5, -1, 2.6, 6, 2, [[-7, 'easy'], [-1, 'easy']]),
+      mk(12, 'Inglés', '¿Qué significa «although»?', 'Aunque / a pesar de que.', 12, -10, 2.7, 22, 4, [[-30, 'easy'], [-22, 'easy'], [-14, 'easy'], [-10, 'easy']]),
+      mk(13, 'Inglés', '¿Cuándo se usa el present perfect?', 'Para acciones pasadas con relación al presente: «I have lived here for 3 years».', 0, null, 2.5, 0, 0, [])
+    ];
+    const pattern = [['Biología', 'easy'], ['Historia', 'again'], ['Inglés', 'easy'], ['Biología', 'hard'], ['Historia', 'hard'], ['Inglés', 'easy'], ['Biología', 'easy'], ['Historia', 'again']];
+    const first = { Biología: 1, Historia: 6, Inglés: 10 };
+    const reviews = [];
+    for (let d = 12; d >= 1; d--) for (let k = 0; k < 2 + (d % 3); k++) {
+      const [subject, rating] = pattern[(d * 3 + k) % pattern.length];
+      reviews.push({ date: off(-d), cardId: `demo-c${first[subject] + (k % 3)}`, subject, rating, quality: Q[rating] });
+    }
+    const ses = (n, date, minutes, intention, label, energy, achieved) => ({ id: `demo-s${n}`, date: off(date), minutes, intention, label, energy, abandon: null, achieved, distractions: [] });
+    const sessions = [
+      ses(1, -5, 25, 'Repasar la fotosíntesis', 'Biología', 4, true), ses(2, -4, 25, 'Línea de tiempo de la Revolución Francesa', 'Historia', 3, true),
+      ses(3, -3, 25, 'Verbos irregulares', 'Inglés', 4, true), ses(4, -2, 25, 'Mitosis y meiosis', 'Biología', 3, false),
+      ses(5, -1, 25, 'Tratado de Versalles', 'Historia', 2, true)
+    ];
+    const deadlines = [{ id: 'demo-d1', title: 'Parcial de Biología', subject: 'Biología', date: off(9), difficulty: 3, dailyMinutes: 40, skipped: 0, debtMin: 0 }];
+    const data = {
+      version: SCHEMA,
+      settings: { name: 'Ejemplo', welcomed: true, engine: 'local', skipAi: true, sound: false, notify: false, proxyUrl: '', lastRemind: off(0), backupNag: off(0), tutor: { subject: 'Biología', goal: 'Aprobar el parcial', mode: 'socratic' } },
+      cards, reviews, sessions, deadlines, topics: [{ id: 'demo-t1', name: 'Biología', category: 'Ciencias' }], apiKey: ''
+    };
+    try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* en memoria: no falla */ }
+  }
+  if (DEMO) seedDemo();
 
   (function load() {
     let merged = {};
     try {
       LEGACY_KEYS.slice().reverse().forEach((k) => { const p = parseJSON(localStorage.getItem(k)); if (p && typeof p === 'object') merged = { ...merged, ...p, settings: { ...(merged.settings || {}), ...(p.settings || {}) } }; });
       const rawCurrent = localStorage.getItem(KEY), current = parseJSON(rawCurrent);
-      if (rawCurrent && !current) { loadProblem = true; try { localStorage.setItem('learny.corrupt', rawCurrent); } catch { /* sin espacio */ } }
+      if (rawCurrent && !current) { loadProblem = true; corruptRaw = rawCurrent; corruptKept = store.set('learny.corrupt', rawCurrent); }
       if (current && typeof current === 'object') merged = { ...merged, ...current, settings: { ...(merged.settings || {}), ...(current.settings || {}) } };
     } catch { /* estado nuevo */ }
     if (Object.keys(merged).length && !(Number(merged.version) >= SCHEMA)) {
-      try { const { apiKey, chats, ...safe } = merged; localStorage.setItem(BACKUP_KEY, JSON.stringify({ at: new Date().toISOString(), reason: `migración desde v${Number(merged.version) || 1}`, data: safe })); } catch { /* sin copia */ }
+      const { apiKey, chats, ...safe } = merged; pushBackup(`migración desde v${Number(merged.version) || 1}`, safe);
     }
+    bootHold = loadProblem && !corruptKept; // datos dañados sin copia: ningún guardado automático del arranque pisa la clave principal
     hydrate(merged);
+    // Etapa 5: quien ya tiene datos (o cuyo archivo estaba dañado) nunca verá la bienvenida; se marca una vez y se guarda al final del arranque.
+    if (!state.settings.welcomed && (loadProblem || hasUserData())) state.settings.welcomed = true;
   })();
 
   function confirmDialog({ title = '¿Seguro?', message = '', ok = 'Confirmar', danger = false } = {}) {
@@ -236,19 +325,27 @@
 
   function setSaved(ok) {
     const el = $('#save-status'); if (!el) return;
+    if (DEMO) { el.textContent = 'Demo: no se guarda'; el.classList.remove('bad'); return; }
     el.textContent = ok ? `Guardado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}` : 'No guardado';
     el.classList.toggle('bad', !ok);
   }
   const save = () => {
+    if (bootHold) return true;
     rev++;
     if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
     let json = null;
-    try { json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
+    try { json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true; }
     catch {
-      try { // almacenamiento lleno: se sacrifican la copia automática y el archivo dañado antes de perder tus datos nuevos
-        if (json) { localStorage.removeItem('learny.corrupt'); localStorage.removeItem(BACKUP_KEY); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
+      try { // almacenamiento lleno: se van soltando copias automáticas (de la más vieja a la más nueva) antes de perder tus datos nuevos; learny.corrupt NO se toca
+        if (json && localStorage) {
+          let list = readBackups();
+          while (list.length) { list = list.slice(0, -1); if (list.length) store.set(BACKUP_KEY, JSON.stringify(list)); else store.del(BACKUP_KEY); try { localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true; } catch { /* sigue */ } }
+          localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true;
+        }
       } catch { /* sigue */ }
-      setSaved(false); toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); return false; }
+      setSaved(false);
+      if (!saveErrorShown) { saveErrorShown = true; toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); }
+      return false; }
   };
 
   const announce = (msg) => { const el = $('#sr-live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
@@ -353,7 +450,7 @@
 
   function beep() {
     try {
-      if (state.settings.sound !== false) {
+      if (state.settings.sound !== false && !DEMO) {
         const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
         const ctx = new Ctx(), osc = ctx.createOscillator(), gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880;
@@ -365,7 +462,7 @@
   }
 
   function notify(title, body) {
-    if (!state.settings.notify || typeof Notification === 'undefined') return;
+    if (DEMO || !state.settings.notify || typeof Notification === 'undefined') return;
     if (Notification.permission !== 'granted') return;
     try { new Notification(title, { body, silent: false }); }
     catch { // Chrome para Android solo admite avisos desde el service worker
@@ -560,11 +657,11 @@
   /* =========================================================
      Pomodoro
      ========================================================= */
-  const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0, intention: '', label: '', id: null, started: false, runId: '' };
+  const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0, intention: '', label: '', id: null, started: false, runId: '', distractions: [] };
   const phaseSeconds = (mode) => (mode === 'focus' ? state.settings.focus : state.settings.rest) * 60;
 
   function resetTimer(mode = 'focus', persist = true) {
-    clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false; timer.runId = '';
+    clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false; timer.runId = ''; timer.distractions = [];
     timer.total = timer.remaining = phaseSeconds(mode); renderTimer(); if (persist) persistTimer();
   }
 
@@ -572,7 +669,7 @@
     try {
       // En reposo también se escribe (started: false) para que las demás pestañas vean el cambio de modo.
       const raw = timer.started
-        ? JSON.stringify({ mode: timer.mode, running: timer.running, endAt: timer.endAt, remaining: timer.remaining, total: timer.total, intention: timer.intention, label: timer.label, runId: timer.runId })
+        ? JSON.stringify({ mode: timer.mode, running: timer.running, endAt: timer.endAt, remaining: timer.remaining, total: timer.total, intention: timer.intention, label: timer.label, runId: timer.runId, distractions: timer.distractions })
         : JSON.stringify({ started: false, mode: timer.mode });
       lastTimerRaw = raw; localStorage.setItem(TIMER_KEY, raw);
     } catch { /* sin persistencia */ }
@@ -583,10 +680,10 @@
     if (!t || !['focus', 'rest'].includes(t.mode)) return;
     clearInterval(timer.id); timer.id = null; timer.running = false;
     if (t.started === false) { // otra pestaña (o una recarga) dejó el temporizador en reposo
-      Object.assign(timer, { mode: t.mode, started: false, runId: '', total: phaseSeconds(t.mode), remaining: phaseSeconds(t.mode) }); renderTimer(); return;
+      Object.assign(timer, { mode: t.mode, started: false, runId: '', distractions: [], total: phaseSeconds(t.mode), remaining: phaseSeconds(t.mode) }); renderTimer(); return;
     }
     const total = num(t.total, 1, 10800, 0); if (!total) return;
-    Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), started: true, runId: String(t.runId || `${t.mode}:${Number(t.endAt) || 0}:${total}`) });
+    Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), distractions: cleanNotes(t.distractions), started: true, runId: String(t.runId || `${t.mode}:${Number(t.endAt) || 0}:${total}`) });
     if (t.running && Number(t.endAt) > 0) {
       timer.endAt = Number(t.endAt); timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
       if (timer.remaining <= 0) {
@@ -611,7 +708,7 @@
       ? (timer.intention ? `Intención: ${timer.intention}${timer.label ? ` · ${timer.label}` : ''}` : '¿Qué resultado concreto quieres lograr?')
       : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.';
     document.title = timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención';
-    applySessionMode();
+    applySessionMode(); renderDistractions();
     const goal = num(state.settings.dailyGoal, 1, 12, 2);
     const done = cached('doneToday', () => state.sessions.filter((s) => s.date === today() && !s.abandon).length);
     $('#goal-progress').textContent = `Meta: ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de ${state.settings.focus} minutos · hoy ${done}/${goal}. Racha: ${calcStreak().streak} días.`;
@@ -629,6 +726,24 @@
     renderTimer(); if (timer.remaining <= 0) finishPhase();
   }
 
+  /* Etapa 2: notas de distracción del bloque en curso (viajan en learny.timer y se guardan en la sesión) */
+  function renderDistractions() {
+    const zone = $('#distraction-zone'); if (!zone) return;
+    zone.hidden = !(timer.started && timer.mode === 'focus');
+    const n = timer.distractions.length, msg = n ? `${plural(n, 'distracción anotada', 'distracciones anotadas')}. La revisas al terminar el bloque.` : 'Anótala aquí en vez de seguirla; la revisas al terminar.';
+    const c = $('#distraction-count'); if (c.textContent !== msg) c.textContent = msg;
+    const list = $('#distraction-list'), key = timer.distractions.join('\u0001');
+    if (list.dataset.key === key) return;
+    list.dataset.key = key;
+    list.replaceChildren(...timer.distractions.slice(-3).map((t) => Object.assign(document.createElement('li'), { textContent: t })));
+  }
+  function addDistraction() {
+    const input = $('#distraction-input'), v = cleanNotes([input.value])[0];
+    if (!v || !timer.started || timer.mode !== 'focus') return;
+    if (timer.distractions.length >= 20) return toast('Ya anotaste 20 en este bloque. Sigue con tu foco.', 'error');
+    timer.distractions.push(v); input.value = ''; persistTimer(); renderDistractions(); announce('Distracción anotada.'); input.focus();
+  }
+
   function askAbandon(onContinue) {
     if (timer.mode !== 'focus' || !timer.started || timer.remaining >= timer.total) { onContinue(); return; }
     modal(`<h2>Reiniciar a mitad de bloque</h2><p>El bloque se descartará. ¿Qué pasó?</p>
@@ -640,7 +755,7 @@
       <button class="primary-button">Guardar y reiniciar</button>`, (data) => {
       state.sessions.push({
         id: uid(), date: today(), minutes: Math.max(1, Math.round((timer.total - timer.remaining) / 60)),
-        intention: timer.intention, label: timer.label, energy: null, abandon: data.get('why'), achieved: false
+        intention: timer.intention, label: timer.label, energy: null, abandon: data.get('why'), achieved: false, distractions: timer.distractions.slice()
       });
       save(); closeModal(); onContinue(); renderAll();
     });
@@ -672,7 +787,7 @@
   async function claimFinish(id) {
     const take = () => { try { if (localStorage.getItem(DONE_KEY) === id) return false; localStorage.setItem(DONE_KEY, id); } catch { /* sin almacenamiento: seguimos */ } return true; };
     if (document.hidden) await new Promise((r) => setTimeout(r, 1200));
-    if (navigator.locks?.request) { try { return await navigator.locks.request('learny-finish', take); } catch { /* sin Web Locks */ } }
+    if (navigator.locks?.request) { try { return await navigator.locks.request(DEMO ? 'learny-finish-demo' : 'learny-finish', take); } catch { /* sin Web Locks */ } }
     return take();
   }
   function finishPhase() {
@@ -691,7 +806,7 @@
     if (timer.mode === 'rest') { toast('Descanso terminado. ¡Listo para otro bloque!'); resetTimer('focus'); return; }
     const session = {
       id: uid(), date: today(), minutes: Math.max(1, Math.round(timer.total / 60)),
-      intention: timer.intention, label: timer.label, energy: null, abandon: null, achieved: null
+      intention: timer.intention, label: timer.label, energy: null, abandon: null, achieved: null, distractions: timer.distractions.slice()
     };
     state.sessions.push(session); save();
     resetTimer('rest'); renderAll();
@@ -699,6 +814,7 @@
     announce('Bloque completado. Guarda cómo te fue.');
     const showDone = () => modal(`<h2>¡Bloque completado!</h2>
       <p>Sumaste ${plural(session.minutes, 'minuto', 'minutos')}${session.label ? ` en ${esc(session.label)}` : ''}.</p>
+      ${session.distractions.length ? `<p class="modal-tip">Para mirar después: ${session.distractions.map(esc).join(' · ')}</p>` : ''}
       <fieldset class="choice-list"><legend>¿Lograste el resultado concreto?</legend>
         <div class="scale"><label><input type="radio" name="achieved" value="yes" required> Sí</label>
         <label><input type="radio" name="achieved" value="no"> Aún no</label></div></fieldset>
@@ -711,7 +827,7 @@
       session.energy = data.get('energy') ? Number(data.get('energy')) : null;
       session.achieved = data.get('achieved') === 'yes';
       save(); closeModal(); renderAll();
-    }, () => { renderAll(); document.dispatchEvent(new Event('learny:pomodone')); });
+    }, () => { renderAll(); document.dispatchEvent(new Event('learny:pomodone')); showClosure('focus', session); });
     if (!modalOpen()) { showDone(); return; }
     // Hay otra ventana abierta (p. ej. un formulario a medias): no la pisamos; la valoración aparece al cerrarla.
     toast('Bloque completado. Cuando cierres esta ventana podrás valorarlo.');
@@ -854,8 +970,31 @@
     deadline() { showPage('planner'); addDeadline(); },
     feynman() { showPage('practice'); $('#feynman-topic').value ||= weakSubject()?.name || ''; $('#feynman-topic').focus(); },
     smart() { document.dispatchEvent(new Event('learny:smart')); },
-    newpomo() { newUserPomo = true; applySessionMode(); $('#intention-input').focus(); }
+    newpomo() { newUserPomo = true; applySessionMode(); $('#intention-input').focus(); },
+    quick5() { showPage('practice'); $('#quick-five')?.click(); },
+    subject(b) { if (b?.dataset.subject) startSubjectQuiz(b.dataset.subject); },
+    mode(b) { const m = b?.dataset.mode; homeMode = homeMode === m ? 'any' : m; renderTodayQueue(); },
+    stuck() { stuckHelp(); }
   };
+
+  /* Etapa 1: el selector de tiempo FILTRA las candidatas existentes (no inventa datos). Solo en memoria, sin clave nueva. */
+  let homeMode = 'any';
+  const MODE_NAME = { five: 'Solo 5 minutos', session: 'Una sesión', topic: 'Elegir tema' };
+  function modeCandidates(list, mode) {
+    if (mode === 'five') {
+      const dn = dueCards().length;
+      return list.map((c) => (c.id === 'review' && c.minutes > 5
+        ? { id: 'quick5', title: 'Repaso rápido de 5 tarjetas', minutes: 4, cta: 'Repasar 5 tarjetas', why: `Tienes ${dn} tarjetas para hoy. Este repaso toma 5 de ellas; el resto sigue pendiente.` } : c)).filter((c) => c.minutes <= 5);
+    }
+    if (mode === 'session') return list.filter((c) => c.minutes >= 8);
+    return list;
+  }
+  function subjectList() {
+    const due = dueCards(), by = {};
+    state.cards.filter((c) => !c.archived && !c.corrupt).forEach((c) => { by[c.subject] = by[c.subject] || { name: c.subject, n: 0, due: 0 }; by[c.subject].n++; });
+    due.forEach((c) => { if (by[c.subject]) by[c.subject].due++; });
+    return Object.values(by).sort((a, b) => b.due - a.due || b.n - a.n).slice(0, 8);
+  }
 
   /* Modo sesión: durante un bloque o un examen solo se ve la actividad actual y sus controles. */
   function applySessionMode() {
@@ -880,7 +1019,9 @@
     const parts = [];
     if (due) parts.push(`${plural(due, 'tarjeta', 'tarjetas')} para hoy${overdue ? ` (${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'})` : ''}`);
     if (exam) { const n = daysUntil(exam.date); parts.push(`${esc(exam.title)} ${n === 0 ? 'hoy' : `en ${plural(n, 'día', 'días')}`}`); }
-    $('#home-summary').innerHTML = isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.';
+    const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop(), gap = act ? -daysUntil(act) : 0;
+    const back = gap >= 3 ? ` Bienvenido de vuelta: han pasado ${plural(gap, 'día', 'días')} desde tu última sesión, y no pasa nada. Puedes retomar con «Solo 5 minutos».` : ''; // sin culpa: no menciona rachas
+    $('#home-summary').innerHTML = (isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.') + back;
     const last = [...state.sessions].reverse().find((s) => !s.abandon);
     if (last) {
       const ago = Math.max(0, -daysUntil(last.date));
@@ -896,19 +1037,81 @@
     showPage('practice'); startExam([...errs, ...pool.filter((c) => !errs.includes(c))].slice(0, size), size);
   }
 
+  /* Etapa 3: cierre de sesión con SOLO datos de esa sesión. No afirma dominio por tiempo de uso. */
+  function showClosure(kind, d) {
+    if (modalOpen()) return; // otro flujo (p. ej. la sesión inteligente) ya abrió su ventana
+    const next = actionCandidates().find((c) => !(kind === 'focus' && c.id === 'focus')) || null;
+    const rows = [];
+    if (kind === 'focus') {
+      rows.push(`<li><b>Tiempo:</b> ${plural(d.minutes, 'minuto', 'minutos')} de foco${d.label ? ` en ${esc(d.label)}` : ''}.</li>`);
+      if (d.intention) rows.push(`<li><b>Tu intención:</b> «${esc(d.intention)}» · ${d.achieved === true ? 'dijiste que la lograste' : d.achieved === false ? 'dijiste que aún no' : 'sin valorar'}.</li>`);
+      if (d.distractions?.length) rows.push(`<li><b>Para mirar después:</b> ${d.distractions.map(esc).join(' · ')}.</li>`);
+    } else {
+      rows.push(`<li><b>Tarjetas respondidas:</b> ${d.total}.</li><li><b>Marcadas «Fácil»:</b> ${d.score} de ${d.total} (es tu autoevaluación).</li>`);
+    }
+    modal(`<h2>${kind === 'focus' ? 'Cierre del bloque' : 'Cierre del examen'}</h2>
+      <ul class="closure-list">${rows.join('')}</ul>
+      <p class="why">${next ? `<b>Siguiente paso:</b> ${esc(next.title)} (≈ ${next.minutes} min). ${esc(next.why)}` : 'No tienes nada urgente pendiente. Descansar también es parte de estudiar.'}</p>
+      <p class="modal-tip">El tiempo mide dedicación, no aprendizaje. Aquí solo ves lo de esta sesión.</p>
+      <div class="actions"><button class="primary-button" type="button" data-closure="done">Terminar por hoy</button>${next ? '<button class="outline-button" type="button" data-closure="more">Seguir un poco más</button>' : ''}</div>`);
+    $('#modal-body').onclick = (e) => {
+      const b = e.target.closest('[data-closure]'); if (!b) return;
+      $('#modal-body').onclick = null; closeModal();
+      if (b.dataset.closure === 'more' && next && ACTIONS[next.id]) ACTIONS[next.id]();
+      else toast('Listo por hoy. Lo que estudiaste ya está guardado.');
+    };
+  }
+
+  /* Etapa 4: «Hoy me cuesta arrancar». Solo ofrece acciones reales y pequeñas; cerrar no guarda ni cambia nada. */
+  function stuckHelp() {
+    const live = state.cards.filter((c) => !c.archived && !c.corrupt), due = dueCards(), n = Math.min(3, due.length);
+    const opt = (id, title, sub) => `<button class="stuck-opt" type="button" data-stuck="${id}"><b>${esc(title)}</b><small>${esc(sub)}</small></button>`;
+    const list = [];
+    if (n) list.push(opt('cards', n === 1 ? 'Repasar 1 tarjeta' : `Repasar ${n} tarjetas`, `Solo ${n === 1 ? 'la primera que toca' : `las ${n} primeras que tocan`} hoy. ≈ ${Math.max(1, Math.ceil(n * 0.7))} min.`));
+    list.push(opt('ask', 'Hacer una pregunta', 'Escribe una duda, por pequeña que sea. Funciona también sin internet (guía local).'));
+    if (live.length) list.push(opt('short', 'Una sesión breve de 5 minutos', 'Un repaso corto; puedes salir del examen cuando quieras.'));
+    list.push(opt('feynman', 'Explicar una idea con tus palabras', 'Método Feynman: solo una idea, sin nota.'));
+    if (!live.length) { list.push(opt('create', 'Crear una tarjeta pequeña', 'Una pregunta y una respuesta; tarda un minuto.')); list.push(opt('deck', 'Probar un mazo de ejemplo', 'Tarjetas ya hechas para ver cómo funciona el repaso.')); }
+    modal(`<h2>Hoy me cuesta arrancar</h2>
+      <p>Es normal. No hace falta hacer mucho: elige una cosa pequeña, o ninguna.</p>
+      <div class="stuck-list">${list.join('')}</div>
+      <p class="modal-tip">Cerrar esta ventana no cambia nada: tu plan y tus datos siguen igual.</p>
+      <div class="actions"><button class="outline-button" type="button" data-close-modal>Ahora no</button></div>`);
+    $('#modal-body').onclick = (e) => {
+      const b = e.target.closest('[data-stuck]'); if (!b) return;
+      const k = b.dataset.stuck; $('#modal-body').onclick = null; closeModal();
+      if (k === 'cards') { const pool = dueCards().slice(0, 3); if (pool.length) { showPage('practice'); startExam(pool, pool.length); } }
+      else if (k === 'ask') setTimeout(() => { toast('Escribe tu duda arriba y pulsa «Consultar».'); $('#ai-question')?.focus(); }, 60);
+      else if (k === 'short') ACTIONS.quick5();
+      else if (ACTIONS[k]) ACTIONS[k]();
+    };
+  }
+
   let lastQueueHtml = '';
   function renderTodayQueue() {
     renderGreeting(); applySessionMode();
-    const list = actionCandidates(), a = list[0], alts = list.slice(1, 3), fresh = isNewUser();
+    const all = actionCandidates(), fresh = isNewUser(), mode = fresh ? 'any' : homeMode;
+    const subs = mode === 'topic' ? subjectList() : [];
+    let list = mode === 'topic' ? all.filter((c) => c.id === 'feynman' || c.id === 'weak') : modeCandidates(all, mode), note = '';
+    if (mode === 'topic' && !subs.length) { list = all; note = 'Aún no tienes materias con tarjetas. Empieza por esto:'; }
+    else if (mode !== 'any' && mode !== 'topic' && !list.length) { list = all; note = `Ahora mismo no hay nada que encaje con «${MODE_NAME[mode]}». Te muestro lo recomendado:`; }
+    const a = list[0], alts = list.slice(mode === 'topic' && subs.length ? 0 : 1, mode === 'topic' && subs.length ? 2 : 3), next = upcoming()[0];
+    const picker = fresh ? '' : `<div class="mode-picker" role="group" aria-label="¿Cuánto tiempo tienes?">${Object.entries(MODE_NAME).map(([m, l]) => `<button class="seg-btn" type="button" data-action="mode" data-mode="${m}" aria-pressed="${mode === m}">${esc(l)}</button>`).join('')}</div>`;
+    const subjHtml = subs.length ? `<p class="eyebrow">Elige un tema</p><h2 class="next-title">¿Qué materia quieres trabajar?</h2><div class="subject-chips">${subs.map((s) => `<button class="topic-chip" type="button" data-action="subject" data-subject="${esc(s.name)}">${esc(s.name)} <small>· ${plural(s.due, 'para hoy', 'para hoy')}</small></button>`).join('')}</div><p class="why">Empieza un mini quiz de 8 tarjetas de la materia, con tus errores primero.</p>` : '';
+    const dateBtn = !fresh && next && a?.id !== 'plan' ? `<button class="text-button" type="button" data-action="plan">Próxima fecha: ${esc(next.title)} · ${esc(whenLabel(next.date))}</button>` : '';
+    const dateLink = `<p class="quick-links">${dateBtn}<button class="text-button" type="button" data-action="stuck">Hoy me cuesta arrancar</button></p>`;
     const altHtml = (c) => `<li class="alt"><div class="alt-text"><b>${esc(c.title)}</b> <span class="tag">≈ ${c.minutes} min</span><p class="why">${esc(c.why)}</p></div><button class="outline-button" type="button" data-action="${esc(c.id)}" aria-label="${esc(`${c.cta}: ${c.title}`)}">${esc(c.cta)}</button></li>`;
     const more = fresh
       ? '<button class="outline-button" type="button" data-action="newpomo">Probar un Pomodoro sin tarjetas</button>'
       : '<button id="smart-session" class="outline-button" type="button" data-action="smart">Empezar sesión inteligente</button><button id="jump-feynman" class="outline-button" type="button" data-action="feynman">Explicar un tema (Feynman)</button>';
-    const html = `
-      <div class="card-head"><div><p class="eyebrow">${fresh ? 'Tu primer paso' : 'Recomendado para ahora'}</p><h2 class="next-title">${esc(a.title)}</h2></div><span class="tag">≈ ${a.minutes} min</span></div>
+    const primary = subs.length ? subjHtml : `
+      ${note ? `<p class="why">${esc(note)}</p>` : ''}
+      <div class="card-head"><div><p class="eyebrow">${fresh ? 'Tu primer paso' : mode === 'any' || note ? 'Recomendado para ahora' : esc(MODE_NAME[mode])}</p><h2 class="next-title">${esc(a.title)}</h2></div><span class="tag" title="Tiempo estimado">≈ ${a.minutes} min</span></div>
       <p class="why"><b>Por qué:</b> ${esc(a.why)}</p>
-      <div class="actions tight"><button id="next-action" class="primary-button big" type="button" data-action="${esc(a.id)}">${esc(a.cta)}</button></div>
-      ${alts.length ? `<h3 class="alts-head">O elige otra opción</h3><ul class="alt-list">${alts.map(altHtml).join('')}</ul>` : ''}
+      <div class="actions tight"><button id="next-action" class="primary-button big" type="button" data-action="${esc(a.id)}">${esc(a.cta)}</button></div>`;
+    const html = `${picker}${primary}
+      ${alts.length ? `<h3 class="alts-head">${subs.length ? 'O prueba otra cosa' : 'O elige otra opción'}</h3><ul class="alt-list">${alts.map(altHtml).join('')}</ul>` : ''}
+      ${dateLink}${fresh ? '' : '<p class="hint">≈ Los tiempos son estimaciones.</p>'}
       <details class="more-inline" id="today-more-options"><summary>Más opciones</summary><div class="actions">${more}</div></details>`;
     if (html === lastQueueHtml) return; // sin cambios: no se redibuja (así no se pierde el foco ni se cierra «Más opciones»)
     const box = $('#today-queue'), ae = document.activeElement, focusSel = ae && box.contains(ae) && ae.dataset.action ? `[data-action="${ae.dataset.action}"]` : '';
@@ -1058,6 +1261,7 @@
       $('#rating-row').hidden = true;
       { const r = state.exams[state.exams.length - 1]; toast(`Examen: ${pct}% (${r.score}/${r.total}).`); }
       renderAll();
+      { const r = state.exams[state.exams.length - 1]; showClosure('exam', { score: r.score, total: r.total }); }
       return;
     }
     save(); renderExam();
@@ -1083,8 +1287,11 @@
       <button class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>`, (data) => {
       const values = { subject: clean(data.get('subject'), 60), question: cleanMl(data.get('question'), 500), answer: cleanMl(data.get('answer'), 1200) };
       if (!values.question || !values.answer) return toast('Pregunta y respuesta no pueden estar vacías.', 'error');
-      if (card) Object.assign(card, values, { corrupt: false });
-      else state.cards.push(normalizeCard({ ...values, nextReview: today() }));
+      if (card) { // se busca por id al guardar: el estado pudo reemplazarse (otra pestaña) mientras el formulario estaba abierto
+        const target = state.cards.find((c) => c.id === card.id);
+        if (!target) { closeModal(); return toast('Esa tarjeta ya no existe (otra pestaña la cambió). No se guardaron los cambios.', 'error'); }
+        Object.assign(target, values, { corrupt: false });
+      } else state.cards.push(normalizeCard({ ...values, nextReview: today() }));
       save(); closeModal(); renderAll(); toast(card ? 'Tarjeta actualizada.' : 'Tarjeta creada.');
     });
     $('#card-template').onchange = (e) => {
@@ -1301,7 +1508,7 @@ ${text}`;
   }
 
   let aiController = null;
-  const hasAi = () => !!(state.apiKey || state.settings.proxyUrl);
+  const hasAi = () => !DEMO && !!(state.apiKey || state.settings.proxyUrl); // Etapa 7: la demo nunca usa IA
   const cancelAi = () => { if (aiController) aiController.abort(); };
 
   async function askGemini(prompt) {
@@ -1351,6 +1558,7 @@ ${text}`;
   }
 
   function requestKey(onKey, onLocal) {
+    if (DEMO) { toast('La demostración no usa IA: tienes la guía local.'); state.settings.skipAi = true; return onLocal(); } // Etapa 7
     modal(`<h2>Conecta Gemini</h2>
       <p>Consigue una clave gratuita en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
       <p class="modal-tip"><b>Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido.</b> Cualquiera con DevTools podría verla. En producción usa un proxy (ver proxy-worker.example.js).</p>
@@ -1590,7 +1798,7 @@ ${text}`;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_META[th] || THEME_META.dark);
     Object.assign(b.dataset, { density: s.density || 'normal', cards: s.cardStyle, bg: s.bgStyle, font: s.font, headfont: s.headFont, lh: s.lineHeight, ls: s.letterSpacing, cardtext: s.cardText, width: s.contentWidth, sidebar: s.sidebar });
     b.classList.toggle('font-dyslexic', s.font === 'dyslexic'); b.classList.toggle('reduce-motion', !!s.reduceMotion);
-    b.classList.toggle('hide-missions', !s.showMissions); b.classList.toggle('hide-fact', !s.showFact);
+    b.classList.toggle('no-dim', s.immersiveDim === false); b.classList.toggle('hide-missions', !s.showMissions); b.classList.toggle('hide-fact', !s.showFact);
     $$('.sidebar .nav-button').forEach((btn) => { // menú de iconos: el texto sigue en el DOM; el tooltip lo repite
       const label = [...btn.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
       if (s.sidebar === 'icons' && label) btn.title = label; else btn.removeAttribute('title');
@@ -1614,6 +1822,7 @@ ${text}`;
   }
 
   function exportData(auto = false) {
+    if (DEMO) { if (!auto) toast('En la demostración no se descargan copias.', 'error'); return; } // Etapa 7
     const { apiKey, ...safe } = state;
     download(`learny-copia-${today()}.json`, JSON.stringify(safe, null, 2), 'application/json');
     state.settings.lastExport = today(); save();
@@ -1621,6 +1830,7 @@ ${text}`;
   }
 
   function exportDeck() {
+    if (DEMO) return toast('En la demostración no se comparten mazos.', 'error'); // Etapa 7
     const deck = state.cards.filter((c) => !c.corrupt).map(({ subject, question, answer }) => ({ subject, question, answer }));
     if (!deck.length && !state.decks.length) return toast('No hay tarjetas para compartir.', 'error');
     download(`learny-mazo-${today()}.json`, JSON.stringify({ type: 'learny-deck', cards: deck, decks: state.decks }, null, 2), 'application/json');
@@ -1686,6 +1896,7 @@ ${text}`;
   };
 
   function importData(file) {
+    if (DEMO) return toast('En la demostración no se importan archivos.', 'error'); // Etapa 7
     if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
     file.text().then(async (text) => {
       let data; try { data = JSON.parse(text); } catch { throw new Error('El archivo no es un JSON válido.'); }
@@ -1718,10 +1929,20 @@ ${text}`;
     }).catch((error) => { console.error(error); toast(error.message || 'Ese archivo no es una copia válida de Learny.', 'error'); });
   }
 
-  async function restoreBackup() {
-    const b = parseJSON(localStorage.getItem(BACKUP_KEY));
-    if (!b?.data) return toast('No hay copia automática para restaurar.', 'error');
+  function restoreBackup() {
+    if (DEMO) return toast('En la demostración no hay copias que restaurar.', 'error'); // Etapa 7
+    const list = readBackups();
+    if (!list.length) return toast('No hay copia automática para restaurar.', 'error');
+    modal(`<h2>Restaurar copia automática</h2>
+      <p class="hint">Elige una copia. Reemplazará tus datos actuales (se guarda antes una copia de lo que tienes ahora).</p>
+      <div class="backup-list">${list.map((b, i) => `<button class="outline-button" type="button" data-backup="${i}">${esc(String(b.at || '').replace('T', ' ').slice(0, 16))} · ${esc(String(b.reason || 'manual'))} · ${plural((b.data.cards || []).length, 'tarjeta', 'tarjetas')}</button>`).join('')}</div>`);
+    document.querySelectorAll('[data-backup]').forEach((btn) => { btn.onclick = () => applyBackup(Number(btn.dataset.backup)); });
+  }
+  async function applyBackup(i) {
+    const b = readBackups()[i];
+    if (!b?.data) return toast('Esa copia ya no está disponible.', 'error');
     if (!(await confirmDialog({ title: 'Restaurar copia automática', message: `Copia del ${String(b.at || '').slice(0, 10)} (${b.reason || 'manual'}). Reemplazará tus datos actuales.`, ok: 'Restaurar', danger: true }))) return;
+    snapshot('antes de restaurar'); // lo actual no se pierde: queda como la copia más reciente
     const keepProxy = state.settings.proxyUrl, keepChats = state.chats;
     exam = null; hydrate({ ...b.data, chats: keepChats, apiKey: state.apiKey }); state.settings.proxyUrl = keepProxy;
     save(); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Copia automática restaurada.');
@@ -1756,6 +1977,7 @@ ${text}`;
   const stripHtml = (v) => String(v || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n').replace(/<!--[\s\S]*?-->/g, '').replace(/<\/?[A-Za-z][^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
   function importCsv(file) {
+    if (DEMO) return toast('En la demostración no se importan archivos.', 'error'); // Etapa 7
     if (file.size > 5 * 1024 * 1024) return toast('El archivo es demasiado grande (máximo 5 MB).', 'error');
     file.text().then(async (text) => {
       const rows = parseCsv(text.replace(/^\uFEFF/, ''));
@@ -1771,21 +1993,35 @@ ${text}`;
     }).catch((e) => { console.error(e); toast('Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma o tabulador).', 'error'); });
   }
 
-  const APP_KEYS = ['theme', 'accent', 'accentCustom', 'radius', 'cardStyle', 'bgStyle', 'density', 'font', 'headFont', 'fontSize', 'lineHeight', 'letterSpacing', 'cardText', 'contentWidth', 'sidebar', 'showMissions', 'showFact', 'reduceMotion'];
+  const APP_KEYS = ['theme', 'accent', 'accentCustom', 'radius', 'cardStyle', 'bgStyle', 'density', 'font', 'headFont', 'fontSize', 'lineHeight', 'letterSpacing', 'cardText', 'contentWidth', 'sidebar', 'showMissions', 'showFact', 'reduceMotion', 'immersiveDim'];
+  /* Estilos rápidos (Ajustes) y ambientes de estudio: Noche = noche, Minimalista = enfoque, Biblioteca = nuevo (cálido, sobre Sepia + serif). */
+  const QS_KEEP = ['accent', 'accentCustom', 'showMissions', 'showFact', 'reduceMotion', 'immersiveDim'];
+  const QS_DEF = {
+    cuaderno: {},
+    noche: { theme: 'oled', font: 'serif', lineHeight: 'roomy', fontSize: 19, bgStyle: 'plain', cardText: 'large' },
+    papel: { theme: 'light', font: 'serif', bgStyle: 'dots' },
+    enfoque: { theme: 'dark', bgStyle: 'plain', radius: 'sharp', contentWidth: 'narrow', sidebar: 'icons' },
+    biblioteca: { theme: 'sepia', font: 'serif', lineHeight: 'roomy', bgStyle: 'plain', cardText: 'large' }
+  };
+  function quickStyle(name) {
+    const base = defaults().settings, o = {};
+    APP_KEYS.filter((k) => !QS_KEEP.includes(k)).forEach((k) => { o[k] = base[k]; });
+    return { ...o, ...(QS_DEF[name] || {}) };
+  }
+  const AMBIENT_NAME = { biblioteca: 'Biblioteca', noche: 'Noche', enfoque: 'Minimalista' };
+  function setAmbient(name) {
+    if (!QS_DEF[name]) return;
+    const before = {}; APP_KEYS.forEach((k) => { before[k] = state.settings[k]; });
+    Object.assign(state.settings, quickStyle(name)); sanitizeSettings(state.settings, defaults().settings); save(); applyAppearance();
+    offerUndo(`Ambiente «${AMBIENT_NAME[name]}» aplicado. Sin sonido.`, () => { Object.assign(state.settings, before); save(); applyAppearance(); });
+  }
   function openSettings() {
     const base = defaults().settings;
     const sel = (name, label, list) => `<label>${label}<select name="${name}">${list.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>`;
     const form = $('#modal-form'), f = form.elements;
     const read = () => { const o = {}; APP_KEYS.forEach((k) => { const el = f[k]; o[k] = el.type === 'checkbox' ? el.checked : k === 'fontSize' ? Number(el.value) : el.value; }); return o; };
     const put = (o) => Object.entries(o).forEach(([k, v]) => { const el = f[k]; if (!el) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v); });
-    const KEEP = ['accent', 'accentCustom', 'showMissions', 'showFact', 'reduceMotion'];
-    const fromDefaults = (extra) => { const o = {}; APP_KEYS.filter((k) => !KEEP.includes(k)).forEach((k) => { o[k] = base[k]; }); return { ...o, ...extra }; };
-    const QS = {
-      cuaderno: fromDefaults({}),
-      noche: fromDefaults({ theme: 'oled', font: 'serif', lineHeight: 'roomy', fontSize: 19, bgStyle: 'plain', cardText: 'large' }),
-      papel: fromDefaults({ theme: 'light', font: 'serif', bgStyle: 'dots' }),
-      enfoque: fromDefaults({ theme: 'dark', bgStyle: 'plain', radius: 'sharp', contentWidth: 'narrow', sidebar: 'icons' })
-    };
+    const QS = Object.fromEntries(Object.keys(QS_DEF).map((k) => [k, quickStyle(k)]));
     const sync = () => {
       const plain = ['sepia', 'contrast'].includes(f.theme.value); // en Sepia y Alto contraste el acento es fijo
       f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
@@ -1796,7 +2032,7 @@ ${text}`;
       <details class="more-inline settings-group" open><summary>Apariencia</summary>
         <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
         <p class="hint"><b>Estilos rápidos</b></p>
-        <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
+        <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
         ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste']])}
         <div class="form-row">${sel('accent', 'Color de acento (no en Sepia ni Alto contraste)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
         <label id="accent-custom-wrap" hidden>Color personalizado<input name="accentCustom" type="color"></label></div>
@@ -1816,9 +2052,11 @@ ${text}`;
         <label class="check"><input name="showMissions" type="checkbox"> Mostrar las misiones de hoy</label>
         <label class="check"><input name="showFact" type="checkbox"> Mostrar el dato curioso</label>
         <label class="check"><input name="reduceMotion" type="checkbox"> Reducir animaciones</label>
+        <label class="check"><input name="immersiveDim" type="checkbox"> Atenuar el menú y la barra superior durante un bloque o examen</label>
       </details>
       <details class="more-inline settings-group"><summary>Estudio y avisos</summary>
         <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
+        <p class="modal-tip">Materia y objetivo de estudio: se editan en «Contexto del tutor», arriba en la página.</p>
         <label class="check"><input name="sound" type="checkbox"> Sonido al terminar</label>
         <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
         <div class="form-row"><label>Pomodoro (min)<input name="focus" type="number" min="1" max="180" value="${state.settings.focus}"></label>
@@ -1839,8 +2077,8 @@ ${text}`;
         <button id="import-json-btn" class="outline-button" type="button">Importar JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden aria-label="Archivo JSON a importar">
         <button id="import-csv-btn" class="outline-button" type="button">Importar CSV / Anki (.csv, .txt)</button><input id="import-csv" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden aria-label="Archivo CSV o Anki a importar">
         ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
-        ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
-        <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
+        ${readBackups().length ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
+        <button id="reset-data" class="outline-button" type="button">${DEMO ? 'Reiniciar demo' : 'Borrar todo'}</button>
         </div>
       </details>
       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
@@ -1854,8 +2092,9 @@ ${text}`;
         model: clean(data.get('model'), 80) || DEFAULT_MODEL
       });
       sanitizeSettings(state.settings, base); // lo que llega del formulario también se valida
+      if (DEMO) { state.apiKey = ''; state.settings.proxyUrl = ''; state.settings.notify = false; } // Etapa 7
       const key = clean(data.get('apikey'), 200); if (key) { state.apiKey = key; state.settings.skipAi = false; }
-      if (state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
+      if (!DEMO && state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
       save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
     });
     modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
@@ -1872,10 +2111,16 @@ ${text}`;
     $('#import-csv-btn').onclick = () => $('#import-csv').click();
     $('#import-file').onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); };
     $('#import-csv').onchange = (e) => { if (e.target.files[0]) importCsv(e.target.files[0]); };
+    if (DEMO) ['apikey', 'proxy', 'notify'].forEach((n) => { const el = $(`#modal-form [name="${n}"]`); if (el) el.disabled = true; }); // Etapa 7: sin IA ni avisos en demo
     $('#reset-data').onclick = async () => {
+      if (DEMO) { // Etapa 7: «Reiniciar demo» solo recarga la demo; no toca ningún dato real
+        if (await confirmDialog({ title: 'Reiniciar demo', message: 'Se restauran los datos de ejemplo. Tus datos reales no se tocan.', ok: 'Reiniciar' })) location.reload();
+        return;
+      }
       if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
       exportData(true); snapshot('reset');
-      try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); ['learny.corrupt', 'learny.drafts', TIMER_KEY, DONE_KEY].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
+      [KEY, ...LEGACY_KEYS, 'learny.corrupt', 'learny.drafts', TIMER_KEY, DONE_KEY].forEach((k) => store.del(k));
+      document.dispatchEvent(new Event('learny:reset')); // extras.js vacía sus borradores en memoria (si no, se reescribirían al teclear)
       exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.');
     };
   }
@@ -1883,6 +2128,7 @@ ${text}`;
   function changeFont(delta) { state.settings.fontSize = Math.min(24, Math.max(13, state.settings.fontSize + delta)); save(); applyAppearance(); }
 
   function maybeRemind() {
+    if (DEMO) return; // Etapa 7
     if (state.settings.lastRemind === today()) return; // una vez al día, no en cada recarga
     state.settings.lastRemind = today(); save();
     const due = dueCards().length;
@@ -1892,6 +2138,7 @@ ${text}`;
   }
 
   function backupNag() {
+    if (DEMO) return; // Etapa 7
     const s = state.settings;
     if (state.cards.length < 10 || s.backupNag === today()) return;
     const last = s.lastExport;
@@ -1928,7 +2175,7 @@ ${text}`;
   { const head = $('.sidebar'); if (head && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => document.documentElement.style.setProperty('--head-h', `${head.offsetHeight}px`)).observe(head); } // y de la cabecera móvil: el temporizador fijo no se solapa
   $$('.page-heading h1').forEach((h) => { h.tabIndex = -1; });
   $('#mini-timer').onclick = () => showPage('study');
-  $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](); };
+  $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](b); };
   $('#modal-form').addEventListener('invalid', (e) => reveal(e.target), true); // un campo inválido dentro de «Avanzado» abre su bloque para poder corregirlo
   $('#exam-exit').onclick = () => { window.Learny.endExam(); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
   $('#flashcard').onclick = (e) => {
@@ -1941,6 +2188,9 @@ ${text}`;
   $('#weak-topics').onclick = (e) => { const n = e.target.dataset.quizSubject; if (n) startSubjectQuiz(n); };
   $('#library-search').oninput = debounce(() => { libLimit = 40; renderLibrary(); }, 150);
   $('#pomodoro-button').onclick = startPomodoro;
+  $('#distraction-add').onclick = addDistraction;
+  $('#distraction-input').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); addDistraction(); } };
+  $$('[data-ambient]').forEach((b) => { b.onclick = () => setAmbient(b.dataset.ambient); });
   $('#intention-input').onkeydown = (e) => { if (e.key === 'Enter' && !timer.running) { e.preventDefault(); startPomodoro(); } }; // teclado: Enter en el resultado concreto inicia el bloque
   $('#pomodoro-skip').onclick = () => resetTimer('focus');
   $('#pomodoro-reset').onclick = () => {
@@ -2033,7 +2283,7 @@ ${text}`;
   $('#ai-question').onkeydown = (e) => { if (e.key === 'Enter') $('#ask-ai').click(); };
 
   document.addEventListener('keydown', (e) => {
-    if (modalOpen() || $('#confirm-modal').open || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (landingOn || modalOpen() || $('#confirm-modal').open || e.ctrlKey || e.metaKey || e.altKey) return; // Etapa 6: con la portada visible, los atajos no actúan
     const t = e.target;
     if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
     if (e.key.toLowerCase() === 'z' && undoRun) { e.preventDefault(); undoRun(); return; }
@@ -2059,12 +2309,113 @@ ${text}`;
   setInterval(checkNewDay, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
-  window.Learny = { reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  /* Etapa 5: bienvenida opcional (4 pasos, todo opcional). Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola.
+     Los pasos ya confirmados con «Siguiente» se conservan; lo escrito en el paso abierto al omitir no se guarda. */
+  function welcomeFlow() {
+    if (DEMO || state.settings.welcomed || hasUserData() || modalOpen()) return; // Etapa 7: la demo nunca abre la bienvenida
+    const TIMES = [[10, '10 min', 'Algo corto'], [25, '25 min', 'Un Pomodoro'], [45, '45 min', 'Sesión larga']];
+    const a = { name: '', subject: '', goal: '', minutes: 0 }, body = $('#modal-body');
+    let i = 0, ended = false;
+    const read = () => {
+      const d = new FormData($('#modal-form')), v = (max) => clean(d.get('v') || '', max);
+      if (i === 0) a.name = v(30); else if (i === 1) a.subject = v(60); else if (i === 2) a.goal = v(200);
+      else { const m = Number(d.get('t')); if (TIMES.some((t) => t[0] === m)) a.minutes = m; }
+    };
+    const apply = () => { // solo campos que la bienvenida posee (estaban vacíos); el tiempo solo si se eligió uno
+      const s = state.settings;
+      s.name = a.name; s.tutor = { ...s.tutor, subject: a.subject, goal: a.goal };
+      if (a.minutes) s.focus = a.minutes;
+    };
+    const end = (completed) => {
+      if (ended) return; ended = true;
+      body.removeEventListener('click', onClick);
+      if (completed) apply();
+      state.settings.welcomed = true; save();
+      applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); // applyPreferences refresca los campos del tutor: así fillTutor no pisa lo guardado con valores viejos
+      closeModal();
+      setTimeout(() => $('.page.active h1')?.focus({ preventScroll: true }), 0);
+      if (completed) toast(`${a.name ? `Listo, ${a.name}. ` : 'Listo. '}Puedes cambiar todo esto en Ajustes ⚙️.`);
+    };
+    function onClick(e) {
+      const b = e.target.closest('[data-w]'); if (!b) return;
+      if (b.dataset.w === 'skip') end(false);
+      else if (b.dataset.w === 'back' && i > 0) { read(); i--; render(); }
+    }
+    function render() {
+      const last = i === 3, label = ['Nombre', 'Materia', 'Objetivo', 'Tiempo'][i];
+      const field = [
+        () => `<label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="next" value="${esc(a.name)}"></label>`,
+        () => `<label>Materia o tema<input name="v" maxlength="60" placeholder="p. ej. Química" enterkeyhint="next" value="${esc(a.subject)}"></label>`,
+        () => `<label>Objetivo<input name="v" maxlength="200" placeholder="p. ej. Aprobar el parcial del viernes" enterkeyhint="next" value="${esc(a.goal)}"></label>`,
+        () => `<fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>`
+      ][i]();
+      const title = ['¿Cómo quieres que te llame?', '¿Qué quieres estudiar?', '¿Qué quieres lograr?', '¿Cuánto tiempo tienes hoy?'][i];
+      modal(`<p class="eyebrow">Paso ${i + 1} de 4 · ${esc(label)}</p><h2>${esc(title)}</h2>
+        ${field}
+        <p class="modal-tip">Todo es opcional y lo puedes cambiar después en Ajustes ⚙️.${last ? ' El tiempo ajusta la duración de tu Pomodoro.' : ''}</p>
+        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button>${i ? '<button class="outline-button" type="button" data-w="back">Atrás</button>' : ''}<button class="primary-button" type="submit">${last ? 'Terminar' : 'Siguiente'}</button></div>`,
+      () => { read(); if (last) end(true); else { apply(); save(); i++; render(); } },
+      () => end(false)); // × o Esc: cerrar sin completar cuenta como omitir
+    }
+    body.addEventListener('click', onClick);
+    render();
+  }
+
+  /* Etapa 6: portada pública. Capa aparte (#landing) sobre la app: no cambia datos ni claves. «Probar Learny» la cierra y abre la bienvenida (etapa 5). */
+  let landingOn = false;
+  function showLanding() {
+    const el = $('#landing'); if (!el || DEMO) return; // Etapa 7: la demo no muestra la portada
+    landingOn = true; el.hidden = false; document.body.classList.add('show-landing');
+    window.scrollTo(0, 0); $('#landing-title')?.focus({ preventScroll: true });
+  }
+  function enterFromLanding() {
+    if (!landingOn) return;
+    landingOn = false; $('#landing').hidden = true; document.body.classList.remove('show-landing');
+    window.scrollTo(0, 0); showPage('study'); $('#study h1')?.focus({ preventScroll: true });
+    setTimeout(welcomeFlow, 150);
+  }
+  $('#landing')?.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-landing]'); if (!b) return;
+    if (b.dataset.landing === 'start') enterFromLanding();
+    else if (b.dataset.landing === 'demo') location.href = `${location.pathname}?demo`; // Etapa 7: entra a la demo (nueva carga, sin tocar datos reales)
+    else if (b.dataset.landing === 'tour') {
+      const t = $('#landing-tour'), calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      t?.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' }); t?.focus({ preventScroll: true });
+    }
+  });
+
+  /* Etapa 7: banner permanente, plan del examen de ejemplo y salida. Salir recarga sin ?demo: el espacio real (o la portada) decide solo. */
+  if (DEMO) {
+    state.deadlines.forEach((d) => rebuildTasks(d, false));
+    document.body.classList.add('is-demo');
+    document.title = `Demostración · ${document.title}`;
+    const bar = $('#demo-banner');
+    if (bar) {
+      bar.hidden = false;
+      const fit = () => document.documentElement.style.setProperty('--demo-h', `${bar.offsetHeight}px`);
+      fit(); window.addEventListener('resize', fit); if (window.ResizeObserver) new ResizeObserver(fit).observe(bar);
+      $('#demo-exit').onclick = () => { location.href = location.pathname; };
+      $('#demo-reset').onclick = async () => {
+        if (await confirmDialog({ title: 'Reiniciar demo', message: 'Se restauran los datos de ejemplo. Tus datos reales no se tocan.', ok: 'Reiniciar' })) location.reload();
+      };
+    }
+  }
+
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
   applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
+  // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
+  if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.hash.slice(1)) showLanding();
   if (migratedFrom) toast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
   if (droppedCards) toast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
-  if (loadProblem) toast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
-  try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ }
+  if (loadProblem) {
+    if (corruptKept) toast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
+    else toast('Tus datos guardados estaban dañados y NO pude guardar una copia (sin espacio o almacenamiento bloqueado). No los he tocado hasta que hagas un cambio: descarga el archivo original ahora.', 'error', { label: 'Descargar original', run: () => {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([corruptRaw || ''], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    } });
+  }
+  bootHold = false;
+  if (corruptKept || !loadProblem) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, no se pisa la clave principal en el arranque
+  if (!state.settings.welcomed && !landingOn) setTimeout(welcomeFlow, 350); // Etapa 5 (con portada, la bienvenida abre al pulsar «Probar Learny»)
 })();
