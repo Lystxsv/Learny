@@ -49,6 +49,7 @@
     if (v) $('#flashcard').insertAdjacentHTML('beforeend', `<p class="recall-compare"><small>Tu respuesta</small><br>${esc(v)}</p>`);
   });
   document.addEventListener('learny:rated', () => { $('#recall-answer').value = ''; });
+  document.addEventListener('learny:cardchange', () => { $('#recall-answer').value = ''; });
 
   /* ---- Dictado ---- */
   const dictate = (btn, target) => {
@@ -137,7 +138,7 @@
       const name = clean(d.get('name'), 60);
       const cards = String(d.get('rows')).split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((r) => r[0] && r[1]).map((r) => [r[0].slice(0, 500), r[1].slice(0, 1200)]);
       if (!cards.length) return toast('Usa el formato pregunta | respuesta en cada línea.', 'error');
-      if (allDecks()[name]) return toast('Ya existe un mazo con ese nombre.', 'error');
+      if (Object.prototype.hasOwnProperty.call(allDecks(), name)) return toast('Ya existe un mazo con ese nombre.', 'error');
       state.decks.push({ name, cards }); save(); closeModal(); renderDecks(); toast(`Mazo «${name}» creado con ${plural(cards.length, 'tarjeta', 'tarjetas')}.`);
     });
   }
@@ -268,7 +269,7 @@
     const pool = interleave([...due, ...shuffle(errs)].slice(0, 12));
     smart.topic = L.weakSubject()?.name || pool[0]?.subject || clean($('#tutor-subject').value, 60) || '';
     smart.step = 'cards'; smart.armed = false;
-    if (pool.length) { L.showPage('practice'); L.startExam(pool, 12); toast(`Sesión inteligente · paso 1 de 3: ${plural(pool.length, 'tarjeta', 'tarjetas')}.`); }
+    if (pool.length) { L.showPage('practice'); smart.launching = true; L.startExam(pool, 12); smart.launching = false; toast(`Sesión inteligente · paso 1 de 3: ${plural(pool.length, 'tarjeta', 'tarjetas')}.`); }
     else smartNext('exam');
   }
   function smartNext(from) {
@@ -287,6 +288,7 @@
       });
     }
   }
+  document.addEventListener('learny:examstart', () => { if (!smart.launching) { smart.step = null; smart.armed = false; } }); // un examen ajeno a la sesión inteligente la cancela
   document.addEventListener('learny:smart', smartSession);
   document.addEventListener('learny:examend', () => smartNext('exam'));
   document.addEventListener('learny:pomodone', () => smartNext('pomo'));
@@ -332,7 +334,7 @@
     $('#mission-count').textContent = `${m.filter((x) => x[1]).length}/3`;
   }
   function renderInsights() {
-    const by = {}; state.cards.forEach((c) => { (by[c.subject] ||= { cards: 0, ok: 0, tot: 0 }).cards++; });
+    const by = Object.create(null); state.cards.forEach((c) => { (by[c.subject] ||= { cards: 0, ok: 0, tot: 0 }).cards++; });
     state.reviews.forEach((r) => { const b = by[r.subject]; if (b) { b.tot++; if (r.rating !== 'again') b.ok++; } });
     const subs = Object.entries(by), none = '<p class="empty">Crea tarjetas para ver este panel.</p>';
     $('#concept-map').innerHTML = subs.length ? subs.map(([n, b]) => `<div class="node" style="--s:${Math.min(1.5, 0.85 + b.cards / 25)}"><b>${esc(n)}</b><small>${plural(b.cards, 'tarjeta', 'tarjetas')}</small></div>`).join('') : none;

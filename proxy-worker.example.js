@@ -52,8 +52,9 @@ export default {
       if (hits.size > 5000) hits.clear();
     }
 
+    if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413); // sin leer el cuerpo
     const raw = await request.text();
-    if (raw.length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
+    if (new TextEncoder().encode(raw).length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
     let payload;
     try { payload = JSON.parse(raw); } catch { return json({ error: { message: 'JSON inválido' } }, 400); }
 

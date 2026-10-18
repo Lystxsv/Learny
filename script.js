@@ -83,10 +83,10 @@
     lastReviewed: /^\d{4}-\d{2}-\d{2}$/.test(c.lastReviewed) ? c.lastReviewed : null,
     archived: !!c.archived,
     origin: c.origin === 'ia' ? 'ia' : '',
-    easeFactor: Number(c.easeFactor ?? c.ease) || 2.5,
-    interval: Number(c.interval) || 0,
-    repetitions: Number(c.repetitions ?? c.reps) || 0,
-    history: Array.isArray(c.history) ? c.history.slice(-40) : []
+    easeFactor: Math.min(4, Math.max(1.3, Number(c.easeFactor ?? c.ease) || 2.5)),
+    interval: Math.min(365, Math.max(0, Number(c.interval) || 0)),
+    repetitions: Math.min(1000, Math.max(0, Number(c.repetitions ?? c.reps) || 0)),
+    history: Array.isArray(c.history) ? c.history.filter((h) => isObj(h) && typeof h.rating === 'string').slice(-40) : []
   });
 
   /* Migraciones: cada función recibe los datos de la versión N y devuelve los de N+1. */
@@ -196,6 +196,7 @@
       id: t.id || uid(), deadlineId: t.deadlineId, date: t.date, phase: t.phase || 'comprension',
       title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
     }));
+    const liveDl = new Set(state.deadlines.map((d) => d.id)); state.tasks = state.tasks.filter((t) => liveDl.has(t.deadlineId)); // sin fecha no hay tarea
     state.chats = state.chats.filter((c) => c && c.topic).slice(-MAX_CHATS).map((c) => ({
       topic: String(c.topic).slice(0, 60), messages: Array.isArray(c.messages) ? c.messages.slice(-20) : []
     }));
@@ -241,8 +242,13 @@
   const save = () => {
     rev++;
     if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
-    try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
-    catch { setSaved(false); toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); return false; }
+    let json = null;
+    try { json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
+    catch {
+      try { // almacenamiento lleno: se sacrifican la copia automática y el archivo dañado antes de perder tus datos nuevos
+        if (json) { localStorage.removeItem('learny.corrupt'); localStorage.removeItem(BACKUP_KEY); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); return true; }
+      } catch { /* sigue */ }
+      setSaved(false); toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); return false; }
   };
 
   const announce = (msg) => { const el = $('#sr-live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
@@ -647,7 +653,7 @@
     }
     if (timer.mode === 'focus') {
       const intention = clean($('#intention-input').value, 140) || timer.intention;
-      if (!intention) { toast('Escribe un resultado concreto antes de empezar.', 'error'); showPage('study'); $('#intention-input').focus(); return; }
+      if (!intention) { toast('Escribe un resultado concreto antes de empezar.', 'error'); showPage('study'); newUserPomo = true; applySessionMode(); $('#intention-input').focus(); return; }
       timer.intention = intention;
       timer.label = clean($('#pomodoro-label').value, 60);
     }
@@ -877,12 +883,13 @@
     $('#home-summary').innerHTML = isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.';
     const last = [...state.sessions].reverse().find((s) => !s.abandon);
     if (last) {
-      const ago = -daysUntil(last.date);
+      const ago = Math.max(0, -daysUntil(last.date));
       $('#home-last').textContent = `Última vez: ${plural(last.minutes, 'minuto', 'minutos')}${last.label ? ` de ${last.label}` : ''} ${ago === 0 ? 'hoy' : ago === 1 ? 'ayer' : `hace ${ago} días`}.`;
     } else $('#home-last').textContent = 'Aún no has completado ningún bloque. Tu primer Pomodoro desbloquea tu progreso.';
   }
 
   function startSubjectQuiz(name, size = 8) {
+    if (!name) return toast('Esa materia ya no tiene suficientes datos para un quiz.', 'error');
     const pool = state.cards.filter((c) => !c.archived && !c.corrupt && c.subject === name);
     if (!pool.length) return toast(`No hay tarjetas activas de ${name}.`, 'error');
     const errs = pool.filter((c) => c.history.some((h) => h.rating === 'again'));
@@ -949,6 +956,7 @@
     if (exam) return renderExam();
     const due = dueCards(), prev = activeCard, wasRevealed = revealed && !answered;
     activeCard = due[0] || null;
+    if ((prev?.id ?? null) !== (activeCard?.id ?? null)) document.dispatchEvent(new Event('learny:cardchange')); // otra tarjeta: se limpia lo que escribiste para la anterior
     revealed = false; answered = false;
     $('#rating-row').hidden = true;
     $('#reveal-card').hidden = !activeCard;
@@ -1126,7 +1134,7 @@
      Análisis
      ========================================================= */
   function subjectStats(list = state.reviews) {
-    const map = {};
+    const map = Object.create(null); // sin prototipo: una materia llamada «constructor» ya no rompe nada
     list.forEach((r) => {
       const k = r.subject || 'Sin materia';
       map[k] ||= { total: 0, easy: 0, ok: 0, again: 0, cards: new Set() };
@@ -1311,11 +1319,12 @@ ${text}`;
         method: 'POST', signal: controller.signal,
         headers: proxy ? { 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json', 'x-goog-api-key': state.apiKey },
         body: JSON.stringify(proxy ? { prompt: text } : { contents: [{ parts: [{ text }] }], generationConfig: { maxOutputTokens: 4096 } })
-      });
+      }).catch((e) => { if (e.name === 'AbortError') throw e; throw new Error('No hay conexión o el servicio no respondió. Puedes usar las preguntas guía locales.'); }); // solo un fallo de red se presenta como «sin conexión»
       let data = {}; try { data = await response.json(); } catch { /* sin cuerpo */ }
       if (!response.ok) {
         const raw = data.error?.message || `Error ${response.status}`;
-        if (response.status === 400 || response.status === 401 || response.status === 403) throw new Error(`${who} no es válido o no tiene permiso. (${raw})`);
+        if (response.status === 401 || response.status === 403 || (response.status === 400 && /api[ _-]?key/i.test(raw))) throw new Error(`${who} no es válido o no tiene permiso. (${raw})`);
+        if (response.status === 400) throw new Error(`La consulta no es válida. (${raw})`);
         if (response.status === 404) throw new Error(`El modelo “${model}” no existe. Cámbialo en Ajustes ⚙️. (${raw})`);
         if (response.status === 429) throw new Error('Se agotó la cuota de la IA. Espera un rato e inténtalo de nuevo.');
         throw new Error(raw);
@@ -1325,7 +1334,6 @@ ${text}`;
       return out;
     } catch (error) {
       if (error.name === 'AbortError') { const e = new Error(timedOut ? 'La IA tardó demasiado. Inténtalo de nuevo.' : 'Consulta cancelada.'); e.cancelled = !timedOut; e.stale = !!controller.stale; throw e; }
-      if (error instanceof TypeError) throw new Error('No hay conexión o el servicio no respondió. Puedes usar las preguntas guía locales.');
       throw error;
     } finally { clearTimeout(timeout); if (aiController === controller) aiController = null; }
   }
@@ -1463,7 +1471,7 @@ ${text}`;
     const parts = text.replace(/\*\*/g, '').split(/[.!?\n]+/).map((s) => s.trim()).filter((s) => s.length > 20).slice(0, 5);
     if (!parts.length) return toast('No encontré ideas suficientes para convertir en tarjetas.', 'error');
     const items = parts.map((p) => ({ ...cloze(p, topic), fragment: p.slice(0, 200) }));
-    reviewCards(items, { topic: topic || 'Feynman', source: text, origin: opts.origin || '', intro: `Detecté ${parts.length} ideas en el texto sobre ${topic || 'el tema'}. Corrige y acepta las que te sirvan.` });
+    reviewCards(items, { topic: topic || 'Feynman', source: text.replace(/\*\*/g, ''), origin: opts.origin || '', intro: `Detecté ${parts.length} ideas en el texto sobre ${topic || 'el tema'}. Corrige y acepta las que te sirvan.` });
   }
 
   let lastFey = null;
