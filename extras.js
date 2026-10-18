@@ -207,12 +207,22 @@
 
 
   /* ---- Borradores: no pierdas lo que escribes si recargas ---- */
+  /* Los borradores viven en su propia clave: guardarlos en cada pulsación ya no reescribe todos tus datos,
+     no despierta a las otras pestañas y no viajan en las copias exportadas. */
+  const DRAFT_KEY = 'learny.drafts';
+  let drafts = {};
+  try { const p = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); if (p && typeof p === 'object' && !Array.isArray(p)) drafts = p; } catch { /* sin borradores */ }
+  if (state.drafts && Object.keys(state.drafts).length) { // migra los borradores antiguos que estaban dentro de los datos
+    drafts = { ...state.drafts, ...drafts }; state.drafts = {};
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch { /* ignorar */ }
+    save();
+  }
   ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input', '#ai-question'].forEach((sel) => {
     const el = $(sel); if (!el) return;
-    if (state.drafts[sel] && !el.value) { el.value = state.drafts[sel]; L.reveal(el); } // un borrador guardado no queda escondido en un bloque plegado
+    if (drafts[sel] && !el.value) { el.value = drafts[sel]; L.reveal(el); } // un borrador guardado no queda escondido en un bloque plegado
     el.addEventListener('input', L.debounce(() => {
-      if (el.value) state.drafts[sel] = el.value.slice(0, 8000); else delete state.drafts[sel];
-      save();
+      if (el.value) drafts[sel] = el.value.slice(0, 8000); else delete drafts[sel];
+      try { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)); } catch { /* sin espacio: el borrador queda solo en memoria */ }
     }, 700));
   });
 

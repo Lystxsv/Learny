@@ -259,13 +259,16 @@
   function toast(message, type = 'ok', action = null) {
     const el = $('#toast'), isErr = type === 'error';
     el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
-    el.textContent = message;
     undoRun = action ? action.run : null;
-    if (action) {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label; b.setAttribute('aria-keyshortcuts', 'z'); b.title = 'Atajo: Z';
-      b.onclick = action.run; el.append(' ', b);
-    }
-    el.className = `toast show ${type}`;
+    el.className = `toast show ${type}`; // primero se hace visible y luego se escribe el texto: los lectores de pantalla solo anuncian cambios en regiones visibles
+    clearTimeout(toast.fillId);
+    toast.fillId = setTimeout(() => {
+      el.textContent = message;
+      if (action) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label; b.setAttribute('aria-keyshortcuts', 'z'); b.title = 'Atajo: Z';
+        b.onclick = action.run; el.append(' ', b);
+      }
+    }, 40);
     clearTimeout(toast.id);
     toast.id = setTimeout(() => { el.classList.remove('show'); undoRun = null; }, action ? 8000 : 4200);
   }
@@ -1793,7 +1796,7 @@ ${text}`;
       </details>
       <details class="more-inline settings-group"><summary>Tipografía y lectura</summary>
         <p class="hint">Solo fuentes del sistema: no se descarga nada.</p>
-        ${sel('font', 'Fuente del texto', [['sans', 'Sistema (sans)'], ['humanist', 'Humanista'], ['serif', 'Serif de lectura'], ['rounded', 'Redondeada'], ['mono', 'Monoespaciada'], ['dyslexic', 'Lectura fácil (OpenDyslexic)']])}
+        ${sel('font', 'Fuente del texto', [['sans', 'Sistema (sans)'], ['humanist', 'Humanista'], ['serif', 'Serif de lectura'], ['rounded', 'Redondeada'], ['mono', 'Monoespaciada'], ['dyslexic', 'Lectura fácil (OpenDyslexic si está instalada; si no, Verdana)']])}
         ${sel('headFont', 'Fuente de los títulos', [['serif', 'Serif (actual)'], ['same', 'La misma del texto']])}
         <label>Tamaño de texto: <output id="fs-out"></output><input name="fontSize" type="range" min="13" max="24" step="1"></label>
         <div class="form-row">${sel('lineHeight', 'Interlineado', [['compact', 'Compacto'], ['normal', 'Normal'], ['roomy', 'Amplio']])}${sel('letterSpacing', 'Espaciado de letras', [['normal', 'Normal'], ['wide', 'Amplio'], ['wider', 'Muy amplio']])}</div>
@@ -1863,7 +1866,7 @@ ${text}`;
     $('#reset-data').onclick = async () => {
       if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
       exportData(true); snapshot('reset');
-      try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); ['learny.corrupt', TIMER_KEY, DONE_KEY].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
+      try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); ['learny.corrupt', 'learny.drafts', TIMER_KEY, DONE_KEY].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
       exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.');
     };
   }
@@ -2040,6 +2043,11 @@ ${text}`;
 
   const syncOnline = () => { const el = $('#offline-note'); if (el) el.hidden = navigator.onLine; };
   window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
+  /* Si la app sigue abierta al pasar la medianoche, «hoy» se recalcula (cola, tarjetas vencidas, plan). */
+  let lastDay = today();
+  const checkNewDay = () => { if (today() !== lastDay) { lastDay = today(); renderAll(); } };
+  setInterval(checkNewDay, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
   window.Learny = { reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
