@@ -180,7 +180,8 @@
     }));
     state.deadlines = state.deadlines.filter((d) => d && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date)).map((d) => ({
       id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
-      difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0)
+      difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0),
+      debtMin: d.debtMin == null ? num(d.skipped, 0, 999, 0) * num(d.dailyMinutes, 15, 240, 45) : num(d.debtMin, 0, 240000, 0)
     }));
     state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards));
     const dayOf = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x));
@@ -294,7 +295,8 @@
     document.dispatchEvent(new Event('learny:page'));
   }
 
-  let modalCloseHandler = null, rouletteId = null;
+  let modalCloseHandler = null, rouletteId = null, modalTeardown = null;
+  const runTeardown = () => { const t = modalTeardown; modalTeardown = null; if (t) { try { t(); } catch (e) { console.error(e); } } }; // limpieza que se ejecuta al cerrar O al reemplazar el diálogo
   const modalOpen = () => $('#app-modal').open;
   const closeModal = () => { if (modalOpen()) $('#app-modal').close(); };
   /* Foco: al abrir una ventana se recuerda qué la abrió y al cerrarla el foco vuelve ahí (si ese botón se redibujó, se busca su equivalente). */
@@ -315,6 +317,7 @@
   }
   function modal(html, onSubmit, onClose) {
     const dialog = $('#app-modal'), form = $('#modal-form');
+    runTeardown();
     if (!dialog.open) { const ae = document.activeElement; modalOpener = ae && ae !== document.body ? { el: ae, sel: openerSelector(ae) } : null; }
     $('#modal-body').innerHTML = html;
     $('#modal-body').removeAttribute('aria-live');
@@ -331,6 +334,7 @@
   }
   $('#app-modal').addEventListener('close', () => {
     if (modalOpen()) return; // se reabrió antes de que llegara el evento: no cancelar la IA ni ejecutar el onClose de la ventana nueva
+    runTeardown();
     clearInterval(rouletteId); rouletteId = null; cancelAi();
     const handler = modalCloseHandler; modalCloseHandler = null; handler?.();
     if (!modalOpen() && !$('#confirm-modal').open) restoreOpenerFocus();
@@ -426,7 +430,7 @@
         moved: keep.map((t) => ({ phase: t.phase, from: t.date })), dropped: drop.map((t) => ({ phase: t.phase, from: t.date }))
       });
       keep.forEach((t) => { t.date = today(); if (!t.title.startsWith('Recuperar:')) t.title = `Recuperar: ${t.title}`; });
-      if (dropIds.size) { state.tasks = state.tasks.filter((t) => !dropIds.has(t.id)); d.skipped = (d.skipped || 0) + dropIds.size; }
+      if (dropIds.size) { state.tasks = state.tasks.filter((t) => !dropIds.has(t.id)); d.debtMin = (d.debtMin ?? (d.skipped || 0) * d.dailyMinutes) + dropIds.size * d.dailyMinutes; d.skipped = (d.skipped || 0) + dropIds.size; }
       moved += keep.length; dropped += drop.length;
     });
     if (!moved && !dropped) return;
@@ -439,7 +443,8 @@
   function loadReport(d) {
     const days = daysUntil(d.date) + 1, mins = d.dailyMinutes, skipped = d.skipped || 0;
     const open = state.tasks.filter((t) => t.deadlineId === d.id && !t.done && t.date >= today()).length;
-    const needed = (open + skipped) * mins, available = days * mins;
+    const debt = d.debtMin ?? skipped * mins; // minutos de las sesiones descartadas, con el tamaño que tenían al descartarlas
+    const needed = open * mins + debt, available = days * mins;
     const need = Math.ceil(needed / days / 5) * 5;
     return { days, open, skipped, needed, available, fits: needed <= available, need, canFix: need <= 240 };
   }
@@ -464,18 +469,22 @@
     const d = state.deadlines.find((x) => x.id === id); if (!d) return;
     const r = loadReport(d), suggested = Math.min(240, Math.max(d.dailyMinutes, r.fits ? d.dailyMinutes : r.need));
     modal(`<h2>Replanificar «${esc(d.title)}»</h2>
-      <p>Se recalculan las tareas desde hoy hasta el ${esc(d.date)}. Lo que completaste antes de hoy se conserva${r.skipped ? `, y ${plural(r.skipped, 'sesión descartada vuelve', 'sesiones descartadas vuelven')} al plan` : ''}.</p>
+      <p>Se recalculan las tareas desde hoy hasta el ${esc(d.date)}. Lo que completaste antes de hoy se conserva${r.skipped ? `. ${plural(r.skipped, 'sesión descartada se recupera', 'sesiones descartadas se recuperan')} solo si los minutos diarios alcanzan` : ''}.</p>
       <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="${suggested}" required></label>
       <p class="modal-tip">Ahora: ${d.dailyMinutes} min/día. ${esc(loadMessage(r))}</p>
       <button class="primary-button">Replanificar</button>`, (data) => {
-      const before = { mins: d.dailyMinutes, skipped: d.skipped || 0, tasks: state.tasks.filter((t) => t.deadlineId === d.id).map((t) => ({ ...t })) };
-      d.dailyMinutes = num(data.get('mins'), 15, 240, d.dailyMinutes); d.skipped = 0;
+      const rr = loadReport(d); // con los minutos actuales: cuánto trabajo queda, incluido lo descartado
+      const before = { mins: d.dailyMinutes, skipped: d.skipped || 0, debt: d.debtMin, tasks: state.tasks.filter((t) => t.deadlineId === d.id).map((t) => ({ ...t })) };
+      const debt = rr.needed - rr.open * before.mins;
+      d.dailyMinutes = num(data.get('mins'), 15, 240, d.dailyMinutes);
+      const absorbs = debt <= 0 || d.dailyMinutes * rr.days >= rr.needed;
+      if (absorbs) { d.skipped = 0; d.debtMin = 0; } else d.debtMin = debt; // si no alcanza, la deuda se conserva y el aviso sigue
       rebuildTasks(d, true, true);
       const entry = { id: uid(), date: today(), deadlineId: d.id, title: d.title, kind: 'replan', minutes: d.dailyMinutes, moved: [], dropped: [] };
       state.planLog = [...state.planLog, entry].slice(-30);
       save(); closeModal(); renderAll();
-      offerUndo('Plan recalculado.', () => {
-        d.dailyMinutes = before.mins; d.skipped = before.skipped;
+      offerUndo(absorbs ? 'Plan recalculado.' : `Plan recalculado, pero con ${d.dailyMinutes} min/día aún no cabe todo lo pendiente (harían falta ≈ ${Math.ceil(rr.needed / rr.days / 5) * 5}).`, () => {
+        d.dailyMinutes = before.mins; d.skipped = before.skipped; d.debtMin = before.debt;
         state.tasks = state.tasks.filter((t) => t.deadlineId !== d.id).concat(before.tasks);
         state.planLog = state.planLog.filter((e) => e.id !== entry.id); save(); renderAll();
       });
@@ -679,7 +688,7 @@
     resetTimer('rest'); renderAll();
     const clockEl = $('#timer-clock'); clockEl.classList.remove('pulse'); void clockEl.offsetWidth; clockEl.classList.add('pulse');
     announce('Bloque completado. Guarda cómo te fue.');
-    modal(`<h2>¡Bloque completado!</h2>
+    const showDone = () => modal(`<h2>¡Bloque completado!</h2>
       <p>Sumaste ${plural(session.minutes, 'minuto', 'minutos')}${session.label ? ` en ${esc(session.label)}` : ''}.</p>
       <fieldset class="choice-list"><legend>¿Lograste el resultado concreto?</legend>
         <div class="scale"><label><input type="radio" name="achieved" value="yes" required> Sí</label>
@@ -694,6 +703,12 @@
       session.achieved = data.get('achieved') === 'yes';
       save(); closeModal(); renderAll();
     }, () => { renderAll(); document.dispatchEvent(new Event('learny:pomodone')); });
+    if (!modalOpen()) { showDone(); return; }
+    // Hay otra ventana abierta (p. ej. un formulario a medias): no la pisamos; la valoración aparece al cerrarla.
+    toast('Bloque completado. Cuando cierres esta ventana podrás valorarlo.');
+    const dlg = $('#app-modal');
+    const later = () => { if (modalOpen()) return; dlg.removeEventListener('close', later); showDone(); };
+    dlg.addEventListener('close', later);
   }
 
   function configurePomodoro() {
@@ -731,6 +746,9 @@
     if (e.storageArea !== localStorage) return;
     if (e.key === TIMER_KEY) { lastTimerRaw = e.newValue; restoreTimer(e.newValue || JSON.stringify({ started: false, mode: 'focus' })); }
     else if (e.key === KEY && e.newValue) adoptRemoteState(e.newValue);
+    else if ((e.key === KEY && !e.newValue) || e.key === null) { // otra pestaña borró todo (o limpió el almacenamiento): no resucitar los datos
+      exam = null; undoRun = null; lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
+    }
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullFromStorage(); if (timer.running) tick(); } });
 
@@ -1346,7 +1364,7 @@ ${text}`;
     };
     if (!hasAi()) {
       if (modalOpen()) { toast('Añade tu clave de Gemini en Ajustes ⚙️ o elige Guía local.', 'error'); return { text: fallback?.() || localGuide(title), fromAi: false }; }
-      if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback)), () => resolve(showLocal('Modo local activo.'))));
+      if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback, onDone)), () => resolve(showLocal('Modo local activo.'))));
       return showLocal('Guía local. Añade tu clave en Ajustes ⚙️ para IA.');
     }
     modal(`<h2>${esc(title)}</h2><div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor…</p><button class="outline-button" type="button" data-cancel-ai>Cancelar</button>`);
@@ -1386,7 +1404,7 @@ ${text}`;
   function cloze(sentence, topic) {
     const word = sentence.split(/\s+/).map((x) => x.replace(/[^\p{L}\p{N}-]/gu, '')).filter((x) => x.length >= 5).sort((a, b) => b.length - a.length)[0];
     return word
-      ? { question: `Completa: ${sentence.replace(word, '_____').slice(0, 400)}`, answer: `${word}. ${sentence}`.slice(0, 1200) }
+      ? { question: `Completa: ${sentence.split(word).join('_____').slice(0, 400)}`, answer: `${word}. ${sentence}`.slice(0, 1200) }
       : { question: `¿Cómo explicarías esta idea de ${topic || 'tu tema'}?`, answer: sentence.slice(0, 1200) };
   }
   /* =========================================================
@@ -1719,11 +1737,11 @@ ${text}`;
       else cur += ch;
     }
     row.push(cur.trim()); rows.push(row);
-    return rows.filter((r) => r.some(Boolean) && !String(r[0]).startsWith('#'));
+    return rows.filter((r) => r.some(Boolean) && !/^#[A-Za-z][\w ]*:/.test(String(r[0])));
   }
 
   // Anki guarda HTML en los campos: <br> pasa a salto de línea y el resto de etiquetas se quita.
-  const stripHtml = (v) => String(v || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  const stripHtml = (v) => String(v || '').replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n').replace(/<!--[\s\S]*?-->/g, '').replace(/<\/?[A-Za-z][^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
   function importCsv(file) {
     if (file.size > 5 * 1024 * 1024) return toast('El archivo es demasiado grande (máximo 5 MB).', 'error');
@@ -1731,7 +1749,7 @@ ${text}`;
       const rows = parseCsv(text.replace(/^\uFEFF/, ''));
       if (rows.length < 1) throw new Error('vacío');
       const header = rows[0].map((h) => h.toLowerCase());
-      const body = header.some((h) => /pregunta|question|front|anverso/.test(h)) ? rows.slice(1) : rows;
+      const body = header.some((h) => /^(pregunta|question|front|anverso|respuesta|answer|back|reverso|materia|subject|tema)$/.test(h.trim())) ? rows.slice(1) : rows;
       const records = body.slice(0, 5000).map((r, i) => ({ n: i + 1, label: 'Registro', question: cleanMl(stripHtml(r[0]), 500), answer: cleanMl(stripHtml(r[1]), 1200), subject: clean(stripHtml(r[2]), 60) || 'Importado' }));
       const A = analyzeCards(records);
       if (!(await previewCards('Importar tarjetas', body.length, A, { over: Math.max(0, body.length - 5000) }))) return;
@@ -1827,7 +1845,8 @@ ${text}`;
       const key = clean(data.get('apikey'), 200); if (key) { state.apiKey = key; state.settings.skipAi = false; }
       if (state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
       save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
-    }, () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }); // cerrar sin guardar revierte la vista previa
+    });
+    modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
     put(state.settings); f.fontSize.value = String(state.settings.fontSize); sync();
     $('#modal-body').oninput = $('#modal-body').onchange = preview;
     { const dlg = $('#app-modal'); dlg.onclick = (e) => { if (e.target === dlg) closeModal(); }; } // clic fuera (solo en Ajustes): cierra y revierte la vista previa
@@ -1844,7 +1863,7 @@ ${text}`;
     $('#reset-data').onclick = async () => {
       if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
       exportData(true); snapshot('reset');
-      try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
+      try { localStorage.removeItem(KEY); LEGACY_KEYS.forEach((k) => localStorage.removeItem(k)); ['learny.corrupt', TIMER_KEY, DONE_KEY].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
       exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast('Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.');
     };
   }
