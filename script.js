@@ -1458,6 +1458,7 @@ ${text}`;
     }, () => { const b = $('#modal-body'); b.onchange = null; b.oninput = null; });
     const body = $('#modal-body'), btn = $('#review-save');
     body.onchange = () => {
+      body.querySelectorAll('.review-card').forEach((f) => f.classList.toggle('discarded', !!f.querySelector('input[value="discard"]:checked')));
       const n = items.filter((_, i) => body.querySelector(`input[name="s${i}"]:checked`)?.value === 'accept').length;
       btn.disabled = !n; btn.textContent = `Guardar aceptadas (${n})`;
     };
@@ -1579,7 +1580,7 @@ ${text}`;
   function applyAppearance(s = state.settings) {
     liveSettings = s;
     const root = document.documentElement, b = document.body, th = resolveTheme(s.theme);
-    root.style.setProperty('--base', `${s.fontSize}px`);
+    root.style.setProperty('--base', `${(s.fontSize / 16) * 100}%`); // porcentaje: respeta el tamaño de texto del navegador
     const acc = s.accent === 'custom' ? (() => { const c = fitAccent(s.accentCustom, th); return [c, c]; })() : ((th === 'light' ? ACCENTS.light : ACCENTS.dark)[s.accent] || ACCENTS.dark.sky);
     root.style.setProperty('--accent', acc[0]); root.style.setProperty('--accent2', acc[1]); root.style.setProperty('--on-accent', onAccentFor(acc[0]));
     const R = { sharp: ['2px', '2px'], soft: ['14px', '9px'], round: ['24px', '16px'] }[s.radius] || ['14px', '9px'];
@@ -1924,6 +1925,7 @@ ${text}`;
 
   $$('[data-page]').forEach((b) => { b.onclick = () => showPage(b.dataset.page); });
   { const nav = $('.bottom-nav'); if (nav && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => document.documentElement.style.setProperty('--nav-h', `${nav.offsetHeight}px`)).observe(nav); } // altura real de la barra: nada queda tapado
+  { const head = $('.sidebar'); if (head && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => document.documentElement.style.setProperty('--head-h', `${head.offsetHeight}px`)).observe(head); } // y de la cabecera móvil: el temporizador fijo no se solapa
   $$('.page-heading h1').forEach((h) => { h.tabIndex = -1; });
   $('#mini-timer').onclick = () => showPage('study');
   $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](); };
