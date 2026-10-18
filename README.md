@@ -18,7 +18,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v15`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v16`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -72,6 +72,16 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 180 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Novedades (v16 · apariencia y tipografía)
+**Ajustes ⚙️ reorganizados** en bloques plegables: *Apariencia* (abierto), *Tipografía y lectura*, *Disposición*, *Estudio y avisos*, *Inteligencia artificial* y *Datos y copias*. No se quitó ningún ajuste.
+
+- **Apariencia:** tema Automático (sigue `prefers-color-scheme` y reacciona a sus cambios), Oscuro, Negro (OLED), Claro, Sepia y Alto contraste; acento Cielo/Menta/Violeta/Ámbar/Rosa o **personalizado** (se mezcla con blanco o negro hasta llegar a 4,5:1 sobre las superficies del tema y con su texto); esquinas, tarjetas con borde o sombra, fondo cuadriculado/puntos/liso y densidad. Cuatro **estilos rápidos** (Cuaderno, Lectura nocturna, Papel, Enfoque) y *Restablecer apariencia*.
+- **Tipografía (solo fuentes del sistema, no se carga nada externo):** Sistema, Humanista, Serif de lectura, Redondeada, Monoespaciada y Lectura fácil; títulos en serif o como el texto; tamaño de 13 a 24 px (A−/A+ comparten el rango); interlineado, espaciado de letras y tamaño del texto de las tarjetas.
+- **Disposición:** ancho del contenido (1000/1240/1600 px), menú lateral de solo iconos en escritorio (con tooltip; el texto sigue en el DOM), mostrar u ocultar misiones y dato curioso.
+- **Vista previa en vivo:** cada cambio se aplica al instante, pero solo se guarda con *Guardar preferencias*; cerrar con la X, `Esc` o fuera de la ventana revierte.
+- **Código:** `applyAppearance()` solo toca estilos; `applyPreferences()` además rellena los campos del tutor. La sincronización entre pestañas, la vista previa y A−/A+ usan solo la primera, así que no pisan lo que escribes en el tutor.
+- **Datos:** ajustes nuevos en `state.settings` con valores por defecto; `sanitizeSettings` solo acepta valores de listas permitidas, rangos numéricos y un color `#rrggbb`, también al importar copias (una copia ajena no puede inyectar CSS). Esquema `version: 4`, sin migraciones; las copias antiguas siguen cargando. `sw.js` pasa a `learny-v16`.
 
 ## Novedades (v15 · etapa 6A: reducir la complejidad visible)
 Esta entrega cubre la pantalla *Hoy*, el modo sesión y los bloques plegables (6A) y la revisión de móvil y teclado (6B, al final de esta sección).

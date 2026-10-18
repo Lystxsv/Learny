@@ -63,7 +63,7 @@
     version: SCHEMA,
     settings: {
       focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
-      theme: 'dark', accent: 'sky', density: 'normal', reduceMotion: false, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
+      theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
       recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
       tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: ''
     },
@@ -135,13 +135,17 @@
   function sanitizeSettings(s, d) {
     s.focus = num(s.focus, 1, 180, d.focus); s.rest = num(s.rest, 1, 60, d.rest);
     s.roulettePrepare = num(s.roulettePrepare, 1, 180, d.roulettePrepare); s.rouletteExplain = num(s.rouletteExplain, 1, 180, d.rouletteExplain);
-    s.fontSize = num(s.fontSize, 14, 21, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal);
+    s.fontSize = num(s.fontSize, 13, 24, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal);
     const pick = (v, list, def) => (list.includes(v) ? v : def);
-    s.theme = pick(s.theme, ['dark', 'sepia', 'contrast'], 'dark'); s.font = pick(s.font, ['sans', 'dyslexic'], 'sans');
-    s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
+    s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
+    s.headFont = pick(s.headFont, ['serif', 'same'], 'serif'); s.radius = pick(s.radius, ['sharp', 'soft', 'round'], 'soft'); s.cardStyle = pick(s.cardStyle, ['border', 'shadow'], 'border'); s.bgStyle = pick(s.bgStyle, ['grid', 'dots', 'plain'], 'grid');
+    s.lineHeight = pick(s.lineHeight, ['compact', 'normal', 'roomy'], 'normal'); s.letterSpacing = pick(s.letterSpacing, ['normal', 'wide', 'wider'], 'normal'); s.cardText = pick(s.cardText, ['normal', 'large', 'xlarge'], 'normal');
+    s.contentWidth = pick(s.contentWidth, ['narrow', 'normal', 'wide'], 'normal'); s.sidebar = pick(s.sidebar, ['full', 'icons'], 'full');
+    s.accentCustom = typeof s.accentCustom === 'string' && /^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom.toLowerCase() : d.accentCustom;
+    s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose', 'custom'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
     s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
     s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
-    ['reduceMotion', 'notify', 'sound', 'skipAi'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
+    ['reduceMotion', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
     ['name', 'model', 'lastExport', 'backupNag', 'lastRemind'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
     s.name = s.name.slice(0, 30); s.model = s.model.trim() || DEFAULT_MODEL;
     s.recentTurns = arr(s.recentTurns).filter((x) => typeof x === 'string').slice(0, 8);
@@ -1522,16 +1526,50 @@ ${text}`;
      ========================================================= */
   function syncTutorMode() { $('#ai-question').placeholder = $('#tutor-mode').value === 'direct' ? 'Pregunta y recibe una explicación directa…' : 'Pregunta a tu tutor socrático…'; }
 
-  function applyAppearance() {
-    document.documentElement.style.setProperty('--base', `${state.settings.fontSize}px`);
-    const ACC = { mint: ['#a7f3d0', '#46c793'], violet: ['#c4b5fd', '#8b5cf6'], amber: ['#fcd34d', '#f59e0b'], sky: ['#9db8ff', '#5b84ff'], rose: ['#fda4af', '#f43f5e'] }[state.settings.accent] || ['#a7f3d0', '#46c793'];
-    document.documentElement.style.setProperty('--accent', ACC[0]); document.documentElement.style.setProperty('--accent2', ACC[1]);
-    document.body.dataset.density = state.settings.density || 'normal';
-    document.body.classList.toggle('theme-sepia', state.settings.theme === 'sepia');
-    document.body.classList.toggle('theme-contrast', state.settings.theme === 'contrast');
-    document.body.classList.toggle('font-dyslexic', state.settings.font === 'dyslexic');
-    document.body.classList.toggle('reduce-motion', !!state.settings.reduceMotion);
+  /* ===== Apariencia (v16): solo estilos; nunca toca los campos de texto del tutor ===== */
+  let liveSettings = null;
+  const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000' };
+  const SURF = { dark: ['#171d38', '#202850', '#232d5e'], oled: ['#0b0b0f', '#16161d', '#1b1f3a'], light: ['#ffffff', '#eceff7', '#e3e8fb'] }; // surface, surface2, tag-bg
+  const ACCENTS = {
+    dark: { mint: ['#a7f3d0', '#46c793'], violet: ['#c4b5fd', '#8b5cf6'], amber: ['#fcd34d', '#f59e0b'], sky: ['#9db8ff', '#5b84ff'], rose: ['#fda4af', '#f43f5e'] },
+    light: { sky: ['#2748c4', '#2748c4'], mint: ['#0a744e', '#0a744e'], violet: ['#5b34d6', '#5b34d6'], amber: ['#8a5200', '#8a5200'], rose: ['#b81d3f', '#b81d3f'] }
+  };
+  const DARK_ON = '#0b1230';
+  const rgbOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lumOf = (h) => { const [r, g, b] = rgbOf(h).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const contrast = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const mixHex = (a, b, t) => { const p = rgbOf(a), q = rgbOf(b); return `#${p.map((v, i) => Math.round(v + (q[i] - v) * t).toString(16).padStart(2, '0')).join('')}`; };
+  const onAccentFor = (c) => (contrast(c, '#ffffff') >= contrast(c, DARK_ON) ? '#ffffff' : DARK_ON);
+  /* Acento personalizado: se mezcla con blanco (temas oscuros) o negro (claro) hasta llegar a 4,5:1 sobre las superficies y con su texto. */
+  function fitAccent(hex, theme) {
+    const bgs = SURF[theme] || SURF.dark, to = theme === 'light' ? '#000000' : '#ffffff';
+    for (let i = 0; i <= 50; i++) { const c = mixHex(hex, to, i / 50); if (bgs.every((b) => contrast(c, b) >= 4.5) && contrast(c, onAccentFor(c)) >= 4.5) return c; }
+    return to;
   }
+  const resolveTheme = (t) => (t === 'auto' ? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t);
+  function applyAppearance(s = state.settings) {
+    liveSettings = s;
+    const root = document.documentElement, b = document.body, th = resolveTheme(s.theme);
+    root.style.setProperty('--base', `${s.fontSize}px`);
+    const acc = s.accent === 'custom' ? (() => { const c = fitAccent(s.accentCustom, th); return [c, c]; })() : ((th === 'light' ? ACCENTS.light : ACCENTS.dark)[s.accent] || ACCENTS.dark.sky);
+    root.style.setProperty('--accent', acc[0]); root.style.setProperty('--accent2', acc[1]); root.style.setProperty('--on-accent', onAccentFor(acc[0]));
+    const R = { sharp: ['2px', '2px'], soft: ['14px', '9px'], round: ['24px', '16px'] }[s.radius] || ['14px', '9px'];
+    root.style.setProperty('--r-card', R[0]); root.style.setProperty('--r-ctl', R[1]); root.style.setProperty('--radius', R[0]);
+    ['light', 'oled', 'sepia', 'contrast'].forEach((t) => b.classList.toggle(`theme-${t}`, th === t));
+    root.style.colorScheme = th === 'light' ? 'light' : 'dark';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_META[th] || THEME_META.dark);
+    Object.assign(b.dataset, { density: s.density || 'normal', cards: s.cardStyle, bg: s.bgStyle, font: s.font, headfont: s.headFont, lh: s.lineHeight, ls: s.letterSpacing, cardtext: s.cardText, width: s.contentWidth, sidebar: s.sidebar });
+    b.classList.toggle('font-dyslexic', s.font === 'dyslexic'); b.classList.toggle('reduce-motion', !!s.reduceMotion);
+    b.classList.toggle('hide-missions', !s.showMissions); b.classList.toggle('hide-fact', !s.showFact);
+    $$('.sidebar .nav-button').forEach((btn) => { // menú de iconos: el texto sigue en el DOM; el tooltip lo repite
+      const label = [...btn.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
+      if (s.sidebar === 'icons' && label) btn.title = label; else btn.removeAttribute('title');
+    });
+  }
+  try { // el tema Automático sigue al sistema
+    const mq = window.matchMedia('(prefers-color-scheme: dark)'), onScheme = () => { if (liveSettings?.theme === 'auto') applyAppearance(liveSettings); };
+    if (mq.addEventListener) mq.addEventListener('change', onScheme); else mq.addListener?.(onScheme);
+  } catch { /* sin matchMedia */ }
   function applyPreferences() {
     applyAppearance();
     $('#daily-goal-input').value = state.settings.dailyGoal || 2;
@@ -1703,28 +1741,69 @@ ${text}`;
     }).catch((e) => { console.error(e); toast('Archivo no válido. Usa pregunta, respuesta, materia (separados por coma, punto y coma o tabulador).', 'error'); });
   }
 
+  const APP_KEYS = ['theme', 'accent', 'accentCustom', 'radius', 'cardStyle', 'bgStyle', 'density', 'font', 'headFont', 'fontSize', 'lineHeight', 'letterSpacing', 'cardText', 'contentWidth', 'sidebar', 'showMissions', 'showFact', 'reduceMotion'];
   function openSettings() {
+    const base = defaults().settings;
+    const sel = (name, label, list) => `<label>${label}<select name="${name}">${list.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>`;
+    const form = $('#modal-form'), f = form.elements;
+    const read = () => { const o = {}; APP_KEYS.forEach((k) => { const el = f[k]; o[k] = el.type === 'checkbox' ? el.checked : k === 'fontSize' ? Number(el.value) : el.value; }); return o; };
+    const put = (o) => Object.entries(o).forEach(([k, v]) => { const el = f[k]; if (!el) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v); });
+    const KEEP = ['accent', 'accentCustom', 'showMissions', 'showFact', 'reduceMotion'];
+    const fromDefaults = (extra) => { const o = {}; APP_KEYS.filter((k) => !KEEP.includes(k)).forEach((k) => { o[k] = base[k]; }); return { ...o, ...extra }; };
+    const QS = {
+      cuaderno: fromDefaults({}),
+      noche: fromDefaults({ theme: 'oled', font: 'serif', lineHeight: 'roomy', fontSize: 19, bgStyle: 'plain', cardText: 'large' }),
+      papel: fromDefaults({ theme: 'light', font: 'serif', bgStyle: 'dots' }),
+      enfoque: fromDefaults({ theme: 'dark', bgStyle: 'plain', radius: 'sharp', contentWidth: 'narrow', sidebar: 'icons' })
+    };
+    const sync = () => {
+      const plain = ['sepia', 'contrast'].includes(f.theme.value); // en Sepia y Alto contraste el acento es fijo
+      f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
+      $('#accent-custom-wrap').hidden = f.accent.value !== 'custom'; $('#fs-out').textContent = `${f.fontSize.value} px`;
+    };
+    const preview = () => { sync(); const d = { ...state.settings, ...read() }; sanitizeSettings(d, base); applyAppearance(d); };
     modal(`<h2>Ajustes</h2>
-      <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
-      <label>Tema<select name="theme"><option value="dark">Oscuro</option><option value="sepia">Sepia</option><option value="contrast">Alto contraste</option></select></label>
-      <label>Fuente<select name="font"><option value="sans">Sans-serif legible</option><option value="dyslexic">Lectura fácil</option></select></label>
-      <div class="form-row"><label>Color de acento (solo tema oscuro)<select name="accent"><option value="mint">Menta</option><option value="violet">Violeta</option><option value="amber">Ámbar</option><option value="sky">Cielo</option><option value="rose">Rosa</option></select></label>
-      <label>Densidad<select name="density"><option value="normal">Normal</option><option value="compact">Compacta</option><option value="roomy">Amplia</option></select></label></div>
-      <label class="check"><input name="reduce" type="checkbox"> Reducir animaciones</label>
-      <label class="check"><input name="sound" type="checkbox"> Sonido al terminar</label>
-      <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
-      <div class="form-row"><label>Pomodoro (min)<input name="focus" type="number" min="1" max="180" value="${state.settings.focus}"></label>
-      <label>Descanso (min)<input name="rest" type="number" min="1" max="60" value="${state.settings.rest}"></label></div>
-      <details class="more-inline" id="settings-advanced">
-        <summary>Ajustes avanzados <small>IA, proxy y ruleta</small></summary>
+      <details class="more-inline settings-group" open><summary>Apariencia</summary>
+        <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
+        <p class="hint"><b>Estilos rápidos</b></p>
+        <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
+        ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste']])}
+        <div class="form-row">${sel('accent', 'Color de acento (no en Sepia ni Alto contraste)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
+        <label id="accent-custom-wrap" hidden>Color personalizado<input name="accentCustom" type="color"></label></div>
+        <div class="form-row">${sel('radius', 'Esquinas', [['sharp', 'Rectas'], ['soft', 'Suaves'], ['round', 'Redondeadas']])}${sel('cardStyle', 'Tarjetas', [['border', 'Con borde'], ['shadow', 'Con sombra']])}</div>
+        <div class="form-row">${sel('bgStyle', 'Fondo', [['grid', 'Cuadriculado'], ['dots', 'Puntos'], ['plain', 'Liso']])}${sel('density', 'Densidad', [['normal', 'Normal'], ['compact', 'Compacta'], ['roomy', 'Amplia']])}</div>
+      </details>
+      <details class="more-inline settings-group"><summary>Tipografía y lectura</summary>
+        <p class="hint">Solo fuentes del sistema: no se descarga nada.</p>
+        ${sel('font', 'Fuente del texto', [['sans', 'Sistema (sans)'], ['humanist', 'Humanista'], ['serif', 'Serif de lectura'], ['rounded', 'Redondeada'], ['mono', 'Monoespaciada'], ['dyslexic', 'Lectura fácil (OpenDyslexic)']])}
+        ${sel('headFont', 'Fuente de los títulos', [['serif', 'Serif (actual)'], ['same', 'La misma del texto']])}
+        <label>Tamaño de texto: <output id="fs-out"></output><input name="fontSize" type="range" min="13" max="24" step="1"></label>
+        <div class="form-row">${sel('lineHeight', 'Interlineado', [['compact', 'Compacto'], ['normal', 'Normal'], ['roomy', 'Amplio']])}${sel('letterSpacing', 'Espaciado de letras', [['normal', 'Normal'], ['wide', 'Amplio'], ['wider', 'Muy amplio']])}</div>
+        ${sel('cardText', 'Texto de las tarjetas de estudio', [['normal', 'Normal'], ['large', 'Grande'], ['xlarge', 'Muy grande']])}
+      </details>
+      <details class="more-inline settings-group"><summary>Disposición</summary>
+        <div class="form-row">${sel('contentWidth', 'Ancho del contenido', [['narrow', 'Estrecho (1000 px)'], ['normal', 'Normal (1240 px)'], ['wide', 'Ancho (1600 px)']])}${sel('sidebar', 'Menú lateral (escritorio)', [['full', 'Completo'], ['icons', 'Solo iconos']])}</div>
+        <label class="check"><input name="showMissions" type="checkbox"> Mostrar las misiones de hoy</label>
+        <label class="check"><input name="showFact" type="checkbox"> Mostrar el dato curioso</label>
+        <label class="check"><input name="reduceMotion" type="checkbox"> Reducir animaciones</label>
+      </details>
+      <details class="more-inline settings-group"><summary>Estudio y avisos</summary>
+        <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
+        <label class="check"><input name="sound" type="checkbox"> Sonido al terminar</label>
+        <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
+        <div class="form-row"><label>Pomodoro (min)<input name="focus" type="number" min="1" max="180" value="${state.settings.focus}"></label>
+        <label>Descanso (min)<input name="rest" type="number" min="1" max="60" value="${state.settings.rest}"></label></div>
         <div class="form-row"><label>Ruleta: preparación<input name="prepare" type="number" min="1" max="180" value="${state.settings.roulettePrepare}"></label>
         <label>Ruleta: explicación<input name="explain" type="number" min="1" max="180" value="${state.settings.rouletteExplain}"></label></div>
+      </details>
+      <details class="more-inline settings-group" id="settings-advanced"><summary>Inteligencia artificial</summary>
         <label>Clave de Gemini (opcional)<input name="apikey" type="password" autocomplete="off" maxlength="200" placeholder="${state.apiKey ? 'Clave guardada (vacío = conservar)' : 'Pega aquí tu clave'}"></label>
         <p class="modal-tip">Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.</p>
         <label>Modelo de Gemini<input name="model" value="${esc(state.settings.model)}"></label>
         <label>URL de tu proxy (opcional, para no exponer la clave)<input name="proxy" type="url" inputmode="url" maxlength="200" placeholder="https://tu-worker.workers.dev" value="${esc(state.settings.proxyUrl)}"></label>
       </details>
-      <div class="actions">
+      <details class="more-inline settings-group"><summary>Datos y copias</summary>
+        <div class="actions">
         <button id="export-data" class="outline-button" type="button">Descargar copia</button>
         <button id="export-deck" class="outline-button" type="button">Compartir mazo</button>
         <button id="import-json-btn" class="outline-button" type="button">Importar JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden aria-label="Archivo JSON a importar">
@@ -1732,29 +1811,28 @@ ${text}`;
         ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
         ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
         <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
-      </div>
+        </div>
+      </details>
       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
       <button class="primary-button">Guardar preferencias</button>`, (data) => {
       if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
       Object.assign(state.settings, {
-        name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')),
-        theme: data.get('theme'), accent: data.get('accent'), density: data.get('density'), font: data.get('font'), reduceMotion: data.get('reduce') === 'on',
+        name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
         sound: data.get('sound') === 'on', notify: data.get('notify') === 'on',
         focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
         roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
         model: clean(data.get('model'), 80) || DEFAULT_MODEL
       });
+      sanitizeSettings(state.settings, base); // lo que llega del formulario también se valida
       const key = clean(data.get('apikey'), 200); if (key) { state.apiKey = key; state.settings.skipAi = false; }
       if (state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission();
       save(); applyPreferences(); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
-    });
-    const form = $('#modal-form');
-    form.theme.value = state.settings.theme; form.accent.value = state.settings.accent; form.density.value = state.settings.density; form.font.value = state.settings.font;
-    const syncAccent = () => { form.accent.disabled = form.theme.value !== 'dark'; };
-    form.theme.onchange = syncAccent; syncAccent();
-    form.reduce.checked = !!state.settings.reduceMotion;
-    form.sound.checked = state.settings.sound !== false;
-    form.notify.checked = !!state.settings.notify;
+    }, () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; applyAppearance(); }); // cerrar sin guardar revierte la vista previa
+    put(state.settings); f.fontSize.value = String(state.settings.fontSize); sync();
+    $('#modal-body').oninput = $('#modal-body').onchange = preview;
+    { const dlg = $('#app-modal'); dlg.onclick = (e) => { if (e.target === dlg) closeModal(); }; } // clic fuera (solo en Ajustes): cierra y revierte la vista previa
+    $$('#modal-body [data-qs]').forEach((b) => { b.onclick = () => { put(QS[b.dataset.qs]); preview(); }; });
+    $('#reset-look').onclick = () => { const o = {}; APP_KEYS.filter((k) => k !== 'reduceMotion').forEach((k) => { o[k] = base[k]; }); put(o); preview(); toast('Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.'); };
     $('#export-data').onclick = () => exportData();
     if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); closeModal(); toast('Clave eliminada de este navegador.'); };
     if ($('#restore-backup')) $('#restore-backup').onclick = restoreBackup;
@@ -1771,7 +1849,7 @@ ${text}`;
     };
   }
 
-  function changeFont(delta) { state.settings.fontSize = Math.min(21, Math.max(14, state.settings.fontSize + delta)); save(); applyPreferences(); }
+  function changeFont(delta) { state.settings.fontSize = Math.min(24, Math.max(13, state.settings.fontSize + delta)); save(); applyAppearance(); }
 
   function maybeRemind() {
     if (state.settings.lastRemind === today()) return; // una vez al día, no en cada recarga
