@@ -50,7 +50,13 @@
   const pad = (n) => String(n).padStart(2, '0');
   const dateStr = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const today = () => dateStr();
-  const validDeadlineDate = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d)) && daysUntil(d) >= 0 && daysUntil(d) <= MAX_PLAN_DAYS;
+  /* Fase 2: una fecha válida es REAL (no 2026-02-31 ni 2026-13-01): se comprueba ida y vuelta con Date. */
+  const isDay = (x) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(x)); if (!m) return false;
+    const y = +m[1], mo = +m[2], d = +m[3], t = new Date(Date.UTC(y, mo - 1, d));
+    return y >= 1970 && y <= 2200 && t.getUTCFullYear() === y && t.getUTCMonth() === mo - 1 && t.getUTCDate() === d;
+  };
+  const validDeadlineDate = (d) => isDay(d) && daysUntil(d) >= 0 && daysUntil(d) <= MAX_PLAN_DAYS;
   const addDays = (date, n) => { const d = new Date(`${date}T12:00:00`); d.setDate(d.getDate() + n); return dateStr(d); };
   const daysUntil = (date) => Math.round((new Date(`${date}T12:00:00`) - new Date(`${today()}T12:00:00`)) / 86400000);
   const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -79,7 +85,7 @@
       focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
       theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, immersiveDim: true, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false,
       recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
-      tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', welcomed: false
+      tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', lastRollover: '', welcomed: false
     },
     notes: [], feynman: [], decks: [], planLog: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
   });
@@ -100,12 +106,12 @@
     subject: String(c.subject || 'Sin materia'),
     question: String(c.question || ''),
     answer: String(c.answer || ''),
-    nextReview: /^\d{4}-\d{2}-\d{2}$/.test(c.nextReview) ? c.nextReview : today(),
-    lastReviewed: /^\d{4}-\d{2}-\d{2}$/.test(c.lastReviewed) ? c.lastReviewed : null,
+    nextReview: isDay(c.nextReview) ? c.nextReview : today(),
+    lastReviewed: isDay(c.lastReviewed) ? c.lastReviewed : null,
     archived: !!c.archived,
     origin: c.origin === 'ia' ? 'ia' : '',
     easeFactor: Math.min(4, Math.max(1.3, Number(c.easeFactor ?? c.ease) || 2.5)),
-    interval: Math.min(365, Math.max(0, Number(c.interval) || 0)),
+    interval: Math.min(MAX_INTERVAL, Math.max(0, Number(c.interval) || 0)),
     repetitions: Math.min(1000, Math.max(0, Number(c.repetitions ?? c.reps) || 0)),
     history: Array.isArray(c.history) ? c.history.filter((h) => isObj(h) && typeof h.rating === 'string').slice(-40) : []
   });
@@ -167,7 +173,7 @@
     s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
     s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
     ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
-    ['name', 'model', 'lastExport', 'backupNag', 'lastRemind'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
+    ['name', 'model', 'lastExport', 'backupNag', 'lastRemind', 'lastRollover'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
     s.name = s.name.slice(0, 30); s.model = s.model.trim() || DEFAULT_MODEL;
     s.recentTurns = arr(s.recentTurns).filter((x) => typeof x === 'string').slice(0, 8);
     const t = isObj(s.tutor) ? s.tutor : {};
@@ -194,26 +200,26 @@
     const rawCards = state.cards;
     state.cards = rawCards.filter((c) => c && typeof c === 'object' && !Array.isArray(c)).map(normalizeCard);
     droppedCards += rawCards.length - state.cards.length;
-    state.sessions = state.sessions.filter((s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s.date)).map((s) => ({
+    state.sessions = state.sessions.filter((s) => s && isDay(s.date)).map((s) => ({
       ...s, id: s.id || uid(), minutes: Number(s.minutes) || 0, energy: s.energy ? Number(s.energy) : null,
       label: String(s.label || s.subject || ''), achieved: typeof s.achieved === 'boolean' ? s.achieved : null,
       abandon: s.abandon || null, intention: String(s.intention || ''), distractions: cleanNotes(s.distractions)
     }));
-    state.deadlines = state.deadlines.filter((d) => d && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date)).map((d) => ({
+    state.deadlines = state.deadlines.filter((d) => d && String(d.title || '').trim() && isDay(d.date)).map((d) => ({
       id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
       difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0),
       debtMin: d.debtMin == null ? num(d.skipped, 0, 999, 0) * num(d.dailyMinutes, 15, 240, 45) : num(d.debtMin, 0, 240000, 0)
     }));
-    state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && Array.isArray(d.cards));
-    const dayOf = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x));
+    state.decks = state.decks.filter((d) => d && typeof d.name === 'string' && d.name.trim() && Array.isArray(d.cards));
+    const dayOf = isDay;
     const taskRef = (m) => ({ phase: String(m?.phase || '').slice(0, 20), from: dayOf(m?.from) ? m.from : today() });
     state.planLog = state.planLog.filter((e) => e && dayOf(e.date)).slice(-30).map((e) => ({
       id: e.id || uid(), date: e.date, deadlineId: String(e.deadlineId || ''), title: String(e.title || '').slice(0, 80), kind: e.kind === 'replan' ? 'replan' : 'late',
       minutes: num(e.minutes, 0, 240, 0), moved: arr(e.moved).slice(0, 10).map(taskRef), dropped: arr(e.dropped).slice(0, 40).map(taskRef)
     }));
-    state.topics = state.topics.filter((t) => t && t.name).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
-    state.reviews = state.reviews.filter((r) => r && r.date).slice(-MAX_REVIEWS);
-    state.tasks = state.tasks.filter((t) => t && t.deadlineId && t.date).map((t) => ({
+    state.topics = state.topics.filter((t) => t && String(t.name || '').trim()).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
+    state.reviews = state.reviews.filter((r) => r && isDay(r.date)).slice(-MAX_REVIEWS);
+    state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
       id: t.id || uid(), deadlineId: t.deadlineId, date: t.date, phase: t.phase || 'comprension',
       title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
     }));
@@ -524,7 +530,9 @@
 
   /* Si te atrasas: se mueven a hoy las 2 tareas atrasadas más recientes de cada examen y se descartan las anteriores.
      Cada cambio queda registrado (state.planLog) y se explica en Planificar; lo descartado se cuenta en deadline.skipped. */
-  function redistributeIfBehind() {
+  function redistributeIfBehind(delay = 0) {
+    if (state.settings.lastRollover === today()) return; // una sola vez por día (y nunca dentro de un render): sin duplicados en el historial
+    const before = JSON.stringify({ tasks: state.tasks, planLog: state.planLog, deadlines: state.deadlines });
     let moved = 0, dropped = 0;
     state.deadlines.forEach((d) => {
       if (daysUntil(d.date) < 0) return;
@@ -539,10 +547,16 @@
       if (dropIds.size) { state.tasks = state.tasks.filter((t) => !dropIds.has(t.id)); d.debtMin = (d.debtMin ?? (d.skipped || 0) * d.dailyMinutes) + dropIds.size * d.dailyMinutes; d.skipped = (d.skipped || 0) + dropIds.size; }
       moved += keep.length; dropped += drop.length;
     });
-    if (!moved && !dropped) return;
+    state.settings.lastRollover = today();
     state.planLog = state.planLog.slice(-30);
     save();
-    toast(`Plan reajustado: moví ${plural(moved, 'tarea atrasada', 'tareas atrasadas')} a hoy${dropped ? ` y descarté ${plural(dropped, 'tarea', 'tareas')} que ya no cabían` : ''}. El detalle está en Planificar → Cambios en tu plan.`);
+    if (!moved && !dropped) return;
+    const msg = `Plan reajustado: moví ${plural(moved, 'tarea atrasada', 'tareas atrasadas')} a hoy${dropped ? ` y descarté ${plural(dropped, 'tarea', 'tareas')} que ya no cabían` : ''}. El detalle está en Planificar → Cambios en tu plan.`;
+    const undo = () => { // deshacer: vuelve a las tareas, el historial y las deudas de antes; hoy no se reajusta otra vez
+      const b = JSON.parse(before); state.tasks = b.tasks; state.planLog = b.planLog; state.deadlines = b.deadlines;
+      state.settings.lastRollover = today(); save(); renderAll();
+    };
+    setTimeout(() => toast(msg, 'ok', { label: 'Deshacer', run: undo }), delay);
   }
 
   /* ¿Cabe lo que queda? Trabajo pendiente (tareas abiertas de hoy en adelante + las descartadas) frente al tiempo disponible hasta el examen. */
@@ -603,7 +617,7 @@
   }
 
   function renderDeadlines() {
-    redistributeIfBehind(); renderPlanLog();
+    renderPlanLog();
     const entries = [...state.deadlines].sort((a, b) => a.date.localeCompare(b.date));
     const alert = $('#planner-alert');
     const urgent = entries.find((d) => daysUntil(d.date) >= 0 && daysUntil(d.date) <= 3);
@@ -647,7 +661,8 @@
         id: uid(), title: clean(data.get('title'), 80), subject: clean(data.get('subject'), 60),
         date: data.get('date'), difficulty: num(data.get('difficulty'), 1, 5, 3), dailyMinutes: num(data.get('mins'), 15, 240, 45)
       };
-      if (!validDeadlineDate(item.date)) return toast('Elige una fecha entre hoy y los próximos 2 años.', 'error');
+      if (!item.title || !item.subject) return toast('Escribe un nombre y una materia (no pueden quedar en blanco).', 'error');
+      if (!validDeadlineDate(item.date)) return toast('Elige una fecha real entre hoy y los próximos 2 años.', 'error');
       state.deadlines.push(item);
       rebuildTasks(item, false);
       save(); closeModal(); renderAll(); toast('Plan inverso creado con tareas diarias.');
@@ -687,8 +702,8 @@
     if (t.running && Number(t.endAt) > 0) {
       timer.endAt = Number(t.endAt); timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
       if (timer.remaining <= 0) {
-        if (Date.now() - timer.endAt < 600000) { finishPhase(); return; }
-        resetTimer('focus'); toast('Un bloque anterior terminó mientras no estabas; no se contó.'); return;
+        if (Date.now() - timer.endAt < AWAY_MS) { finishPhase(); return; }
+        discardAway(); return;
       }
       timer.running = true; timer.id = setInterval(tick, 500);
     } else timer.remaining = num(t.remaining, 0, total, total);
@@ -721,9 +736,17 @@
     }
   }
 
+  /* Fase 2: un bloque que terminó mientras la pestaña dormía o estaba cerrada (más de AWAY_MS después de su hora) no se registra como sesión completa: no hay forma de saber si estudiaste. */
+  const AWAY_MS = 20000;
+  function discardAway() {
+    const wasFocus = timer.mode === 'focus';
+    resetTimer('focus');
+    if (wasFocus) toast('Un bloque de enfoque terminó mientras no estabas; no se contó como sesión.');
+  }
   function tick() {
     timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
-    renderTimer(); if (timer.remaining <= 0) finishPhase();
+    if (timer.remaining <= 0) { if (Date.now() - timer.endAt > AWAY_MS) { clearInterval(timer.id); timer.id = null; discardAway(); return; } renderTimer(); finishPhase(); return; }
+    renderTimer();
   }
 
   /* Etapa 2: notas de distracción del bloque en curso (viajan en learny.timer y se guardan en la sesión) */
@@ -1019,7 +1042,7 @@
     const parts = [];
     if (due) parts.push(`${plural(due, 'tarjeta', 'tarjetas')} para hoy${overdue ? ` (${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'})` : ''}`);
     if (exam) { const n = daysUntil(exam.date); parts.push(`${esc(exam.title)} ${n === 0 ? 'hoy' : `en ${plural(n, 'día', 'días')}`}`); }
-    const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort().pop(), gap = act ? -daysUntil(act) : 0;
+    const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => isDay(d)).sort().pop(), gap = act ? -daysUntil(act) : 0;
     const back = gap >= 3 ? ` Bienvenido de vuelta: han pasado ${plural(gap, 'día', 'días')} desde tu última sesión, y no pasa nada. Puedes retomar con «Solo 5 minutos».` : ''; // sin culpa: no menciona rachas
     $('#home-summary').innerHTML = (isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.') + back;
     const last = [...state.sessions].reverse().find((s) => !s.abandon);
@@ -1134,14 +1157,14 @@
     if (q < 3) {
       card.repetitions = 0; card.interval = 1; // SM-2: con calidad < 3 el factor de facilidad no cambia
     } else {
+      const hardLate = q === 3 && card.repetitions >= 2; // «Dudé» en una tarjeta ya consolidada: crece poco y no suma repeticiones
       if (card.repetitions === 0) card.interval = 1;
       else if (card.repetitions === 1) card.interval = 6;
-      else card.interval = Math.round(Math.max(1, card.interval) * card.easeFactor);
-      card.repetitions += 1;
+      else card.interval = Math.round(Math.max(1, card.interval) * (hardLate ? 1.2 : card.easeFactor));
+      if (!hardLate) card.repetitions += 1;
       card.easeFactor = Math.max(1.3, +(card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(2));
     }
-    const cap = Math.min(MAX_INTERVAL + Math.max(0, card.repetitions - 4) * 15, 365);
-    card.interval = Math.min(cap, Math.max(1, card.interval));
+    card.interval = Math.min(MAX_INTERVAL, Math.max(1, card.interval)); // tope real: nunca más de MAX_INTERVAL días
     card.nextReview = addDays(today(), card.interval);
   }
 
@@ -1286,6 +1309,7 @@
       <button id="generate-answer" class="outline-button" type="button">✨ Generar respuesta con IA</button>
       <button class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>`, (data) => {
       const values = { subject: clean(data.get('subject'), 60), question: cleanMl(data.get('question'), 500), answer: cleanMl(data.get('answer'), 1200) };
+      if (!values.subject) return toast('La materia no puede quedar en blanco.', 'error');
       if (!values.question || !values.answer) return toast('Pregunta y respuesta no pueden estar vacías.', 'error');
       if (card) { // se busca por id al guardar: el estado pudo reemplazarse (otra pestaña) mientras el formulario estaba abierto
         const target = state.cards.find((c) => c.id === card.id);
@@ -1914,7 +1938,7 @@ ${text}`;
         return;
       }
       const brokenCards = arr(data.cards).map((c, i) => [c, i]).filter(([c]) => !isObj(c) || isBrokenCard(c)).map(([c, i]) => `Tarjeta ${i + 1}: ${isObj(c) ? 'le falta la pregunta o la respuesta' : 'no es una tarjeta'} (se importará marcada como dañada)`);
-      const badDeadlines = arr(data.deadlines).map((d, i) => [d, i]).filter(([d]) => !(isObj(d) && d.title && /^\d{4}-\d{2}-\d{2}$/.test(d.date))).map(([, i]) => `Fecha ${i + 1}: sin nombre o con fecha no válida (se omitirá)`);
+      const badDeadlines = arr(data.deadlines).map((d, i) => [d, i]).filter(([d]) => !(isObj(d) && String(d.title || '').trim() && isDay(d.date))).map(([, i]) => `Fecha ${i + 1}: sin nombre o con fecha no válida (se omitirá)`);
       const problems = brokenCards.length + badDeadlines.length;
       if (!(await importPreview({
         title: 'Reemplazar tus datos', intro: 'Esta copia <b>reemplazará</b> tus datos actuales.',
@@ -2165,7 +2189,7 @@ ${text}`;
   const LAZY = { library: () => renderLibrary(), planner: () => renderDeadlines(), analysis: () => renderAnalysis(), practice: () => renderTopics() };
   const renderPage = (page) => { const fn = LAZY[page]; if (fn) safe(fn, page); };
   const renderAll = () => {
-    safe(redistributeIfBehind, 'plan'); safe(subjects, 'materias'); safe(renderFocus, 'Hoy'); safe(renderCard, 'tarjetas'); safe(renderTodayQueue, 'siguiente acción');
+    safe(subjects, 'materias'); safe(renderFocus, 'Hoy'); safe(renderCard, 'tarjetas'); safe(renderTodayQueue, 'siguiente acción');
     renderPage(currentPage);
     document.dispatchEvent(new Event('learny:render'));
   };
@@ -2305,7 +2329,7 @@ ${text}`;
   window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
   /* Si la app sigue abierta al pasar la medianoche, «hoy» se recalcula (cola, tarjetas vencidas, plan). */
   let lastDay = today();
-  const checkNewDay = () => { if (today() !== lastDay) { lastDay = today(); renderAll(); } };
+  const checkNewDay = () => { if (today() !== lastDay) { lastDay = today(); safe(redistributeIfBehind, 'plan'); renderAll(); } };
   setInterval(checkNewDay, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
@@ -2403,7 +2427,9 @@ ${text}`;
   }
 
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
-  applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
+  applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer);
+  safe(() => redistributeIfBehind((migratedFrom || droppedCards || loadProblem) ? 5000 : 600), 'plan'); // el aviso con «Deshacer» espera si hay otros avisos de arranque
+  renderAll(); maybeRemind(); backupNag();
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
   // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
   if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.hash.slice(1)) showLanding();

@@ -142,6 +142,7 @@
       <button class="primary-button">Guardar mazo</button>`, (d) => {
       const name = clean(d.get('name'), 60);
       const cards = String(d.get('rows')).split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((r) => r[0] && r[1]).map((r) => [r[0].slice(0, 500), r[1].slice(0, 1200)]);
+      if (!name) return toast('El mazo necesita un nombre (no puede quedar en blanco).', 'error');
       if (!cards.length) return toast('Usa el formato pregunta | respuesta en cada línea.', 'error');
       if (Object.prototype.hasOwnProperty.call(allDecks(), name)) return toast('Ya existe un mazo con ese nombre.', 'error');
       state.decks.push({ name, cards }); save(); closeModal(); renderDecks(); toast(`Mazo «${name}» creado con ${plural(cards.length, 'tarjeta', 'tarjetas')}.`);
