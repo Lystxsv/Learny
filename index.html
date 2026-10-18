@@ -38,7 +38,7 @@
     <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy) o el dictado por voz, que usa el servicio de tu navegador (en Chrome, Google). No guardes tu clave en un equipo compartido.</div>
   </aside>
 
-  <main class="main" id="main">
+  <main class="main" id="main" tabindex="-1">
     <header class="topbar">
       <div class="ai-input">
         <span aria-hidden="true">✦</span>
@@ -101,46 +101,51 @@
       <div class="page-heading">
         <h1 id="greeting">Tu día de estudio</h1>
         <p id="home-summary" class="lead"></p>
-        <p id="home-last" class="lead"></p>
-        <p class="fact"><span aria-hidden="true">💡</span> <span id="daily-fact"></span></p>
       </div>
 
-      <article class="card today-queue" id="today-queue"></article>
-      <article class="card" id="missions-card">
-        <div class="card-head"><h2>Misiones de hoy</h2><span id="mission-count" class="tag">0/3</span></div>
-        <div id="missions-list"></div>
-      </article>
+      <article class="card today-queue" id="today-queue" aria-label="Qué hacer ahora"></article>
 
-      <article class="card pomodoro-card">
+      <article class="card pomodoro-card" id="pomodoro-card">
         <div class="card-head"><h2>Pomodoro</h2><span id="pomodoro-profile" class="tag">25/5 · Foco</span></div>
         <div class="timer" role="timer" aria-live="off"><span id="timer-clock">25:00</span><small id="timer-note">¿Qué resultado concreto quieres lograr?</small></div>
         <label class="field">Resultado concreto de este bloque
           <input id="intention-input" class="intention" placeholder="Ej.: terminar los ejercicios 1 al 5" maxlength="140"></label>
-        <div class="form-row compact">
-          <label>Etiqueta del bloque
-            <input id="pomodoro-label" list="subject-list" maxlength="60" placeholder="Materia, curso o tarjeta">
-          </label>
-          <label>Meta diaria (bloques)
-            <input id="daily-goal-input" type="number" min="1" max="12" value="2">
-          </label>
-        </div>
-        <p id="goal-progress" class="lead rhythm"></p>
-        <p id="notify-hint" class="hint" hidden>Las notificaciones están bloqueadas: Learny avisará aquí y con sonido/vibración.</p>
         <div class="actions">
           <button id="pomodoro-button" class="primary-button">▶ Iniciar enfoque</button>
           <button id="pomodoro-skip" class="outline-button" hidden>Saltar descanso</button>
           <button id="pomodoro-reset" class="outline-button">Reiniciar</button>
-          <button id="pomodoro-config" class="outline-button">Ajustar tiempos</button>
         </div>
+        <details class="more-inline" id="pomodoro-more">
+          <summary>Opciones del bloque</summary>
+          <div class="form-row compact">
+            <label>Etiqueta del bloque
+              <input id="pomodoro-label" list="subject-list" maxlength="60" placeholder="Materia, curso o tarjeta">
+            </label>
+            <label>Meta diaria (bloques)
+              <input id="daily-goal-input" type="number" min="1" max="12" value="2">
+            </label>
+          </div>
+          <p id="goal-progress" class="lead rhythm"></p>
+          <p id="notify-hint" class="hint" hidden>Las notificaciones están bloqueadas: Learny avisará aquí y con sonido/vibración.</p>
+          <div class="actions"><button id="pomodoro-config" class="outline-button" type="button">Ajustar tiempos</button></div>
+        </details>
       </article>
 
-      <div class="grid metrics">
-        <div class="metric"><b id="focus-today">0 min</b><span>Foco hoy</span></div>
-        <div class="metric"><b id="current-streak">0 días</b><span>Racha actual</span></div>
-        <div class="metric"><b id="average-energy">—</b><span>Concentración media</span></div>
-      </div>
-      <p id="daily-rhythm" class="lead rhythm"></p>
-
+      <details class="card more-today" id="today-more">
+        <summary>Más sobre hoy <small>misiones, progreso y un dato curioso</small></summary>
+        <p id="home-last" class="lead"></p>
+        <div id="missions-card" class="tool-block">
+          <div class="card-head"><h2>Misiones de hoy</h2><span id="mission-count" class="tag">0/3</span></div>
+          <div id="missions-list"></div>
+        </div>
+        <div class="grid metrics">
+          <div class="metric"><b id="focus-today">0 min</b><span>Foco hoy</span></div>
+          <div class="metric"><b id="current-streak">0 días</b><span>Racha actual</span></div>
+          <div class="metric"><b id="average-energy">—</b><span>Concentración media</span></div>
+        </div>
+        <p id="daily-rhythm" class="lead rhythm"></p>
+        <p class="fact"><span aria-hidden="true">💡</span> <span id="daily-fact"></span></p>
+      </details>
     </section>
 
     <!-- ===== BIBLIOTECA ===== -->
@@ -157,35 +162,31 @@
       </article>
 
 
-      <article class="card">
-        <div class="card-head"><h2>Biblioteca de temas</h2><p class="lead">Mazos iniciales sin tus estadísticas. Duplicas el contenido; el progreso es solo tuyo.</p></div>
+      <details class="card" id="decks-more">
+        <summary>Mazos iniciales y mazos propios <small>añade tarjetas de ejemplo o crea tu mazo</small></summary>
+        <p class="lead">Mazos iniciales sin tus estadísticas. Duplicas el contenido; el progreso es solo tuyo.</p>
         <div id="topic-library" class="topic-results"></div>
-      </article>
+      </details>
     </section>
 
     <!-- ===== PRACTICAR ===== -->
     <section class="page" id="practice">
       <div class="page-heading"><p class="eyebrow">Practicar</p><h1>Recuerda de memoria, explica con tus palabras</h1><p class="lead">Repasa tarjetas, usa el método Feynman y captura material de clase.</p></div>
       <div class="grid study-grid">
-        <article class="card">
+        <article class="card review-main">
           <div class="card-head">
             <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
             <div class="actions tight">
               <button id="add-card" class="outline-button">+ Crear</button>
-              <button id="exam-mode" class="outline-button">Modo examen</button>
-              <button id="interleave-mode" class="outline-button">Intercalar</button>
-              <button id="quick-five" class="outline-button">5 minutos</button>
-              <button id="real-exam" class="outline-button">Examen real</button>
-              <button id="gen-cards" class="outline-button" type="button">✨ Crear con IA</button>
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
             </div>
           </div>
-          <div id="flashcard" class="flashcard" aria-live="polite"></div>
+          <div id="flashcard" class="flashcard" aria-live="polite" tabindex="-1"></div>
           <label class="recall-wrap">Tu respuesta (recuperación activa)
             <textarea id="recall-answer" maxlength="800" placeholder="Escríbela antes de ver la tarjeta. Compararemos al revelar."></textarea>
           </label>
           <button id="reveal-card" class="outline-button card-reveal">Ver respuesta</button>
-          <div id="rating-row" class="rating-row" hidden>
+          <div id="rating-row" class="rating-row" role="group" aria-label="Califica cómo te fue" hidden>
             <button class="option-button" data-rating="again">1 · No lo sabía</button>
             <button class="option-button" data-rating="hard">2 · Dudé</button>
             <button class="option-button easy" data-rating="easy">3 · Fácil</button>
@@ -196,10 +197,21 @@
             <button class="text-button" id="card-archive" type="button">Enviar a Biblioteca</button>
             <button class="text-button danger" id="card-delete" type="button">Eliminar</button>
           </div>
+          <details class="more-inline" id="review-more">
+            <summary>Más formas de repasar</summary>
+            <div class="actions">
+              <button id="exam-mode" class="outline-button" type="button">Modo examen</button>
+              <button id="interleave-mode" class="outline-button" type="button">Intercalar</button>
+              <button id="quick-five" class="outline-button" type="button">5 minutos</button>
+              <button id="real-exam" class="outline-button" type="button">Examen real</button>
+              <button id="gen-cards" class="outline-button" type="button">✨ Crear con IA</button>
+            </div>
+            <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b>Examen real:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
+          </details>
           <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P pausa el Pomodoro. SM-2: No lo sabía = 0–2, Dudé = 3, Fácil = 4–5.</p>
         </article>
 
-        <article class="card">
+        <article class="card feynman-card">
           <div class="card-head"><h2>Método Feynman</h2><span aria-hidden="true">✍️</span></div>
           <label class="field">Tema que estás explicando
             <input id="feynman-topic" class="intention" placeholder="Ej.: la fotosíntesis" maxlength="80"></label>
@@ -207,13 +219,18 @@
             <textarea id="feynman-text" maxlength="4000" placeholder="Explícalo como a alguien de 12 años; incluye un ejemplo y una duda."></textarea></label>
           <div class="actions">
             <button id="feynman-feedback" class="primary-button">Explica para aprender</button>
-            <button id="feynman-voice" class="outline-button" type="button">🎤 Dictar explicación</button>
           </div>
+          <details class="more-inline" id="feynman-more">
+            <summary>Más opciones</summary>
+            <div class="actions"><button id="feynman-voice" class="outline-button" type="button">🎤 Dictar explicación</button></div>
+          </details>
           <div id="feynman-guide" class="guided-feedback" aria-live="polite">Escribe o dicta una explicación: Learny detecta vacíos, pregunta y propone tarjetas. Sin clave también funciona.</div>
         </article>
       </div>
 
-      <article class="card roulette-panel">
+      <details class="card more-tools" id="more-tools">
+      <summary>Más herramientas de práctica <small>ruleta de temas, notas rápidas, lectura y resumen</small></summary>
+      <section class="tool-block roulette-panel">
         <div class="card-head">
           <div><h2>Ruleta temática</h2><p class="lead">Elige un tema al azar, estúdialo y luego explícalo: recuperación activa en dos fases.</p></div>
           <button id="spin-roulette" class="roulette primary-button">🎲 Girar tema</button>
@@ -225,10 +242,10 @@
           <button id="suggest-topic" class="outline-button">✨ Sugerir con IA</button>
         </div>
         <div id="topic-results" class="topic-results"></div>
-      </article>
+      </section>
 
       <div class="grid study-grid">
-        <article class="card">
+        <section class="tool-block">
           <div class="card-head"><h2>Notas rápidas</h2><span class="tag">Clase → tarjetas</span></div>
           <label class="field">Tu nota
             <textarea id="quick-note" maxlength="2000" placeholder="Una idea, definición o fórmula; luego conviértela en tarjeta."></textarea></label>
@@ -238,8 +255,8 @@
             <button id="capture-clip" class="outline-button" type="button">Pegar del portapapeles</button>
           </div>
           <div id="notes-list" class="session-list"></div>
-        </article>
-        <article class="card">
+        </section>
+        <section class="tool-block">
           <div class="card-head"><h2>Lectura y resumen</h2><span class="tag">Fuente → práctica</span></div>
           <label class="field">Texto a estudiar
             <textarea id="source-text" maxlength="8000" placeholder="Pega un texto (o el contenido de un PDF copiado) para obtener resumen, preguntas y tarjetas."></textarea></label>
@@ -247,14 +264,15 @@
             <button id="source-analyze" class="primary-button" type="button">Generar estudio</button>
           </div>
           <div id="source-out" class="guided-feedback" aria-live="polite">Pega material para ampliar Learny más allá de las flashcards.</div>
-        </article>
+        </section>
       </div>
+      </details>
     </section>
 
     <!-- ===== PLANIFICADOR ===== -->
     <section class="page" id="planner">
       <div class="page-heading"><p class="eyebrow">Planificador inteligente</p><h1>Convierte fechas en pasos diarios.</h1></div>
-      <p id="planner-alert" class="alert" hidden></p>
+      <p id="planner-alert" class="alert" role="status" hidden></p>
       <article class="card" id="week-calendar-card">
         <div class="card-head">
           <h2>Calendario de la semana</h2>
@@ -281,14 +299,15 @@
         <div class="card-head"><div><h2>Cambios en tu plan</h2><p class="lead">Si te atrasas, Learny mueve a hoy como máximo las 2 tareas atrasadas más recientes de cada examen y descarta las anteriores para que el plan siga siendo realista. Aquí ves cada cambio.</p></div><button id="plan-log-clear" class="text-button" type="button">Borrar historial</button></div>
         <div id="plan-log" class="session-list"></div>
       </article>
-      <article class="card spaced">
-        <div class="card-head"><h2>Informe de examen</h2><p class="lead">Registra qué falló en un parcial y Learny arma un plan de recuperación.</p></div>
+      <details class="card spaced" id="recovery-more">
+        <summary>Informe de examen <small>registra qué falló y crea un plan de recuperación</small></summary>
+        <p class="lead">Registra qué falló en un parcial y Learny arma un plan de recuperación.</p>
         <div class="form-row">
           <label>Materia<input id="recovery-subject" list="subject-list" maxlength="60"></label>
           <label>Qué falló<textarea id="recovery-miss" maxlength="600" placeholder="Temas o tipos de problema"></textarea></label>
         </div>
         <button id="recovery-plan" class="primary-button" type="button">Crear plan de recuperación</button>
-      </article>
+      </details>
     </section>
 
     <!-- ===== ANÁLISIS ===== -->
@@ -334,18 +353,21 @@
           <div id="adaptive-route" class="guided-feedback"></div>
         </article>
       </div>
-      <div class="grid planner-grid spaced">
-        <article class="card">
+      <details class="card spaced" id="analysis-more">
+      <summary>Más datos <small>mapa conceptual, resultados y práctica</small></summary>
+      <div class="grid planner-grid">
+        <article class="tool-block">
           <h2>Mapa conceptual</h2>
           <div id="concept-map" class="concept-map" role="img" aria-label="Relación entre materias y tarjetas"></div>
         </article>
-        <article class="card">
+        <article class="tool-block">
           <div class="card-head"><h2>Resultados y práctica</h2><span id="challenge-tag" class="tag">Reto semanal</span></div>
           <div id="badges-list"></div>
           <div id="levels-list"></div>
           <p id="weekly-digest" class="lead"></p>
         </article>
       </div>
+      </details>
     </section>
 
     <!-- ===== GUÍA ===== -->
@@ -353,29 +375,31 @@
       <div class="page-heading"><p class="eyebrow">Guía de uso</p><h1>Cómo sacarle partido a Learny.</h1>
         <p class="lead">Cinco minutos de lectura. Todo funciona sin cuenta y tus datos se quedan en este navegador.</p></div>
       <article class="card guide-flow"><h2>Tu rutina diaria</h2>
+        <p class="lead">Abre <i>Hoy</i>: Learny te propone <b>una acción recomendada</b>, te explica por qué con tus datos y te deja elegir entre dos alternativas. Si empiezas de cero, solo verás un primer paso.</p>
         <ol class="steps"><li><b>Planificar.</b> En <i>Planificar</i> añade tu examen con fecha: Learny crea tareas diarias.</li>
         <li><b>Enfocarte.</b> Escribe un resultado concreto y pulsa <i>Iniciar enfoque</i>.</li>
         <li><b>Crear y repasar tarjetas.</b> Crea tarjetas de lo que estudiaste y repasa las de hoy.</li>
         <li><b>Explicar.</b> Usa Feynman o la ruleta para explicar con tus palabras.</li>
         <li><b>Reforzar.</b> En <i>Reforzar</i> mira qué materias fallan y empieza ahí mañana.</li></ol></article>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas.</p></article>
+        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas.</p></article>
         <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta. Las que dominas, envíalas a la Biblioteca.</p></article>
-        <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
+        <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
         <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
       </div>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny elige por ti: primero las tarjetas vencidas, luego tu plan de examen, luego tu materia más débil y, si no hay nada pendiente, material nuevo. <i>Empezar sesión inteligente</i> encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
+        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
+        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → Informe de examen</i>. <i>Reforzar → Más datos</i>. <i>Ajustes ⚙️ → Ajustes avanzados</i> (IA, proxy, ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
         <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes ⚙️ puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
       </div>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Más formas de repasar</h2><p class="lead"><i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i>Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
-        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono 🎤 dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
-        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes ⚙️) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
+        <article class="card"><h2>Más formas de repasar</h2><p class="lead">En <i>Practicar → Más formas de repasar</i>: <i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i>Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
+        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar → Más herramientas de práctica</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono 🎤 dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
+        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes ⚙️) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
         <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i>Informe de examen</i> convierte tus fallos en un plan de recuperación de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
       </div>
       <article class="card spaced"><h2>Atajos de teclado</h2>
-        <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana. Los atajos de tarjetas funcionan en <i>Practicar</i>.</p></article>
+        <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana · <kbd>Enter</kbd> en el resultado concreto inicia el bloque · <kbd>Z</kbd> deshace. Los atajos de tarjetas funcionan en <i>Practicar</i>. Todo el recorrido (planificar, iniciar un Pomodoro, repasar y calificar, crear una tarjeta, importar) se puede hacer solo con teclado: <kbd>Tab</kbd> avanza, <kbd>Mayús</kbd>+<kbd>Tab</kbd> retrocede, <kbd>Enter</kbd> o <kbd>Espacio</kbd> pulsan, y al cerrar una ventana el foco vuelve al botón que la abrió.</p></article>
       <article class="card spaced"><h2>Datos, copias e instalación</h2>
         <p class="lead">En Ajustes ⚙️ puedes descargar una copia, importar JSON o CSV, y compartir un mazo sin tu progreso. En el móvil, usa <i>Añadir a pantalla de inicio</i> para instalarla y usarla sin conexión. Antes de borrar o importar, Learny guarda una copia automática que puedes restaurar en Ajustes ⚙️. Si borras los datos del navegador, pierdes tu progreso: descarga copias de vez en cuando.</p></article>
     </section>

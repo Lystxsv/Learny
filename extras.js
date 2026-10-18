@@ -209,7 +209,7 @@
   /* ---- Borradores: no pierdas lo que escribes si recargas ---- */
   ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input', '#ai-question'].forEach((sel) => {
     const el = $(sel); if (!el) return;
-    if (state.drafts[sel] && !el.value) el.value = state.drafts[sel];
+    if (state.drafts[sel] && !el.value) { el.value = state.drafts[sel]; L.reveal(el); } // un borrador guardado no queda escondido en un bloque plegado
     el.addEventListener('input', L.debounce(() => {
       if (el.value) state.drafts[sel] = el.value.slice(0, 8000); else delete state.drafts[sel];
       save();

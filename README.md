@@ -18,7 +18,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v14`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v15`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -72,6 +72,37 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 180 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Novedades (v15 · etapa 6A: reducir la complejidad visible)
+Esta entrega cubre la pantalla *Hoy*, el modo sesión y los bloques plegables (6A) y la revisión de móvil y teclado (6B, al final de esta sección).
+
+**Hoy: una acción, su motivo y dos alternativas**
+- *Hoy* muestra una **acción recomendada** con su botón y un **«Por qué»** calculado con tus datos, p. ej.: «Te sugerimos repasar estas 6 tarjetas porque están vencidas y pertenecen a «Parcial», que es el miércoles».
+- Debajo, **como máximo dos alternativas** con su propio motivo y botón («O elige otra opción»). Prioridad: tarjetas de hoy → plan de examen → tarjetas falladas → materia más débil → crear tarjetas → bloque de enfoque → añadir fecha → Feynman.
+- **Más opciones** (plegado): sesión inteligente y Feynman. El resto de *Hoy* (misiones, progreso, dato curioso) está en **Más sobre hoy**; etiqueta del bloque, meta diaria y *Ajustar tiempos*, en **Opciones del bloque**.
+- La tarjeta no se redibuja si no cambia nada, así que no pierdes el foco ni se cierra «Más opciones».
+
+**Usuario nuevo**
+- Sin datos, *Hoy* muestra un único primer paso («Crea tu primera tarjeta») y dos alternativas (mazo de ejemplo o añadir la fecha de un examen). El Pomodoro y las misiones aparecen cuando hay datos, o al pulsar «Probar un Pomodoro sin tarjetas» en Más opciones.
+
+**Solo lo necesario en cada momento**
+- Durante un **bloque de enfoque** (*Hoy*) y durante un **examen/repaso en modo examen** (*Practicar*) solo se ve la actividad actual y sus controles. Al terminar, reiniciar o salir, todo vuelve.
+- Lo avanzado sigue ahí, a un clic: *Practicar → Más formas de repasar* (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y *Más herramientas de práctica* (ruleta, notas, lectura); dictado de Feynman en *Más opciones*; *Biblioteca → Mazos iniciales y mazos propios*; *Planificar → Informe de examen*; *Reforzar → Más datos*; Contexto del tutor, solo en *Practicar*; *Ajustes → Ajustes avanzados* (ruleta, clave de Gemini, modelo y proxy).
+- Si un campo inválido está dentro de un bloque plegado, el bloque se abre solo para poder corregirlo; un borrador guardado también abre su bloque.
+
+**6B · Móvil (320, 360 y 390 px)**
+- Sin desbordamiento horizontal en las 6 secciones (también con el texto al máximo, A+), áreas táctiles de al menos 44 px (incluido el enlace de comentarios, las opciones 1–5 de concentración y el enlace «Saltar al contenido»).
+- La barra inferior mide su altura real: el contenido ya no queda tapado al final de la página, y el temporizador flotante y los avisos se colocan encima de ella sin solaparse entre sí.
+- Durante un bloque de enfoque el reloj y los botones (Pausar, Reiniciar) quedan fijos a la vista incluso en pantallas bajas; en pantallas pequeñas se oculta la barra del tutor mientras dura el bloque. Fuera de *Hoy*, el temporizador sigue accesible en la píldora flotante.
+- Cabecera sin solapes a 320 px; el control enfocado nunca queda bajo la cabecera ni la barra inferior.
+
+**6B · Teclado y accesibilidad**
+- Recorrido principal solo con teclado: planificar, iniciar Pomodoro (**Enter** en «Resultado concreto» también lo inicia), revelar y calificar, crear tarjeta e importar. *Importar JSON/CSV* ahora son botones (antes eran etiquetas con un campo oculto que el teclado no alcanzaba).
+- Las ventanas tienen título asociado, el foco entra en el primer campo (en el móvil, en el título, para no abrir el teclado), **Esc** las cierra y al cerrar el foco vuelve al botón que las abrió (o a su equivalente si el botón se redibujó).
+- Al revelar o calificar una tarjeta el foco pasa al siguiente control útil en lugar de perderse.
+- Los avisos normales se anuncian con `role="status"` y los errores con `role="alert"` (inmediato); el aviso del planificador y el grupo de calificación tienen su rol y etiqueta; foco visible en todas las paradas de tabulación y todos los controles con nombre accesible.
+
+**Sin cambios en los datos**: esquema `version: 4`, sin migraciones nuevas; `sw.js` pasa a `learny-v15`.
 
 ## Novedades (v14 · etapa 5: planificador transparente, importación con vista previa y varias pestañas)
 **Planificador**

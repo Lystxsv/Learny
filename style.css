@@ -451,3 +451,104 @@ code { padding: .1rem var(--s1); border-radius: var(--r-ctl); background: var(--
 .import-group summary { cursor: pointer; font-weight: 700; padding: var(--s1) 0; }
 .import-group.err summary { color: var(--err); }
 .import-list { max-height: 11rem; overflow: auto; margin: 0 0 var(--s1); padding-left: 1.4rem; color: var(--muted); font-size: var(--fs-cap, .85rem); line-height: 1.5; }
+
+/* ===== Etapa 6A: reducir la complejidad visible ===== */
+/* Bloques plegables («Más opciones»): lo avanzado queda a un clic, no eliminado */
+summary { cursor: pointer; font-weight: 700; padding-block: .5rem; }
+summary small { font-weight: 400; color: var(--muted); margin-left: var(--s1); font-size: var(--fs-cap); }
+details.card > summary { padding-block: .25rem; }
+details.card[open] > summary { margin-bottom: var(--s1); }
+details.card > :not(summary), .more-inline > :not(summary) { margin-top: var(--s2); }
+.more-inline { margin-top: var(--s2); border-top: 1px solid var(--border); }
+.more-inline > summary { color: var(--accent); }
+.more-inline .lead.rhythm { margin-top: var(--s2); }
+.tool-block { padding: var(--s2) 0 0; margin-top: var(--s2); border-top: 1px solid var(--border); }
+.tool-block .card-head { margin-bottom: var(--s1); }
+details.card > .tool-block:first-of-type { margin-top: var(--s1); }
+details.card > .grid > .tool-block { margin-top: 0; }
+@media (pointer: coarse) { summary { min-height: 44px; display: list-item; } }
+
+/* Hoy: una acción recomendada, su motivo y dos alternativas */
+.today-queue .next-title { font-size: clamp(1.3rem, 2.4vw, 1.7rem); line-height: 1.25; }
+.today-queue .why { margin: var(--s1) 0 var(--s2); color: var(--muted); line-height: 1.55; max-width: 70ch; overflow-wrap: anywhere; }
+.today-queue .why b { color: var(--text); }
+.today-queue .card-head { margin-bottom: var(--s1); }
+.primary-button.big { min-height: 48px; padding: var(--s1) var(--s3); font-size: var(--fs-sub); }
+.alts-head { margin: var(--s3) 0 var(--s1); font-size: var(--fs-cap); font-weight: 700; color: var(--muted); }
+.alt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.alt { display: flex; gap: var(--s2); align-items: center; justify-content: space-between; flex-wrap: wrap; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); }
+.alt-text { flex: 1 1 14rem; min-width: 0; }
+.alt .why { margin: .25rem 0 0; font-size: var(--fs-cap); }
+.alt .outline-button { flex: 0 0 auto; }
+#study.active { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+#study .today-queue { grid-column: 1 / -1; grid-row: 2; }
+#study .pomodoro-card { grid-column: 1; grid-row: 3; }
+#study .more-today { grid-column: 2; grid-row: 3; align-self: start; margin: 0; }
+#study .more-today .metrics { margin: var(--s2) 0; }
+#study .more-today .tool-block { margin-top: var(--s1); }
+@media (max-width: 1000px) {
+  #study.active { grid-template-columns: minmax(0, 1fr); }
+  #study .today-queue, #study .pomodoro-card, #study .more-today { grid-column: 1; grid-row: auto; }
+}
+
+/* Modo sesión: durante un bloque o un examen solo se ve la actividad actual y sus controles */
+body.session-study #study .page-heading .lead,
+body.session-study #study .today-queue,
+body.session-study #study .more-today,
+body.session-study #pomodoro-more,
+body.session-study .tutor-context { display: none; }
+body.session-study #study.active { grid-template-columns: minmax(0, 1fr); }
+body.session-study #study .pomodoro-card { grid-column: 1; grid-row: auto; }
+body.session-practice .tutor-context,
+body.session-practice #practice .page-heading .lead,
+body.session-practice .feynman-card,
+body.session-practice .more-tools,
+body.session-practice #review-more { display: none; }
+body.session-practice #practice .study-grid { grid-template-columns: minmax(0, 1fr); }
+
+/* Usuario nuevo: un único primer paso */
+body.new-user #study.active { grid-template-columns: minmax(0, 1fr); }
+body.new-user #study .more-today { display: none; }
+body.new-user:not(.new-pomo) #study .pomodoro-card { display: none; }
+body.new-user #study .pomodoro-card, body.new-user #study .today-queue { grid-column: 1; grid-row: auto; }
+body.new-user[data-page="study"] .tutor-context { display: none; }
+
+/* El contexto del tutor es avanzado: solo se muestra en Practicar (y nunca durante una sesión) */
+body:not([data-page="practice"]) .tutor-context { display: none; }
+
+/* ===== Etapa 6B: móvil y teclado ===== */
+@media (pointer: coarse), (max-width: 820px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), select { min-height: 44px; }
+  .card-tools .text-button, .text-button { min-height: 44px; min-width: 44px; }
+  .modal-close { width: 44px; height: 44px; }
+  .review-card textarea { min-height: 44px; }
+}
+@media (max-width: 820px) {
+  .bottom-nav .nav-button:focus-visible { outline-offset: -4px; }
+}
+#main:focus { outline: none; }
+.flashcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* ===== Etapa 6B (cont.): barra inferior, temporizador y avisos sin solapes ===== */
+:root { --nav-h: 4.6rem; }
+.skip-link { min-height: 44px; display: inline-flex; align-items: center; }
+.modal h2:focus { outline: none; }
+@media (max-width: 820px) {
+  .main { padding-bottom: calc(var(--nav-h) + var(--s3)); }
+  .mini-timer { bottom: calc(var(--nav-h) + var(--s1)); }
+  .toast { bottom: calc(var(--nav-h) + var(--s1)); }
+  body.has-mini .toast { bottom: calc(var(--nav-h) + var(--s1) + 52px); }
+  /* Durante un bloque, los controles del temporizador quedan siempre a la vista sobre la barra inferior */
+  body.session-study .pomodoro-card .actions { position: sticky; bottom: calc(var(--nav-h) + var(--s1)); z-index: 2; background: var(--surface); padding: var(--s1) 0; margin-top: var(--s1); }
+  body.session-study #study .page-heading { margin-bottom: var(--s1); padding-bottom: 0; border: 0; }
+  body.session-study #study h1 { font-size: 1.25rem; margin: 0; }
+  body.session-study .pomodoro-card .timer { position: sticky; top: 62px; z-index: 2; background: var(--surface); }
+}
+@media (max-width: 600px) { body.session-study .ai-input { display: none; } }
+@media (max-width: 359px) { .brand strong { display: none; } }
+@media (max-height: 640px) { .timer { font-size: 3.4rem; padding: var(--s1) 0; } }
+@media (pointer: coarse) {
+  .modal-content a { display: inline-flex; align-items: center; min-height: 44px; }
+  .scale label { min-width: 44px; }
+}
+@media (max-width: 820px) { html { scroll-padding-top: 4.5rem; scroll-padding-bottom: calc(var(--nav-h) + var(--s2)); } } /* el control enfocado nunca queda bajo la cabecera ni la barra inferior */

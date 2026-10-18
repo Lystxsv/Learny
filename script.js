@@ -252,11 +252,12 @@
   /* Deshacer de un nivel: cada acción reversible ofrece «Deshacer» ~8 s (botón o tecla Z). Una acción nueva sustituye a la anterior. */
   let undoRun = null;
   function toast(message, type = 'ok', action = null) {
-    const el = $('#toast');
+    const el = $('#toast'), isErr = type === 'error';
+    el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
     el.textContent = message;
     undoRun = action ? action.run : null;
     if (action) {
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-action'; b.textContent = action.label; b.setAttribute('aria-keyshortcuts', 'z'); b.title = 'Atajo: Z';
       b.onclick = action.run; el.append(' ', b);
     }
     el.className = `toast show ${type}`;
@@ -282,6 +283,7 @@
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
     $$('.page').forEach((p) => p.classList.toggle('active', p.id === page));
+    applySessionMode();
     if (changed) { window.scrollTo(0, 0); $(`#${page} h1`)?.focus({ preventScroll: true }); }
     renderPage(page);
     renderTimer();
@@ -291,18 +293,43 @@
   let modalCloseHandler = null, rouletteId = null;
   const modalOpen = () => $('#app-modal').open;
   const closeModal = () => { if (modalOpen()) $('#app-modal').close(); };
+  /* Foco: al abrir una ventana se recuerda qué la abrió y al cerrarla el foco vuelve ahí (si ese botón se redibujó, se busca su equivalente). */
+  let modalOpener = null;
+  const openerSelector = (el) => {
+    if (el.id) return `#${el.id}`;
+    const a = [...el.attributes].find((x) => x.name.startsWith('data-'));
+    return a ? `${el.tagName.toLowerCase()}[${a.name}="${a.value.replace(/"/g, '\\"')}"]` : '';
+  };
+  const shown = (el) => !!el && el.isConnected && el.getClientRects().length > 0;
+  function restoreOpenerFocus() {
+    const o = modalOpener; modalOpener = null; if (!o) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && shown(ae)) return; // el navegador ya devolvió el foco
+    let el = shown(o.el) ? o.el : (o.sel ? document.querySelector(o.sel) : null);
+    if (!shown(el)) el = $('.page.active h1');
+    el?.focus({ preventScroll: true });
+  }
   function modal(html, onSubmit, onClose) {
     const dialog = $('#app-modal'), form = $('#modal-form');
+    if (!dialog.open) { const ae = document.activeElement; modalOpener = ae && ae !== document.body ? { el: ae, sel: openerSelector(ae) } : null; }
     $('#modal-body').innerHTML = html;
     $('#modal-body').removeAttribute('aria-live');
     modalCloseHandler = onClose || null;
     form.onsubmit = (event) => { event.preventDefault(); onSubmit ? onSubmit(new FormData(form)) : closeModal(); };
     if (!dialog.open) dialog.showModal();
+    const body = $('#modal-body'), h = body.querySelector('h2');
+    if (h) { h.id = 'modal-title'; h.tabIndex = -1; dialog.setAttribute('aria-labelledby', 'modal-title'); dialog.removeAttribute('aria-label'); }
+    else { dialog.removeAttribute('aria-labelledby'); dialog.setAttribute('aria-label', 'Ventana de Learny'); }
+    // Foco inicial: primer campo (en táctil, el título, para no abrir el teclado virtual), si no, el botón principal
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+    const field = coarse ? null : [...body.querySelectorAll('input:not([type=hidden]):not([type=file]),textarea,select')].find((e) => !e.disabled && !e.closest('details:not([open])'));
+    (field || (coarse ? h : body.querySelector('.primary-button,.danger-button')) || h)?.focus({ preventScroll: true });
   }
   $('#app-modal').addEventListener('close', () => {
     if (modalOpen()) return; // se reabrió antes de que llegara el evento: no cancelar la IA ni ejecutar el onClose de la ventana nueva
     clearInterval(rouletteId); rouletteId = null; cancelAi();
     const handler = modalCloseHandler; modalCloseHandler = null; handler?.();
+    if (!modalOpen() && !$('#confirm-modal').open) restoreOpenerFocus();
   });
   $('.modal-close').onclick = closeModal;
   $('#app-modal').addEventListener('click', (e) => { if (e.target.closest('[data-close-modal]')) closeModal(); });
@@ -562,6 +589,7 @@
       ? (timer.intention ? `Intención: ${timer.intention}${timer.label ? ` · ${timer.label}` : ''}` : '¿Qué resultado concreto quieres lograr?')
       : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.';
     document.title = timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención';
+    applySessionMode();
     const goal = num(state.settings.dailyGoal, 1, 12, 2);
     const done = cached('doneToday', () => state.sessions.filter((s) => s.date === today() && !s.abandon).length);
     $('#goal-progress').textContent = `Meta: ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de ${state.settings.focus} minutos · hoy ${done}/${goal}. Racha: ${calcStreak().streak} días.`;
@@ -569,7 +597,7 @@
     const mini = $('#mini-timer');
     if (mini) {
       const show = timer.started && currentPage !== 'study';
-      mini.hidden = !show;
+      mini.hidden = !show; document.body.classList.toggle('has-mini', show);
       if (show) { mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`; mini.setAttribute('aria-label', `Volver al temporizador. ${focusMode ? 'Foco' : 'Descanso'}: quedan ${time(timer.remaining)}${timer.running ? '' : ', en pausa'}`); }
     }
   }
@@ -737,16 +765,80 @@
     });
   }
 
-  function nextAction() {
-    const due = dueCards(), overdue = overdueCards().length;
+  /* ===== Etapa 6A: una recomendación con su motivo y como máximo dos alternativas ===== */
+  const lastOf = (a) => a[a.length - 1];
+  const norm = (v) => String(v || '').trim().toLowerCase();
+  const errorCards = () => cached('errcards', () => state.cards.filter((c) => !c.archived && !c.corrupt && lastOf(c.history || [])?.rating === 'again'));
+  const upcoming = () => state.deadlines.filter((d) => daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date));
+  const whenLabel = (date) => { const n = daysUntil(date); return n === 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${new Date(`${date}T12:00:00`).toLocaleDateString('es', { weekday: 'long' })}` : `el ${shortDate(date)}`; };
+  const isNewUser = () => !state.cards.length && !state.deadlines.length && !state.sessions.length && !state.reviews.length && !state.notes.length && !state.feynman.length;
+  const reveal = (target) => { const el = typeof target === 'string' ? $(target) : target; for (let d = el?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true; return el; };
+
+  /* Devuelve las acciones posibles ordenadas por prioridad; cada una trae su motivo calculado con datos reales. */
+  function actionCandidates() {
+    const out = [], due = dueCards(), overdue = overdueCards().length, upc = upcoming(), fresh = isNewUser();
+    const done = state.sessions.filter((s) => s.date === today() && !s.abandon).length, goal = num(state.settings.dailyGoal, 1, 12, 2);
+    const weak = weakSubject(), hasCards = state.cards.some((c) => !c.archived);
+    if (due.length) {
+      const n = due.length, one = n === 1;
+      const exam = upc.find((d) => daysUntil(d.date) <= 14 && due.some((c) => norm(c.subject) === norm(d.subject)));
+      const inExam = exam ? due.filter((c) => norm(c.subject) === norm(exam.subject)).length : 0;
+      const state1 = overdue === n ? (one ? 'está vencida' : 'están vencidas')
+        : overdue > 0 ? `${overdue} ${overdue === 1 ? 'está vencida' : 'están vencidas'} y ${n - overdue} ${n - overdue === 1 ? 'toca' : 'tocan'} hoy`
+        : (one ? 'le toca repaso hoy' : 'les toca repaso hoy') + ' según tu calendario';
+      const examPart = !exam || !inExam ? '.' : inExam === n ? ` y ${one ? 'pertenece' : 'pertenecen'} a «${exam.title}», que es ${whenLabel(exam.date)}.` : `. ${inExam} ${inExam === 1 ? 'es' : 'son'} de «${exam.title}», que es ${whenLabel(exam.date)}.`;
+      out.push({ id: 'review', title: `Repasar ${plural(n, 'tarjeta', 'tarjetas')}`, minutes: Math.max(2, Math.ceil(n * 0.7)), cta: 'Repasar ahora', why: `Te sugerimos repasar ${one ? 'esta tarjeta' : `estas ${n} tarjetas`} porque ${state1}${examPart}` });
+    }
     const tasks = state.tasks.filter((t) => t.date === today() && !t.done);
-    const deadline = tasks.length ? state.deadlines.find((d) => d.id === tasks[0].deadlineId) : null;
-    const weak = weakSubject();
-    if (due.length) return { id: 'review', title: `Repasar ${plural(due.length, 'tarjeta', 'tarjetas')}`, minutes: Math.max(2, Math.ceil(due.length * 0.7)), cta: 'Repasar ahora', why: overdue ? `${plural(overdue, 'vencida', 'vencidas')}: repásalas antes de que se olviden.` : 'Son pocos minutos y mantienen tus tarjetas al día.' };
-    if (tasks.length && deadline) return { id: 'plan', title: `Continuar plan de ${deadline.subject}`, minutes: deadline.dailyMinutes, cta: 'Ver plan de hoy', why: tasks[0].title };
-    if (weak) return { id: 'weak', title: `Mini quiz de ${weak.name}`, minutes: 5, cta: 'Empezar quiz', why: `${weak.pct}% sin fallar (${weak.ok} de ${weak.total} repasos): es tu materia con más fallos.` };
-    if (!state.cards.some((c) => !c.archived)) return { id: 'create', title: 'Crea tu primera tarjeta', minutes: 3, cta: 'Crear tarjeta', why: 'Con tarjetas, Learny agenda tus repasos por ti.' };
-    return { id: 'focus', title: 'Haz un bloque de enfoque', minutes: state.settings.focus, cta: 'Ir al Pomodoro', why: 'No tienes repasos pendientes: avanza con material nuevo.' };
+    const planDl = upc.find((d) => tasks.some((t) => t.deadlineId === d.id));
+    if (planDl) {
+      const mine = tasks.filter((t) => t.deadlineId === planDl.id), r = loadReport(planDl);
+      out.push({ id: 'plan', title: `Continuar plan de ${planDl.subject || planDl.title}`, minutes: planDl.dailyMinutes, cta: 'Ver plan de hoy',
+        why: `Hoy tienes ${plural(mine.length, 'tarea', 'tareas')} de «${planDl.title}», que es ${whenLabel(planDl.date)}: ${mine[0].title.replace(/[.\s]+$/, '')}.${r.fits ? '' : ' A este ritmo ya no cabe todo lo que queda: revisa o replanifica.'}` });
+    }
+    const dueIds = new Set(due.map((c) => c.id)), errs = errorCards().filter((c) => !dueIds.has(c.id));
+    if (errs.length) {
+      const subs = [...new Set(errs.map((c) => c.subject))];
+      out.push({ id: 'errors', title: `Repasar ${plural(errs.length, 'tarjeta fallada', 'tarjetas falladas')}`, minutes: Math.max(2, Math.ceil(Math.min(10, errs.length) * 0.7)), cta: 'Repasar errores',
+        why: `Marcaste «No lo sabía» en ${errs.length === 1 ? 'esta tarjeta' : `estas ${errs.length} tarjetas`} la última vez${subs.length === 1 ? ` (${subs[0]})` : ''}. Volver a verlas pronto es lo que más ayuda a fijarlas.` });
+    }
+    if (weak) out.push({ id: 'weak', title: `Mini quiz de ${weak.name}`, minutes: 5, cta: 'Empezar quiz', why: `${weak.pct}% sin fallar (${weak.ok} de ${weak.total} repasos): es tu materia con más fallos. El quiz empieza por tus errores.` });
+    if (!hasCards) out.push({ id: 'create', title: 'Crea tu primera tarjeta', minutes: 3, cta: 'Crear tarjeta', why: 'Aún no tienes tarjetas. Con ellas Learny agenda tus repasos por ti; la primera tarda un minuto.' });
+    if (!hasCards) out.push({ id: 'deck', title: 'Probar con un mazo de ejemplo', minutes: 2, cta: 'Ver mazos', why: 'Añade unas pocas tarjetas ya hechas para ver cómo funciona el repaso sin escribir nada.' });
+    if (!fresh) out.push({ id: 'focus', title: 'Haz un bloque de enfoque', minutes: state.settings.focus, cta: 'Ir al Pomodoro', why: `${due.length ? '' : 'No tienes repasos pendientes. '}Hoy llevas ${done} de ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de tu meta; escribe un resultado concreto y empieza.` });
+    if (!upc.length) out.push({ id: 'deadline', title: 'Añade la fecha de un examen', minutes: 3, cta: 'Planificar', why: 'No tienes ninguna fecha próxima. Con una fecha, Learny reparte tareas diarias hasta el examen.' });
+    if (!fresh) out.push({ id: 'feynman', title: 'Explícalo con tus palabras (Feynman)', minutes: 10, cta: 'Explicar un tema', why: `${weak ? `Explicar «${weak.name}», tu materia con más fallos,` : 'Explicar un tema de hoy'} revela lo que todavía no entiendes.` });
+    return out;
+  }
+
+  let newUserPomo = false;
+  const ACTIONS = {
+    review() { showPage('practice'); $('#flashcard').scrollIntoView({ behavior: 'smooth', block: 'center' }); const b = $('#reveal-card'); if (!b.hidden) b.focus({ preventScroll: true }); },
+    plan() { showPage('planner'); },
+    errors() { const list = errorCards().slice(0, 10); if (!list.length) return; showPage('practice'); startExam(list, 10); },
+    weak() { startSubjectQuiz(weakSubject()?.name); },
+    create() { showPage('practice'); cardForm(); },
+    deck() { showPage('library'); reveal('#topic-library'); toast('Elige un mazo de ejemplo y púlsalo para añadir sus tarjetas.'); $('#topic-library .topic-chip')?.focus(); },
+    focus() { showPage('study'); (timer.started ? $('#pomodoro-button') : $('#intention-input')).focus(); },
+    deadline() { showPage('planner'); addDeadline(); },
+    feynman() { showPage('practice'); $('#feynman-topic').value ||= weakSubject()?.name || ''; $('#feynman-topic').focus(); },
+    smart() { document.dispatchEvent(new Event('learny:smart')); },
+    newpomo() { newUserPomo = true; applySessionMode(); $('#intention-input').focus(); }
+  };
+
+  /* Modo sesión: durante un bloque o un examen solo se ve la actividad actual y sus controles. */
+  function applySessionMode() {
+    const b = document.body, fresh = isNewUser(), ae = document.activeElement;
+    b.dataset.page = currentPage;
+    if (!fresh) newUserPomo = false;
+    b.classList.toggle('session-study', currentPage === 'study' && !!timer.started);
+    b.classList.toggle('session-practice', currentPage === 'practice' && !!exam);
+    b.classList.toggle('new-user', fresh);
+    b.classList.toggle('new-pomo', newUserPomo || !!timer.started);
+    if (ae && ae !== document.body && ae.isConnected && ae.closest('.page') && !ae.getClientRects().length) { // el control con foco quedó oculto
+      const t = currentPage === 'study' ? $('#pomodoro-button') : currentPage === 'practice' ? ($('#exam-exit').hidden ? $('#reveal-card') : $('#exam-exit')) : null;
+      if (shown(t)) t.focus({ preventScroll: true });
+    }
   }
 
   function renderGreeting() {
@@ -757,7 +849,7 @@
     const parts = [];
     if (due) parts.push(`${plural(due, 'tarjeta', 'tarjetas')} para hoy${overdue ? ` (${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'})` : ''}`);
     if (exam) { const n = daysUntil(exam.date); parts.push(`${esc(exam.title)} ${n === 0 ? 'hoy' : `en ${plural(n, 'día', 'días')}`}`); }
-    $('#home-summary').innerHTML = parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.';
+    $('#home-summary').innerHTML = isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.';
     const last = [...state.sessions].reverse().find((s) => !s.abandon);
     if (last) {
       const ago = -daysUntil(last.date);
@@ -772,26 +864,26 @@
     showPage('practice'); startExam([...errs, ...pool.filter((c) => !errs.includes(c))].slice(0, size), size);
   }
 
+  let lastQueueHtml = '';
   function renderTodayQueue() {
-    renderGreeting();
-    const a = nextAction();
-    $('#today-queue').innerHTML = `
-      <div class="card-head"><div><h2>Siguiente mejor acción</h2><p class="lead">${esc(a.why)}</p></div><span class="tag">≈ ${a.minutes} min</span></div>
-      <p class="next-title">${esc(a.title)}</p>
-      <div class="actions tight">
-        <button id="next-action" class="primary-button" type="button">${esc(a.cta)}</button>
-        <button id="smart-session" class="outline-button" type="button">Empezar sesión inteligente</button>
-        <button id="jump-feynman" class="outline-button" type="button">Explicar un tema (Feynman)</button>
-      </div>`;
-    $('#next-action').onclick = () => {
-      if (a.id === 'review') { showPage('practice'); $('#flashcard').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-      else if (a.id === 'plan') showPage('planner');
-      else if (a.id === 'weak') startSubjectQuiz(weakSubject()?.name);
-      else if (a.id === 'create') { showPage('practice'); cardForm(); }
-      else $('#intention-input').focus();
-    };
-    $('#smart-session').onclick = () => document.dispatchEvent(new Event('learny:smart'));
-    $('#jump-feynman').onclick = () => { showPage('practice'); $('#feynman-topic').value ||= weakSubject()?.name || ''; $('#feynman-topic').focus(); };
+    renderGreeting(); applySessionMode();
+    const list = actionCandidates(), a = list[0], alts = list.slice(1, 3), fresh = isNewUser();
+    const altHtml = (c) => `<li class="alt"><div class="alt-text"><b>${esc(c.title)}</b> <span class="tag">≈ ${c.minutes} min</span><p class="why">${esc(c.why)}</p></div><button class="outline-button" type="button" data-action="${esc(c.id)}" aria-label="${esc(`${c.cta}: ${c.title}`)}">${esc(c.cta)}</button></li>`;
+    const more = fresh
+      ? '<button class="outline-button" type="button" data-action="newpomo">Probar un Pomodoro sin tarjetas</button>'
+      : '<button id="smart-session" class="outline-button" type="button" data-action="smart">Empezar sesión inteligente</button><button id="jump-feynman" class="outline-button" type="button" data-action="feynman">Explicar un tema (Feynman)</button>';
+    const html = `
+      <div class="card-head"><div><p class="eyebrow">${fresh ? 'Tu primer paso' : 'Recomendado para ahora'}</p><h2 class="next-title">${esc(a.title)}</h2></div><span class="tag">≈ ${a.minutes} min</span></div>
+      <p class="why"><b>Por qué:</b> ${esc(a.why)}</p>
+      <div class="actions tight"><button id="next-action" class="primary-button big" type="button" data-action="${esc(a.id)}">${esc(a.cta)}</button></div>
+      ${alts.length ? `<h3 class="alts-head">O elige otra opción</h3><ul class="alt-list">${alts.map(altHtml).join('')}</ul>` : ''}
+      <details class="more-inline" id="today-more-options"><summary>Más opciones</summary><div class="actions">${more}</div></details>`;
+    if (html === lastQueueHtml) return; // sin cambios: no se redibuja (así no se pierde el foco ni se cierra «Más opciones»)
+    const box = $('#today-queue'), ae = document.activeElement, focusSel = ae && box.contains(ae) && ae.dataset.action ? `[data-action="${ae.dataset.action}"]` : '';
+    const open = $('#today-more-options')?.open;
+    box.innerHTML = html; lastQueueHtml = html;
+    if (open) $('#today-more-options').open = true;
+    if (focusSel) box.querySelector(focusSel)?.focus({ preventScroll: true });
   }
 
   /* =========================================================
@@ -818,7 +910,17 @@
     card.nextReview = addDays(today(), card.interval);
   }
 
-  function renderCard() {
+  const cardCtl = () => { const ae = document.activeElement; return !!ae && (ae.id === 'reveal-card' || ae.id === 'exam-exit' || $('#rating-row').contains(ae)); };
+  function settleCardFocus(had) { // si el botón que tenía el foco se oculta, el foco pasa al siguiente control útil
+    if (!had) return;
+    const ae = document.activeElement;
+    if (ae && ae !== document.body && shown(ae)) return;
+    (!$('#rating-row').hidden ? $('#rating-row button') : !$('#reveal-card').hidden ? $('#reveal-card') : $('#flashcard')).focus({ preventScroll: true });
+  }
+  function renderCard() { const had = cardCtl(); try { renderCardBody(); } finally { settleCardFocus(had); } }
+  function renderExam() { const had = cardCtl(); try { renderExamBody(); } finally { settleCardFocus(had); } }
+  function renderCardBody() {
+    applySessionMode();
     if (exam) return renderExam();
     const due = dueCards(), prev = activeCard, wasRevealed = revealed && !answered;
     activeCard = due[0] || null;
@@ -846,9 +948,11 @@
   function revealCard() {
     if (exam) { exam.revealed = true; renderExam(); document.dispatchEvent(new Event('learny:reveal')); return; }
     if (!activeCard || revealed || activeCard.corrupt) return;
+    const had = cardCtl();
     revealed = true;
     $('#flashcard').innerHTML = `<div><small>Pregunta</small><br>${esc(activeCard.question)}<hr><small>Respuesta</small><br>${esc(activeCard.answer)}</div>`;
     $('#reveal-card').hidden = true; $('#rating-row').hidden = false;
+    settleCardFocus(had);
     document.dispatchEvent(new Event('learny:reveal'));
   }
 
@@ -887,7 +991,8 @@
     renderExam();
   }
 
-  function renderExam() {
+  function renderExamBody() {
+    applySessionMode();
     const item = exam.cards[exam.i];
     $('#card-count').textContent = `Examen ${exam.i + 1}/${exam.cards.length}`;
     $('#card-tools').hidden = true; $('#exam-exit').hidden = false;
@@ -1609,18 +1714,21 @@ ${text}`;
       <label class="check"><input name="sound" type="checkbox"> Sonido al terminar</label>
       <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
       <div class="form-row"><label>Pomodoro (min)<input name="focus" type="number" min="1" max="180" value="${state.settings.focus}"></label>
-      <label>Descanso (min)<input name="rest" type="number" min="1" max="60" value="${state.settings.rest}"></label>
-      <label>Ruleta: preparación<input name="prepare" type="number" min="1" max="180" value="${state.settings.roulettePrepare}"></label>
-      <label>Ruleta: explicación<input name="explain" type="number" min="1" max="180" value="${state.settings.rouletteExplain}"></label></div>
-      <label>Clave de Gemini (opcional)<input name="apikey" type="password" autocomplete="off" maxlength="200" placeholder="${state.apiKey ? 'Clave guardada (vacío = conservar)' : 'Pega aquí tu clave'}"></label>
-      <p class="modal-tip">Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.</p>
-      <label>Modelo de Gemini<input name="model" value="${esc(state.settings.model)}"></label>
-      <label>URL de tu proxy (opcional, para no exponer la clave)<input name="proxy" type="url" inputmode="url" maxlength="200" placeholder="https://tu-worker.workers.dev" value="${esc(state.settings.proxyUrl)}"></label>
+      <label>Descanso (min)<input name="rest" type="number" min="1" max="60" value="${state.settings.rest}"></label></div>
+      <details class="more-inline" id="settings-advanced">
+        <summary>Ajustes avanzados <small>IA, proxy y ruleta</small></summary>
+        <div class="form-row"><label>Ruleta: preparación<input name="prepare" type="number" min="1" max="180" value="${state.settings.roulettePrepare}"></label>
+        <label>Ruleta: explicación<input name="explain" type="number" min="1" max="180" value="${state.settings.rouletteExplain}"></label></div>
+        <label>Clave de Gemini (opcional)<input name="apikey" type="password" autocomplete="off" maxlength="200" placeholder="${state.apiKey ? 'Clave guardada (vacío = conservar)' : 'Pega aquí tu clave'}"></label>
+        <p class="modal-tip">Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.</p>
+        <label>Modelo de Gemini<input name="model" value="${esc(state.settings.model)}"></label>
+        <label>URL de tu proxy (opcional, para no exponer la clave)<input name="proxy" type="url" inputmode="url" maxlength="200" placeholder="https://tu-worker.workers.dev" value="${esc(state.settings.proxyUrl)}"></label>
+      </details>
       <div class="actions">
         <button id="export-data" class="outline-button" type="button">Descargar copia</button>
         <button id="export-deck" class="outline-button" type="button">Compartir mazo</button>
-        <label class="outline-button" style="cursor:pointer">Importar JSON<input id="import-file" type="file" accept="application/json,.json" hidden></label>
-        <label class="outline-button" style="cursor:pointer">Importar CSV / Anki (.csv, .txt)<input id="import-csv" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden></label>
+        <button id="import-json-btn" class="outline-button" type="button">Importar JSON</button><input id="import-file" type="file" accept="application/json,.json" hidden aria-label="Archivo JSON a importar">
+        <button id="import-csv-btn" class="outline-button" type="button">Importar CSV / Anki (.csv, .txt)</button><input id="import-csv" type="file" accept=".csv,.tsv,.txt,text/csv,text/plain,text/tab-separated-values" hidden aria-label="Archivo CSV o Anki a importar">
         ${state.apiKey ? '<button id="clear-key" class="outline-button" type="button">Quitar clave guardada</button>' : ''}
         ${localStorage.getItem(BACKUP_KEY) ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
         <button id="reset-data" class="outline-button" type="button">Borrar todo</button>
@@ -1651,6 +1759,8 @@ ${text}`;
     if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); closeModal(); toast('Clave eliminada de este navegador.'); };
     if ($('#restore-backup')) $('#restore-backup').onclick = restoreBackup;
     $('#export-deck').onclick = exportDeck;
+    $('#import-json-btn').onclick = () => $('#import-file').click();
+    $('#import-csv-btn').onclick = () => $('#import-csv').click();
     $('#import-file').onchange = (e) => { if (e.target.files[0]) importData(e.target.files[0]); };
     $('#import-csv').onchange = (e) => { if (e.target.files[0]) importCsv(e.target.files[0]); };
     $('#reset-data').onclick = async () => {
@@ -1705,8 +1815,11 @@ ${text}`;
   };
 
   $$('[data-page]').forEach((b) => { b.onclick = () => showPage(b.dataset.page); });
+  { const nav = $('.bottom-nav'); if (nav && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => document.documentElement.style.setProperty('--nav-h', `${nav.offsetHeight}px`)).observe(nav); } // altura real de la barra: nada queda tapado
   $$('.page-heading h1').forEach((h) => { h.tabIndex = -1; });
   $('#mini-timer').onclick = () => showPage('study');
+  $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](); };
+  $('#modal-form').addEventListener('invalid', (e) => reveal(e.target), true); // un campo inválido dentro de «Avanzado» abre su bloque para poder corregirlo
   $('#exam-exit').onclick = () => { window.Learny.endExam(); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
   $('#flashcard').onclick = (e) => {
     const k = e.target.closest('[data-empty]')?.dataset.empty; if (!k) return;
@@ -1718,6 +1831,7 @@ ${text}`;
   $('#weak-topics').onclick = (e) => { const n = e.target.dataset.quizSubject; if (n) startSubjectQuiz(n); };
   $('#library-search').oninput = debounce(() => { libLimit = 40; renderLibrary(); }, 150);
   $('#pomodoro-button').onclick = startPomodoro;
+  $('#intention-input').onkeydown = (e) => { if (e.key === 'Enter' && !timer.running) { e.preventDefault(); startPomodoro(); } }; // teclado: Enter en el resultado concreto inicia el bloque
   $('#pomodoro-skip').onclick = () => resetTimer('focus');
   $('#pomodoro-reset').onclick = () => {
     if (timer.started && timer.mode === 'focus' && timer.remaining < timer.total) askAbandon(() => resetTimer('focus'));
@@ -1830,7 +1944,7 @@ ${text}`;
   const syncOnline = () => { const el = $('#offline-note'); if (el) el.hidden = navigator.onLine; };
   window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
 
-  window.Learny = { pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+  window.Learny = { reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: () => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new Event('learny:examend')); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
   const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
   applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer); renderAll(); maybeRemind(); backupNag();
   { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
