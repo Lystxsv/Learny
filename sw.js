@@ -1,6 +1,24 @@
-const CACHE = 'learny-v24';
+const CACHE = 'learny-v25';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
-const CORE = ['./', './index.html', './style.css', './script.js', './extras.js', './manifest.json'];
+const CORE = [
+  './', './index.html', './style.css', './extras.js', './manifest.json',
+  // Partes de la app (antes script.js); mantén esta lista igual que los <script> de index.html.
+  './js/01-base.js',
+  './js/02-datos.js',
+  './js/03-interfaz.js',
+  './js/04-planificador.js',
+  './js/05-temporizador.js',
+  './js/06-hoy.js',
+  './js/07-tarjetas.js',
+  './js/08-analisis.js',
+  './js/09-tutor-ia.js',
+  './js/10-revision-ia-y-temas.js',
+  './js/11-apariencia.js',
+  './js/12-copias-e-importacion.js',
+  './js/13-ajustes.js',
+  './js/14-eventos.js',
+  './js/15-inicio.js'
+];
 const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;
 const ASSET_TIMEOUT = 10000;

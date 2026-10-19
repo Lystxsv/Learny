@@ -7,9 +7,37 @@ Todo se guarda en el navegador de cada persona; no hay cuentas ni servidor.
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `script.js`, `extras.js` | La app completa (no necesita instalación ni compilación). |
+| `index.html`, `style.css`, `extras.js` y la carpeta `js/` (15 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `sw.js`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Modo sin conexión e instalación como app (PWA) con sus iconos. |
 | `proxy-worker.example.js` | Ejemplo de proxy (Cloudflare Worker) para usar IA sin exponer tu clave. |
+
+## Estructura del código
+El antiguo `script.js` (≈ 2 500 líneas) está dividido en 15 archivos dentro de `js/`, en el mismo orden en que estaban. Son scripts clásicos (no módulos), así que `index.html` sigue funcionando con doble clic.
+
+| Archivo | Contenido |
+|---|---|
+| `js/01-base.js` | Base: Modo demo, constantes, utilidades y el objeto `state`. |
+| `js/02-datos.js` | Datos: Tarjetas, migraciones, validación, copias automáticas, datos de la demo y carga inicial. |
+| `js/03-interfaz.js` | Interfaz base: Confirmación, guardado, avisos y deshacer, páginas, ventana modal, sonido. |
+| `js/04-planificador.js` | Planificador: Plan inverso, tareas diarias y reajuste si te atrasas. |
+| `js/05-temporizador.js` | Temporizador: Pomodoro, sincronización entre pestañas, racha y pantalla «Hoy». |
+| `js/06-hoy.js` | Hoy: Recomendación con motivo, saludo, cierre de sesión y cola del día. |
+| `js/07-tarjetas.js` | Tarjetas: Repaso espaciado (SM-2), simulacro, formulario y biblioteca. |
+| `js/08-analisis.js` | Análisis: Estadísticas por materia e informe. |
+| `js/09-tutor-ia.js` | Tutor e IA: Guía local, prompts, Gemini (clave o proxy) y chats. |
+| `js/10-revision-ia-y-temas.js` | Revisión de IA y temas: Bandeja de revisión, Feynman, temas y ruleta. |
+| `js/11-apariencia.js` | Apariencia: Temas, acentos con contraste y preferencias. |
+| `js/12-copias-e-importacion.js` | Copias e importación: Exportar, validar e importar copias, mazos y CSV. |
+| `js/13-ajustes.js` | Ajustes: Estilos rápidos, ventana de Ajustes, recordatorios y contexto del tutor. |
+| `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny`. |
+| `js/15-inicio.js` | Inicio: Bienvenida, portada, banner de la demo y arranque. |
+
+Reglas para tocarlos:
+- **El orden de los `<script>` en `index.html` importa.** Lo que se ejecuta al cargar solo puede usar nombres definidos en archivos anteriores; lo demás (manejadores, funciones) se resuelve cuando se usa.
+- **Comparten el ámbito global** (no hay `import`/`export`): un nombre de nivel superior (`const`, `let` o `function`) no se puede repetir entre archivos, y las variables compartidas (`exam`, `currentPage`, `rev`…) siguen siendo las mismas en todos.
+- `extras.js` no ve esos nombres: solo usa la API `window.Learny`, que se crea en `js/14-eventos.js`.
+- Si añades, quitas o renombras un archivo de `js/`, cámbialo también en la lista `CORE` de `sw.js` y sube `CACHE`.
+- Si ya tenías `script.js` publicado, bórralo del repositorio: ya no se usa.
 
 ## Probarla en tu computador
 Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa servida por `https://` o `localhost`.)
@@ -18,7 +46,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v24`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v25`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -73,6 +101,9 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (≈ 265 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
 
+## Novedades (v25 · código dividido en archivos)
+`script.js` se dividió en 15 archivos dentro de `js/` (ver «Estructura del código»). **No cambia el comportamiento ni los datos**: el código es el mismo, solo se repartió por secciones y se quitó la sangría extra de la función envolvente; esquema `version: 4`, mismas claves de almacenamiento y misma API `window.Learny` (46 claves). `sw.js` pasa a `learny-v25` y precachea los 15 archivos; `index.html` los carga en orden.
+
 ## Novedades (v24 · etapas 5, 6 y 7, y revisión de fiabilidad)
 **Etapa 5 · bienvenida.** La primera vez, una guía corta pregunta tu nombre, qué estudias, tu meta y cuánto tiempo quieres por bloque (10, 25 o 45 min). Todo es opcional y se puede saltar. Además, el botón «Hoy me cuesta arrancar» ofrece acciones pequeñas (repasar hasta 3 tarjetas, una sesión breve de 5 minutos, hacer una pregunta, explicar una idea) y cerrarlo no cambia nada.
 **Etapa 6 · portada.** Quien nunca ha entrado (sin datos, sin bienvenida y sin enlace directo a una sección) ve primero una portada con «Probar Learny». Quien ya tiene datos entra directo a la app.
@@ -80,7 +111,7 @@ Los archivos no están minificados (≈ 265 KB entre HTML, CSS y JS, se cachean 
 **Revisión de fiabilidad (fases 1 a 6).**
 - *Datos:* copias automáticas rotativas, copia del archivo dañado, estadísticas y fechas más estrictas, importación más segura.
 - *Avisos:* los avisos de arranque (migración, tarjetas omitidas, datos dañados) se muestran en cola sin pisarse; un aviso nuevo ya no cancela un «Deshacer» pendiente; Ajustes no se cierra si sueltas un arrastre fuera; Enter se ignora mientras se compone texto con IME; salir de un examen dentro de una sesión inteligente la cancela.
-- *Infraestructura:* `sw.js` (ahora `learny-v24`) borra solo cachés que empiezan por `learny-`; `viewport-fit=cover`, alturas `dvh` y cabecera pegajosa bajo el aviso de demostración en móvil; menos anuncios repetidos para lectores de pantalla; iconos en los accesos directos del manifest.
+- *Infraestructura:* `sw.js` (ahora `learny-v25`) borra solo cachés que empiezan por `learny-`; `viewport-fit=cover`, alturas `dvh` y cabecera pegajosa bajo el aviso de demostración en móvil; menos anuncios repetidos para lectores de pantalla; iconos en los accesos directos del manifest.
 - *Worker:* el límite se mide en caracteres, no en bytes, y devuelve el `Content-Type` de Google.
 - *Textos:* SM-2 se explica como No lo sabía = 1, Dudé = 3, Fácil = 5.
 

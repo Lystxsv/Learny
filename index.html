@@ -527,7 +527,22 @@
 <button id="mini-timer" class="mini-timer" type="button" hidden aria-label="Volver al temporizador"></button>
 <div id="sr-live" class="sr-only" aria-live="polite"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="script.js" defer></script>
+<!-- Partes de la app (antes script.js). El orden importa: comparten ámbito global. -->
+<script src="js/01-base.js" defer></script>
+<script src="js/02-datos.js" defer></script>
+<script src="js/03-interfaz.js" defer></script>
+<script src="js/04-planificador.js" defer></script>
+<script src="js/05-temporizador.js" defer></script>
+<script src="js/06-hoy.js" defer></script>
+<script src="js/07-tarjetas.js" defer></script>
+<script src="js/08-analisis.js" defer></script>
+<script src="js/09-tutor-ia.js" defer></script>
+<script src="js/10-revision-ia-y-temas.js" defer></script>
+<script src="js/11-apariencia.js" defer></script>
+<script src="js/12-copias-e-importacion.js" defer></script>
+<script src="js/13-ajustes.js" defer></script>
+<script src="js/14-eventos.js" defer></script>
+<script src="js/15-inicio.js" defer></script>
 <script src="extras.js" defer></script>
 </body>
 </html>
