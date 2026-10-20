@@ -109,8 +109,12 @@ if (loadProblem) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([corruptRaw || ''], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   } });
 }
+if (newerFrom) queueToast(newerKept
+  ? `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). Guardé una copia intacta (learny.newer); al guardar aquí podrían perderse campos nuevos. Actualiza la app.`
+  : `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}) y NO pude guardar una copia intacta (sin espacio). Al guardar aquí podrían perderse campos nuevos: actualiza la app.`, 'error');
 if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
-if (migratedFrom) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
+if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
+  else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes ⚙️.`, 'error'); }
 bootHold = false;
 if (corruptKept || !loadProblem) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, no se pisa la clave principal en el arranque
 if (!state.settings.welcomed && !landingOn) setTimeout(welcomeFlow, 350); // Etapa 5 (con portada, la bienvenida abre al pulsar «Probar Learny»)

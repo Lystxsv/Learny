@@ -46,6 +46,14 @@ function restoreTimer(raw) {
   renderTimer();
 }
 
+/* Lumi y otros extras: aviso de que el temporizador cambió de estado (solo cuando cambia, no en cada tick). */
+let lastTimerKey = '';
+function emitTimerState() {
+  const key = `${timer.started}|${timer.running}|${timer.mode}`;
+  if (key === lastTimerKey) return;
+  lastTimerKey = key;
+  document.dispatchEvent(new CustomEvent('learny:timer', { detail: { started: timer.started, running: timer.running, mode: timer.mode } }));
+}
 function renderTimer() {
   const focusMode = timer.mode === 'focus', fresh = timer.remaining >= timer.total;
   const clock = $('#timer-clock');
@@ -69,6 +77,7 @@ function renderTimer() {
     mini.hidden = !show; document.body.classList.toggle('has-mini', show);
     if (show) { mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`; mini.setAttribute('aria-label', `Volver al temporizador. ${focusMode ? 'Foco' : 'Descanso'}: quedan ${time(timer.remaining)}${timer.running ? '' : ', en pausa'}`); }
   }
+  emitTimerState();
 }
 
 /* Fase 2: un bloque que terminó mientras la pestaña dormía o estaba cerrada (más de AWAY_MS después de su hora) no se registra como sesión completa: no hay forma de saber si estudiaste. */
@@ -218,7 +227,7 @@ function adoptRemoteState(raw) {
   lastSavedRaw = raw;
   hydrate(data);
   if (exam) { exam.cards = exam.cards.map((c) => state.cards.find((x) => x.id === c.id)).filter(Boolean); if (exam.i >= exam.cards.length) exam = null; }
-  undoRun = null; toast.undo = null; // las acciones de deshacer apuntan a objetos que ya no son los actuales
+  clearUndo(); // las acciones de deshacer apuntan a objetos que ya no son los actuales
   applyAppearance(); renderAll();
   const el = $('#save-status'); if (el) { el.textContent = `Sincronizado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; el.classList.remove('bad'); }
 }
@@ -233,7 +242,7 @@ window.addEventListener('storage', (e) => {
   if (e.key === TIMER_KEY) { lastTimerRaw = e.newValue; restoreTimer(e.newValue || JSON.stringify({ started: false, mode: 'focus' })); }
   else if (e.key === KEY && e.newValue) adoptRemoteState(e.newValue);
   else if ((e.key === KEY && !e.newValue) || e.key === null) { // otra pestaña borró todo (o limpió el almacenamiento): no resucitar los datos
-    exam = null; undoRun = null; toast.undo = null; lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
+    exam = null; clearUndo(); lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
   }
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullFromStorage(); if (timer.running) tick(); } });

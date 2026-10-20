@@ -77,7 +77,7 @@ function sanitizeSettings(s, d) {
   s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose', 'custom'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
   s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
   s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
-  ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
+  ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed', 'mascot'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
   ['name', 'model', 'lastExport', 'backupNag', 'lastRemind', 'lastRollover'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
   s.name = s.name.slice(0, 30); s.model = s.model.trim() || DEFAULT_MODEL;
   s.recentTurns = arr(s.recentTurns).filter((x) => typeof x === 'string').slice(0, 8);
@@ -154,12 +154,22 @@ function readBackups() {
   const list = Array.isArray(p) ? p : (p && typeof p === 'object' ? [p] : []); // acepta el formato antiguo (una sola copia)
   return list.filter((b) => b && typeof b === 'object' && b.data && typeof b.data === 'object').slice(0, MAX_BACKUPS);
 }
+const ROUTINE = new Set(['delete-card', 'delete-deadline']); // copias de borrados puntuales (ya tienen «Deshacer»): nunca desplazan a las importantes (importar, migrar, restaurar, borrar todo)
+const isRoutine = (b) => ROUTINE.has(b.reason);
+function dropOneBackup(list) { // para liberar sitio: primero la copia rutinaria más vieja y, si no hay, la más vieja de todas
+  const i = list.map(isRoutine).lastIndexOf(true);
+  list.splice(i >= 0 ? i : list.length - 1, 1); return list;
+}
 function pushBackup(reason, data) {
-  const entry = { at: new Date().toISOString(), reason, data };
-  let list = [entry, ...readBackups()].slice(0, MAX_BACKUPS);
-  while (list.length) { // si no cabe, se descartan las copias más viejas (nunca el archivo dañado ni tus datos)
+  const entry = { at: new Date().toISOString(), reason, data }, routine = ROUTINE.has(reason);
+  let old = readBackups();
+  if (routine) { old = old.filter((b) => !isRoutine(b)); if (old.length >= MAX_BACKUPS) return false; } // solo una copia rutinaria (sustituye a la anterior); si ocuparía el sitio de una importante, no se crea
+  const list = [entry, ...old];
+  while (list.length > MAX_BACKUPS) dropOneBackup(list);
+  while (list.length) { // si no cabe, se sueltan copias (rutinarias primero; nunca el archivo dañado ni tus datos)
     if (store.set(BACKUP_KEY, JSON.stringify(list))) return true;
-    list = list.slice(0, -1);
+    if (routine) return false;
+    dropOneBackup(list);
   }
   return false;
 }
@@ -215,16 +225,18 @@ function seedDemo() {
 }
 if (DEMO) seedDemo();
 
+let migrationBackup = true; // ¿se pudo guardar la copia previa a la migración? (15-inicio.js ajusta el aviso)
 (function load() {
   let merged = {};
   try {
     LEGACY_KEYS.slice().reverse().forEach((k) => { const p = parseJSON(localStorage.getItem(k)); if (p && typeof p === 'object') merged = { ...merged, ...p, settings: { ...(merged.settings || {}), ...(p.settings || {}) } }; });
     const rawCurrent = localStorage.getItem(KEY), current = parseJSON(rawCurrent);
     if (rawCurrent && !current) { loadProblem = true; corruptRaw = rawCurrent; corruptKept = store.set('learny.corrupt', rawCurrent); }
+    if (current && typeof current === 'object' && Number(current.version) > SCHEMA) { newerFrom = Number(current.version); newerKept = store.set('learny.newer', rawCurrent); } // datos de una versión más nueva: se guarda el original intacto antes de que esta versión los reescriba
     if (current && typeof current === 'object') merged = { ...merged, ...current, settings: { ...(merged.settings || {}), ...(current.settings || {}) } };
   } catch { /* estado nuevo */ }
   if (Object.keys(merged).length && !(Number(merged.version) >= SCHEMA)) {
-    const { apiKey, chats, ...safe } = merged; pushBackup(`migración desde v${Number(merged.version) || 1}`, safe);
+    const { apiKey, chats, ...safe } = merged; migrationBackup = pushBackup(`migración desde v${Number(merged.version) || 1}`, safe);
   }
   bootHold = loadProblem && !corruptKept; // datos dañados sin copia: ningún guardado automático del arranque pisa la clave principal
   hydrate(merged);

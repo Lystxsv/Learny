@@ -9,7 +9,7 @@
    ========================================================= */
 function syncTutorMode() { $('#ai-question').placeholder = $('#tutor-mode').value === 'direct' ? 'Pregunta y recibe una explicación directa…' : 'Pregunta a tu tutor socrático…'; }
 
-/* ===== Apariencia (v16): solo estilos; nunca toca los campos de texto del tutor ===== */
+/* ===== Apariencia (v16): applyAppearance solo toca estilos; applyPreferences además rellena los campos del tutor desde state (salvo keepTutor) ===== */
 let liveSettings = null;
 const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000' };
 const SURF = { dark: ['#171d38', '#202850', '#232d5e'], oled: ['#0b0b0f', '#16161d', '#1b1f3a'], light: ['#ffffff', '#eceff7', '#e3e8fb'] }; // surface, surface2, tag-bg
@@ -48,14 +48,16 @@ function applyAppearance(s = state.settings) {
     const label = [...btn.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
     if (s.sidebar === 'icons' && label) btn.title = label; else btn.removeAttribute('title');
   });
+  try { window.LumiCompanion?.sync(s); } catch (e) { console.error('Learny · Lumi', e); } // la mascota sigue la preferencia (también en la vista previa de Ajustes)
 }
 try { // el tema Automático sigue al sistema
   const mq = window.matchMedia('(prefers-color-scheme: dark)'), onScheme = () => { if (liveSettings?.theme === 'auto') applyAppearance(liveSettings); };
   if (mq.addEventListener) mq.addEventListener('change', onScheme); else mq.addListener?.(onScheme);
 } catch { /* sin matchMedia */ }
-function applyPreferences() {
+function applyPreferences({ keepTutor = false } = {}) { // keepTutor: no reescribe los campos del tutor (guardar Ajustes no cambia el contexto del tutor)
   applyAppearance();
   $('#daily-goal-input').value = state.settings.dailyGoal || 2;
+  if (keepTutor) return;
   const t = state.settings.tutor;
   $('#tutor-subject').value = t.subject; $('#tutor-level').value = t.level; $('#tutor-known').value = t.known; $('#tutor-goal').value = t.goal;
   $('#tutor-style').value = t.style || 'uni'; $('#tutor-career').value = t.career || ''; $('#tutor-mode').value = t.mode || 'socratic'; syncTutorMode();

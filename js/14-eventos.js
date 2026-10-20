@@ -22,7 +22,7 @@ $$('.page-heading h1').forEach((h) => { h.tabIndex = -1; });
 $('#mini-timer').onclick = () => showPage('study');
 $('#today-queue').onclick = (e) => { const b = e.target.closest('button[data-action]'); if (b && ACTIONS[b.dataset.action]) ACTIONS[b.dataset.action](b); };
 $('#modal-form').addEventListener('invalid', (e) => reveal(e.target), true); // un campo inválido dentro de «Avanzado» abre su bloque para poder corregirlo
-$('#exam-exit').onclick = () => { window.Learny.endExam(true); toast('Saliste del examen. Tus respuestas quedaron guardadas.'); };
+$('#exam-exit').onclick = () => { window.Learny.endExam(true); toast('Saliste del examen. Tus respuestas se guardaron en el repaso, pero no cuentan como examen.'); };
 $('#flashcard').onclick = (e) => {
   const k = e.target.closest('[data-empty]')?.dataset.empty; if (!k) return;
   if (k === 'create') cardForm();
@@ -154,4 +154,4 @@ const checkNewDay = () => { if (today() !== lastDay) { lastDay = today(); safe(r
 setInterval(checkNewDay, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNewDay(); });
 
-window.Learny = { stripBullet, noProto, isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: (aborted = false) => { if (exam && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); exam = null; save(); renderAll(); document.dispatchEvent(new CustomEvent('learny:examend', { detail: { aborted: aborted === true } })); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };
+window.Learny = { stripBullet, noProto, isDemo: DEMO, reveal, pullFromStorage, validDeadlineDate, MAX_PLAN_DAYS, isExam: () => !!exam, endExam: (aborted = false) => { if (!exam) return; if (aborted !== true && exam.i) state.exams.push({ date: today(), score: exam.score, total: exam.i }); /* salir a medias no cuenta como examen; el tiempo agotado sí */ exam = null; clearUndo(); save(); renderAll(); document.dispatchEvent(new CustomEvent('learny:examend', { detail: { aborted: aborted === true } })); }, state, save, toast, modal, closeModal, today, addDays, uid, clean, esc, fmt, plural, daysUntil, dueCards, startExam, cardForm, normalizeCard, suggestCards: suggestCardsFromText, reviewCards, askGemini, gemini, rebuildTasks, addDeadline, renderAll, hasAi, cancelAi, showPage, subjectStats, overdueCards, weakSubject, startSubjectQuiz, calcStreak, announce, debounce, currentPage: () => currentPage, timerStarted: () => timer.started, timerRunning: () => timer.running };

@@ -81,12 +81,13 @@ function rateCard(rating) {
   const now = Date.now(); if (now - lastRateAt < 350) return; lastRateAt = now; // doble clic o tecla repetida
   answered = true; flashFeedback(rating);
   const card = activeCard, before = cardSnap(card);
+  const early = before.nextReview > today() && qualityOf(rating) >= 3; // misma condición que en schedule(): repaso anticipado, la fecha no cambia
   schedule(card, rating);
   const rv = { date: today(), cardId: card.id, subject: card.subject || 'Sin materia', rating, quality: qualityOf(rating) };
   state.reviews.push(rv);
   document.dispatchEvent(new Event('learny:rated'));
   save(); renderAll();
-  offerUndo(`Volverá en ${plural(card.interval, 'día', 'días')}.`, () => { Object.assign(card, before); dropReview(rv); save(); renderAll(); });
+  offerUndo(early ? 'Repaso anticipado guardado: la tarjeta mantiene su fecha.' : `Volverá en ${plural(card.interval, 'día', 'días')}.`, () => { Object.assign(card, before); dropReview(rv); save(); renderAll(); });
 }
 
 function flashFeedback(rating) {
@@ -101,13 +102,15 @@ function snoozeCard() {
   save(); renderAll(); offerUndo('Pospuesta 1 día.', () => { card.nextReview = prev; save(); renderAll(); });
 }
 
-function startExam(custom, size = 20) {
+function startExam(custom, size = 20) { // devuelve true si el examen empezó
+  if (exam) { toast('Ya tienes un examen en curso. Termínalo o sal de él antes de empezar otro.', 'error'); return false; }
   const pool = (Array.isArray(custom) ? custom : dueCards()).filter((c) => !c.corrupt);
-  if (pool.length < 1) return toast('No hay tarjetas vencidas o de hoy para el examen.', 'error');
+  if (pool.length < 1) { toast('No hay tarjetas vencidas o de hoy para el examen.', 'error'); return false; }
   exam = { cards: pool.slice(0, size), i: 0, score: 0, revealed: false, answers: [] };
   document.dispatchEvent(new Event('learny:examstart'));
   toast(`Modo examen: ${exam.cards.length} tarjetas.`);
   renderExam();
+  return true;
 }
 
 function renderExamBody() {
@@ -139,8 +142,8 @@ function examRate(rating) {
   if (exam.i >= exam.cards.length) {
     const pct = Math.round((exam.score * 100) / exam.cards.length);
     state.exams.push({ date: today(), score: exam.score, total: exam.cards.length });
-    exam = null; save();
-    document.dispatchEvent(new Event('learny:examend'));
+    exam = null; save(); clearUndo(); // el «Deshacer» de la tarjeta anterior ya no tiene sentido
+    document.dispatchEvent(new CustomEvent('learny:examend', { detail: { aborted: false } })); // mismo formato que endExam()
     $('#rating-row').hidden = true;
     { const r = state.exams[state.exams.length - 1]; toast(`Examen: ${pct}% (${r.score}/${r.total}).`); }
     renderAll();
@@ -149,7 +152,7 @@ function examRate(rating) {
   }
   save(); renderExam();
   offerUndo('Calificación guardada.', () => {
-    if (exam !== ex) return;
+    if (exam !== ex) return false; // el examen ya terminó o se reemplazó: no hay nada que deshacer
     ex.i = prev.i; ex.score = prev.score; ex.answers.pop(); ex.revealed = true;
     Object.assign(item, before); dropReview(rv); save(); renderExam();
   });

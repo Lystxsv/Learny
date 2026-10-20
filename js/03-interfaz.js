@@ -21,20 +21,40 @@ function setSaved(ok) {
   el.textContent = ok ? `Guardado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}` : 'No guardado';
   el.classList.toggle('bad', !ok);
 }
+/* ¿Otra pestaña (con una versión MÁS NUEVA de Learny) escribió datos que esta versión no entiende? Guardar encima los degradaría y perdería campos nuevos.
+   Solo se mira cuando lo guardado no es lo último que escribió esta pestaña; la versión se lee del arranque del JSON (empieza por "version") y, si no, se parsea. */
+function newerStored() {
+  const cur = store.get(KEY);
+  if (!cur || cur === lastSavedRaw) return false;
+  const m = /^\s*\{\s*"version"\s*:\s*(\d+)/.exec(cur.slice(0, 80));
+  return (m ? Number(m[1]) : Number(parseJSON(cur)?.version)) > SCHEMA;
+}
 const save = () => {
   if (bootHold) return true;
   rev++;
   if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
+  if (newerStored()) {
+    setSaved(false);
+    if (!save.newerShown) { save.newerShown = true; toast('Otra pestaña usa una versión más nueva de Learny. Para no pisar sus datos, esta pestaña no guarda: recárgala para actualizarla.', 'error'); }
+    return false;
+  }
   let json = null;
   try { json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true; }
   catch {
-    try { // almacenamiento lleno: se van soltando copias automáticas (de la más vieja a la más nueva) antes de perder tus datos nuevos; learny.corrupt NO se toca
-      if (json && localStorage) {
-        let list = readBackups();
-        while (list.length) { list = list.slice(0, -1); if (list.length) store.set(BACKUP_KEY, JSON.stringify(list)); else store.del(BACKUP_KEY); try { localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true; } catch { /* sigue */ } }
-        localStorage.setItem(KEY, json); lastSavedRaw = json; setSaved(true); saveErrorShown = false; return true;
+    if (json && localStorage) { // almacenamiento lleno: se sueltan copias automáticas (primero las rutinarias, luego la más vieja) antes de perder tus datos nuevos; learny.corrupt y learny.newer NO se tocan
+      const rawBackups = store.get(BACKUP_KEY); let list = readBackups(), saved = false;
+      while (list.length && !saved) {
+        dropOneBackup(list);
+        if (list.length) store.set(BACKUP_KEY, JSON.stringify(list)); else store.del(BACKUP_KEY);
+        try { localStorage.setItem(KEY, json); saved = true; } catch { /* sigue */ }
       }
-    } catch { /* sigue */ }
+      if (saved) {
+        lastSavedRaw = json; setSaved(true); saveErrorShown = false;
+        if (!save.trimmed) { save.trimmed = true; toast('Poco espacio: se borraron copias automáticas antiguas para poder guardar. Descarga una copia en Ajustes ⚙️.', 'error'); }
+        return true;
+      }
+      if (rawBackups != null) store.set(BACKUP_KEY, rawBackups); // ni liberando todas las copias cabe: se devuelven las copias, no se pierden en vano
+    }
     setSaved(false);
     if (!saveErrorShown) { saveErrorShown = true; toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); }
     return false; }
@@ -49,15 +69,17 @@ function safe(fn, name) {
   }
 }
 
-/* Deshacer de un nivel: cada acción reversible ofrece «Deshacer» ~8 s (botón o tecla Z). Una acción nueva sustituye a la anterior. */
+/* Deshacer de un nivel: cada acción reversible ofrece «Deshacer» ~8 s (botón o tecla Z). Una acción nueva sustituye a la anterior.
+   El botón solo acompaña a SU mensaje: cualquier otro aviso lo retira (antes lo heredaba y deshacía otra cosa). */
 let undoRun = null;
+function clearUndo() { // retira el «Deshacer» pendiente: tecla Z, botón visible y caducidad
+  undoRun = null; toast.undo = null;
+  document.querySelector('#toast .toast-action')?.remove();
+}
 function toast(message, type = 'ok', action = null) {
   const el = $('#toast'), isErr = type === 'error', now = Date.now();
   el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
-  // Fase 4: un aviso posterior no cancela un «Deshacer» pendiente: muestra su mensaje y conserva el botón hasta que caduque.
-  if (action) toast.undo = { action, until: now + 8000 };
-  else if (toast.undo && now < toast.undo.until) action = toast.undo.action;
-  else toast.undo = null;
+  toast.undo = action ? { action, until: now + 8000 } : null; // un aviso sin acción sustituye al anterior y su «Deshacer»
   undoRun = action ? action.run : null;
   el.className = `toast show ${type}`; // primero se hace visible y luego se escribe el texto: los lectores de pantalla solo anuncian cambios en regiones visibles
   clearTimeout(toast.fillId);
@@ -69,7 +91,7 @@ function toast(message, type = 'ok', action = null) {
     }
   }, 40);
   clearTimeout(toast.id);
-  toast.id = setTimeout(() => { el.classList.remove('show'); undoRun = null; toast.undo = null; }, action ? Math.max(1000, toast.undo.until - now) : 4200);
+  toast.id = setTimeout(() => { el.classList.remove('show'); undoRun = null; toast.undo = null; }, action ? 8000 : 4200);
 }
 /* Fase 4: los avisos de arranque (migración, tarjetas omitidas, datos dañados, plan reajustado…) esperan su turno en vez de pisarse. */
 const toastQueue = []; let toastBusy = false;
@@ -80,10 +102,12 @@ function nextQueued() {
   setTimeout(nextQueued, (n[2] ? 8000 : 4200) + 400);
 }
 function queueToast(message, type = 'ok', action = null) { toastQueue.push([message, type, action]); if (!toastBusy) nextQueued(); }
-function offerUndo(message, restore) {
+function offerUndo(message, restore) { // restore() devuelve false si ya no puede deshacer nada (p. ej. el examen terminó)
   const run = () => {
     if (undoRun !== run) return; // ya caducó o la sustituyó otra acción
-    undoRun = null; toast.undo = null; lastRateAt = 0; restore(); toast('Acción deshecha.');
+    clearUndo(); lastRateAt = 0;
+    if (restore() === false) { toast('Ya no se puede deshacer: la situación cambió.', 'error'); return; }
+    toast('Acción deshecha.');
   };
   toast(message, 'ok', { label: 'Deshacer', run });
 }
@@ -146,7 +170,7 @@ function modal(html, onSubmit, onClose) {
 $('#app-modal').addEventListener('close', () => {
   if (modalOpen()) return; // se reabrió antes de que llegara el evento: no cancelar la IA ni ejecutar el onClose de la ventana nueva
   runTeardown();
-  clearInterval(rouletteId); rouletteId = null; cancelAi();
+  clearInterval(rouletteId); rouletteId = null; if (aiController?.modalBound) cancelAi(); // una consulta fuera de ventanas (Feynman) no se cancela por abrir y cerrar Ajustes
   const handler = modalCloseHandler; modalCloseHandler = null; handler?.();
   if (!modalOpen() && !$('#confirm-modal').open) restoreOpenerFocus();
 });

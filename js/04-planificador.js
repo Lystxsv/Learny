@@ -71,7 +71,7 @@ function redistributeIfBehind(delay = 0) {
   if (!moved && !dropped) return;
   const msg = `Plan reajustado: moví ${plural(moved, 'tarea atrasada', 'tareas atrasadas')} a hoy${dropped ? ` y descarté ${plural(dropped, 'tarea', 'tareas')} que ya no cabían` : ''}. El detalle está en Planificar → Cambios en tu plan.`;
   const undo = () => { // deshacer: vuelve a las tareas, el historial y las deudas de antes; hoy no se reajusta otra vez
-    undoRun = null; toast.undo = null; const b = JSON.parse(before); state.tasks = b.tasks; state.planLog = b.planLog; state.deadlines = b.deadlines;
+    clearUndo(); const b = JSON.parse(before); state.tasks = b.tasks; state.planLog = b.planLog; state.deadlines = b.deadlines;
     state.settings.lastRollover = today(); save(); renderAll();
   };
   queueToast(msg, 'ok', { label: 'Deshacer', run: undo }); // en cola: espera a los demás avisos de arranque

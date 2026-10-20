@@ -27,8 +27,9 @@ function parseBlocks(text) {
 
 function tutorContext() {
   const t = state.settings.tutor;
+  const styles = { 12: 'como a alguien de 12 años', uni: 'nivel universitario', carrera: `con ejemplos de ${$('#tutor-career').value || 'su carrera'}` };
   return `Contexto: materia=${t.subject || 'no indicada'}; nivel=${t.level || 'no indicado'}; ya sabe=${t.known || 'no indicado'}; quiere lograr=${t.goal || 'no indicado'}.
-Estilo de explicación: ${({ 12: 'como a alguien de 12 años', uni: 'nivel universitario', carrera: `con ejemplos de ${$('#tutor-career').value || 'su carrera'}` })[$('#tutor-style').value]}.`;
+Estilo de explicación: ${styles[$('#tutor-style').value] || styles.uni}.`; // un valor inesperado cae en «universitario», nunca en «undefined»
 }
 
 function socraticPrompt(query, mode = $('#tutor-mode').value) {
@@ -83,6 +84,7 @@ async function askGemini(prompt) {
   const model = (state.settings.model || DEFAULT_MODEL).trim();
   if (aiController) { aiController.stale = true; aiController.abort(); } // una consulta nueva sustituye a la anterior
   const controller = new AbortController(); aiController = controller;
+  controller.modalBound = modalOpen(); // solo una consulta lanzada desde una ventana se cancela al cerrarla; la de Feynman sobrevive a abrir y cerrar Ajustes
   let timedOut = false;
   const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
   try {
@@ -91,7 +93,10 @@ async function askGemini(prompt) {
       headers: proxy ? { 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json', 'x-goog-api-key': state.apiKey },
       body: JSON.stringify(proxy ? { prompt: text } : { contents: [{ parts: [{ text }] }], generationConfig: { maxOutputTokens: 4096 } })
     }).catch((e) => { if (e.name === 'AbortError') throw e; throw new Error('No hay conexión o el servicio no respondió. Puedes usar las preguntas guía locales.'); }); // solo un fallo de red se presenta como «sin conexión»
-    let data = {}; try { data = await response.json(); } catch { /* sin cuerpo */ }
+    let data = {}; try { data = await response.json(); } catch (e) {
+      if (e?.name === 'AbortError' || controller.signal.aborted) { const err = new Error('abort'); err.name = 'AbortError'; throw err; } // se canceló o venció el tiempo leyendo la respuesta
+      /* sin cuerpo */
+    }
     if (!response.ok) {
       const raw = data.error?.message || `Error ${response.status}`;
       if (response.status === 401 || response.status === 403 || (response.status === 400 && /api[ _-]?key/i.test(raw))) throw new Error(`${who} no es válido o no tiene permiso. (${raw})`);
@@ -121,8 +126,9 @@ function saveChat(role, text) {
   save();
 }
 
-function requestKey(onKey, onLocal) {
+function requestKey(onKey, onLocal, onCancel) { // onCancel: se cerró la ventana sin elegir nada
   if (DEMO) { toast('La demostración no usa IA: tienes la guía local.'); state.settings.skipAi = true; return onLocal(); } // Etapa 7
+  let chosen = false;
   modal(`<h2>Conecta Gemini</h2>
       <p>Consigue una clave gratuita en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
       <p class="modal-tip"><b>Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido.</b> Cualquiera con DevTools podría verla. En producción usa un proxy (ver proxy-worker.example.js).</p>
@@ -130,9 +136,9 @@ function requestKey(onKey, onLocal) {
       <p class="lead">La clave viaja en el encabezado x-goog-api-key, no en la URL.</p>
       <button class="primary-button">Guardar clave</button>
       <button id="use-local" class="outline-button" type="button">Continuar sin IA</button>`, (data) => {
-    state.apiKey = clean(data.get('key'), 200); save(); closeModal(); onKey();
-  });
-  $('#use-local').onclick = () => { state.settings.skipAi = true; save(); closeModal(); onLocal(); };
+    chosen = true; state.apiKey = clean(data.get('key'), 200); save(); closeModal(); onKey();
+  }, () => { if (!chosen) onCancel?.(); });
+  $('#use-local').onclick = () => { chosen = true; state.settings.skipAi = true; save(); closeModal(); onLocal(); };
 }
 
 let lastAi = null, lastFail = null;
@@ -147,23 +153,24 @@ async function gemini(prompt, title, fallback, onDone) {
   };
   if (!hasAi()) {
     if (modalOpen()) { toast('Añade tu clave de Gemini en Ajustes ⚙️ o elige Guía local.', 'error'); return { text: fallback?.() || localGuide(title), fromAi: false }; }
-    if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback, onDone)), () => resolve(showLocal('Modo local activo.'))));
+    if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback, onDone)), () => resolve(showLocal('Modo local activo.')), () => resolve({ text: '', fromAi: false, cancelled: true })));
     return showLocal('Guía local. Añade tu clave en Ajustes ⚙️ para IA.');
   }
   modal(`<h2>${esc(title)}</h2><div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor…</p><button class="outline-button" type="button" data-cancel-ai>Cancelar</button>`);
   $('#modal-body').setAttribute('aria-live', 'polite');
+  const mark = $('#modal-body').firstElementChild, mine = () => modalOpen() && !!mark?.isConnected; // ¿la ventana abierta sigue siendo la de esta consulta?
   try {
     const text = await askGemini(prompt);
     lastAi = { prompt, title, text };
-    $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`;
+    if (mine()) $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`;
     try { onDone?.(text); } catch (e) { console.error(e); }
     return { text, fromAi: true };
   } catch (error) {
     if (error.stale) return { text: '', fromAi: false, cancelled: true }; // ya hay otra consulta en curso: no tocar su ventana
-    if (error.cancelled) { closeModal(); toast('Consulta cancelada.'); return { text: '', fromAi: false, cancelled: true }; }
+    if (error.cancelled) { if (mine()) closeModal(); toast('Consulta cancelada.'); return { text: '', fromAi: false, cancelled: true }; }
     const text = fallback?.() || localGuide(title);
     lastFail = { prompt, title, fallback, onDone };
-    $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Tu pregunta se conserva. Puedes reintentar o usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}<div class="actions"><button class="primary-button" type="button" data-ai-retry>Reintentar</button><button class="outline-button" type="button" data-close-modal>Cerrar</button></div>`;
+    if (mine()) $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Tu pregunta se conserva. Puedes reintentar o usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}<div class="actions"><button class="primary-button" type="button" data-ai-retry>Reintentar</button><button class="outline-button" type="button" data-close-modal>Cerrar</button></div>`;
     toast(error.message, 'error');
     return { text, fromAi: false, failed: true };
   }

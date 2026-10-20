@@ -11,6 +11,8 @@ const errorCards = () => cached('errcards', () => state.cards.filter((c) => !c.a
 const upcoming = () => state.deadlines.filter((d) => daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date));
 const whenLabel = (date) => { const n = daysUntil(date); return n === 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${new Date(`${date}T12:00:00`).toLocaleDateString('es', { weekday: 'long' })}` : `el ${shortDate(date)}`; };
 const isNewUser = () => !state.cards.length && !state.deadlines.length && !state.sessions.length && !state.reviews.length && !state.notes.length && !state.feynman.length;
+/* Última actividad de estudio (sesiones no abandonadas y repasos, fechas reales y locales) y días desde entonces: la usan el saludo y Lumi (WELCOME). */
+const daysSinceActivity = () => { const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => isDay(d)).sort().pop(); return act ? -daysUntil(act) : 0; };
 const reveal = (target) => { const el = typeof target === 'string' ? $(target) : target; for (let d = el?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true; return el; };
 
 /* Devuelve las acciones posibles ordenadas por prioridad; cada una trae su motivo calculado con datos reales. */
@@ -111,7 +113,7 @@ function renderGreeting() {
   const parts = [];
   if (due) parts.push(`${plural(due, 'tarjeta', 'tarjetas')} para hoy${overdue ? ` (${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'})` : ''}`);
   if (exam) { const n = daysUntil(exam.date); parts.push(`${esc(exam.title)} ${n === 0 ? 'hoy' : `en ${plural(n, 'día', 'días')}`}`); }
-  const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => isDay(d)).sort().pop(), gap = act ? -daysUntil(act) : 0;
+  const gap = daysSinceActivity();
   const back = gap >= 3 ? ` Bienvenido de vuelta: han pasado ${plural(gap, 'día', 'días')} desde tu última sesión, y no pasa nada. Puedes retomar con «Solo 5 minutos».` : ''; // sin culpa: no menciona rachas
   $('#home-summary').innerHTML = (isNewUser() ? 'Bienvenido a Learny. Te propongo un primer paso para empezar.' : parts.length ? `Tienes ${parts.join(' y ')}.` : 'Hoy no tienes pendientes urgentes.') + back;
   const last = [...state.sessions].reverse().find((s) => !s.abandon);
