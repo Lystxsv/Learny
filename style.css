@@ -772,3 +772,9 @@ body.session-study .lumi { --lumi-size: 40px; }
 .lumi[data-react="welcome"] .lumi-svg { animation: lumi-wave .4s ease-in-out 1; transform-origin: 50% 80%; }
 @keyframes lumi-hop { 0%, 100% { transform: none; } 40% { transform: translateY(-6px); } }
 @keyframes lumi-wave { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(4deg); } }
+
+/* Lumi · etapa C: la cabecera de Práctica reserva la línea del slot mientras Lumi está activa y fuera de una sesión de enfoque.
+   Antes, `.head-inline` se encogía al ancho de su contenido (~200 px), el mensaje no cabía junto al título y pasaba a una 2.ª línea:
+   la tarjeta se desplazaba ~28 px justo al aparecer o desaparecer el mensaje. Sin Lumi (body.has-lumi) no cambia nada. */
+body.has-lumi:not(.session-study) #practice .head-inline { flex: 1 1 14rem; min-width: 0; }
+body.has-lumi:not(.session-study) #practice .lumi-msg-card { display: block; flex: 0 0 100%; min-height: 1.5em; }
