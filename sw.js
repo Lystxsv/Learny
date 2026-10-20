@@ -1,4 +1,4 @@
-const CACHE = 'learny-v25';
+const CACHE = 'learny-v32';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
   './', './index.html', './style.css', './extras.js', './manifest.json',
@@ -17,7 +17,8 @@ const CORE = [
   './js/12-copias-e-importacion.js',
   './js/13-ajustes.js',
   './js/14-eventos.js',
-  './js/15-inicio.js'
+  './js/15-inicio.js',
+  './js/16-lumi.js'
 ];
 const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;

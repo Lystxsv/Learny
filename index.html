@@ -179,6 +179,27 @@
       <div class="page-heading">
         <h1 id="greeting">Tu día de estudio</h1>
         <p id="home-summary" class="lead"></p>
+        <!-- Lumi (compañero de estudio opcional). El SVG es decorativo; el mensaje es texto real. Se muestra solo si settings.mascot está activo. -->
+        <div class="lumi" id="lumi" data-pose="neutral" data-anim="none" hidden>
+          <svg class="lumi-svg" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle class="lumi-halo" cx="20" cy="42" r="19"/>
+            <g class="lumi-wings"><ellipse class="lumi-wing" cx="31" cy="25" rx="7" ry="13" transform="rotate(-28 31 25)"/><ellipse class="lumi-wing" cx="38" cy="24" rx="6" ry="12" transform="rotate(-12 38 24)"/></g>
+            <path class="lumi-legs" d="M30 45l-2 6M36 46v6M42 45l2 5"/>
+            <ellipse class="lumi-abdomen" cx="19" cy="42" rx="13" ry="10.5" transform="rotate(-18 19 42)"/>
+            <ellipse class="lumi-core" cx="17.5" cy="42" rx="7" ry="5.5" transform="rotate(-18 17.5 42)"/>
+            <ellipse class="lumi-thorax" cx="34" cy="38" rx="11" ry="9.5"/>
+            <path class="lumi-antenna" d="M45 22C45 15 41 11 38 10M52 22C53 15 57 11 60 10"/>
+            <circle class="lumi-dot" cx="38" cy="10" r="1.8"/><circle class="lumi-dot" cx="60" cy="10" r="1.8"/>
+            <circle class="lumi-head" cx="48.5" cy="31" r="10.5"/>
+            <ellipse class="lumi-eye" cx="44.6" cy="30" rx="3.5" ry="4.2"/><ellipse class="lumi-eye" cx="53" cy="30" rx="3.5" ry="4.2"/>
+            <circle class="lumi-pupil" cx="45.4" cy="30.8" r="2.2"/><circle class="lumi-pupil" cx="53.8" cy="30.8" r="2.2"/>
+            <circle class="lumi-shine" cx="46.2" cy="29.2" r=".8"/><circle class="lumi-shine" cx="54.6" cy="29.2" r=".8"/>
+            <path class="lumi-mouth" d="M46.5 36.5Q48.8 38.6 51 36.5"/>
+          </svg>
+          <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span aria-hidden="true">×</span></button>
+        </div>
+        <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
+        <span id="lumi-live" class="sr-only" aria-live="polite"></span>
       </div>
 
       <article class="card today-queue" id="today-queue" aria-label="Qué hacer ahora"></article>
@@ -266,7 +287,7 @@
       <div class="grid study-grid">
         <article class="card">
           <div class="card-head">
-            <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
+            <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span><span id="lumi-msg-card" class="lumi-msg-card" data-on="false" hidden></span></div>
             <div class="actions tight">
               <button id="add-card" class="outline-button">+ Crear</button>
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
@@ -543,6 +564,7 @@
 <script src="js/13-ajustes.js" defer></script>
 <script src="js/14-eventos.js" defer></script>
 <script src="js/15-inicio.js" defer></script>
+<script src="js/16-lumi.js" defer></script>
 <script src="extras.js" defer></script>
 </body>
 </html>

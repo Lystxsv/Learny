@@ -38,7 +38,8 @@
   let rt = null, timedStarting = false;
   document.addEventListener('learny:examstart', () => { if (timedStarting) return; clearInterval(rt); const c = $('#exam-clock'); if (c) c.hidden = true; });
   function timedExam(p) {
-    timedStarting = true; L.startExam(p, 20); timedStarting = false;
+    timedStarting = true; const started = L.startExam(p, 20); timedStarting = false;
+    if (!started) return; // ya hay un examen en curso o no hay tarjetas: sin reloj
     const end = Date.now() + Math.min(20, p.length) * 90000;
     const el = $('#exam-clock') || $('#card-count').insertAdjacentElement('afterend', Object.assign(document.createElement('span'), { id: 'exam-clock', className: 'tag', hidden: true }));
     clearInterval(rt);
@@ -272,11 +273,12 @@
   const errorCards = () => live().filter((c) => last(c.history)?.rating === 'again');
   const feynmanPrompt = () => (smart.topic ? `Explica con tus palabras lo esencial de ${smart.topic}: una idea central, un ejemplo y una duda.` : 'Elige un tema de hoy y explícalo como a alguien de 12 años.');
   function smartSession() {
+    if (L.isExam()) return toast('Ya tienes un examen en curso. Termínalo o sal de él antes de empezar la sesión inteligente.', 'error');
     const due = L.dueCards(), errs = errorCards().filter((c) => !due.includes(c));
     const pool = interleave([...due, ...shuffle(errs)].slice(0, 12));
     smart.topic = L.weakSubject()?.name || pool[0]?.subject || clean($('#tutor-subject').value, 60) || '';
     smart.step = 'cards'; smart.armed = false;
-    if (pool.length) { L.showPage('practice'); smart.launching = true; L.startExam(pool, 12); smart.launching = false; toast(`Sesión inteligente · paso 1 de 3: ${plural(pool.length, 'tarjeta', 'tarjetas')}.`); }
+    if (pool.length) { L.showPage('practice'); smart.launching = true; const ok = L.startExam(pool, 12); smart.launching = false; if (!ok) { smart.step = null; return; } toast(`Sesión inteligente · paso 1 de 3: ${plural(pool.length, 'tarjeta', 'tarjetas')}.`); }
     else smartNext('exam');
   }
   function smartNext(from) {
