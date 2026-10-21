@@ -1,52 +1,77 @@
 # Learny
 
 App web de estudio: Pomodoro con descanso, flashcards con repaso espaciado (SM-2), método Feynman,
-ruleta de temas, planificador inverso, estadísticas y un tutor socrático opcional con IA.
-Todo se guarda en el navegador de cada persona; no hay cuentas ni servidor.
+ruleta de temas, planificador inverso, estadísticas, un tutor socrático opcional con IA y **Lumi**,
+un compañero de estudio opcional (una abeja pixelada). Todo se guarda en el navegador de cada persona;
+no hay cuentas ni servidor.
+
+Versión actual del service worker: `learny-v37` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `extras.js` y la carpeta `js/` (15 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `extras.js` y la carpeta `js/` (16 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `sw.js`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Modo sin conexión e instalación como app (PWA) con sus iconos. |
 | `proxy-worker.example.js` | Ejemplo de proxy (Cloudflare Worker) para usar IA sin exponer tu clave. |
+| `CONTINUIDAD.md` | Cuaderno de trabajo de Lumi: qué se hizo en cada bloque, decisiones, reglas de frecuencia, pruebas y pendientes. Léelo antes de tocar `js/16-lumi.js`. |
 
 ## Estructura del código
-El antiguo `script.js` (≈ 2 500 líneas) está dividido en 15 archivos dentro de `js/`, en el mismo orden en que estaban. Son scripts clásicos (no módulos), así que `index.html` sigue funcionando con doble clic.
+El antiguo `script.js` está dividido en 16 archivos dentro de `js/`, en el mismo orden en que se cargan. Son scripts clásicos (no módulos), así que `index.html` sigue funcionando con doble clic. Las partes 01–15 son la app; la 16 es Lumi y se carga después de la 15.
 
 | Archivo | Contenido |
 |---|---|
-| `js/01-base.js` | Base: Modo demo, constantes, utilidades y el objeto `state`. |
-| `js/02-datos.js` | Datos: Tarjetas, migraciones, validación, copias automáticas, datos de la demo y carga inicial. |
+| `js/01-base.js` | Base: Modo demo, constantes, utilidades y el objeto `state` (incluye `settings.mascot: true`). |
+| `js/02-datos.js` | Datos: Tarjetas, migraciones, validación (`sanitizeSettings`), copias automáticas, datos de la demo y carga inicial. |
 | `js/03-interfaz.js` | Interfaz base: Confirmación, guardado, avisos y deshacer, páginas, ventana modal, sonido. |
 | `js/04-planificador.js` | Planificador: Plan inverso, tareas diarias y reajuste si te atrasas. |
-| `js/05-temporizador.js` | Temporizador: Pomodoro, sincronización entre pestañas, racha y pantalla «Hoy». |
-| `js/06-hoy.js` | Hoy: Recomendación con motivo, saludo, cierre de sesión y cola del día. |
+| `js/05-temporizador.js` | Temporizador: Pomodoro, sincronización entre pestañas, racha y pantalla «Hoy». Emite `learny:timer`. |
+| `js/06-hoy.js` | Hoy: Recomendación con motivo, saludo (`daysSinceActivity()`), cierre de sesión, «me cuesta arrancar» y cola del día. |
 | `js/07-tarjetas.js` | Tarjetas: Repaso espaciado (SM-2), simulacro, formulario y biblioteca. |
 | `js/08-analisis.js` | Análisis: Estadísticas por materia e informe. |
 | `js/09-tutor-ia.js` | Tutor e IA: Guía local, prompts, Gemini (clave o proxy) y chats. |
 | `js/10-revision-ia-y-temas.js` | Revisión de IA y temas: Bandeja de revisión, Feynman, temas y ruleta. |
-| `js/11-apariencia.js` | Apariencia: Temas, acentos con contraste y preferencias. |
+| `js/11-apariencia.js` | Apariencia: Temas (incluido Cromo), acentos con contraste y preferencias; avisa a Lumi con `LumiCompanion?.sync`. |
 | `js/12-copias-e-importacion.js` | Copias e importación: Exportar, validar e importar copias, mazos y CSV. |
-| `js/13-ajustes.js` | Ajustes: Estilos rápidos, ventana de Ajustes, recordatorios y contexto del tutor. |
+| `js/13-ajustes.js` | Ajustes: Estilos rápidos, ambientes, ventana de Ajustes (con la casilla de Lumi), recordatorios y contexto del tutor. |
 | `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny`. |
 | `js/15-inicio.js` | Inicio: Bienvenida, portada, banner de la demo y arranque. |
+| `js/16-lumi.js` | Lumi: la abeja pixelada (SVG generado por `lumiBeeSvg()`), controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
 
 Reglas para tocarlos:
 - **El orden de los `<script>` en `index.html` importa.** Lo que se ejecuta al cargar solo puede usar nombres definidos en archivos anteriores; lo demás (manejadores, funciones) se resuelve cuando se usa.
 - **Comparten el ámbito global** (no hay `import`/`export`): un nombre de nivel superior (`const`, `let` o `function`) no se puede repetir entre archivos, y las variables compartidas (`exam`, `currentPage`, `rev`…) siguen siendo las mismas en todos.
-- `extras.js` no ve esos nombres: solo usa la API `window.Learny`, que se crea en `js/14-eventos.js`.
-- Si añades, quitas o renombras un archivo de `js/`, cámbialo también en la lista `CORE` de `sw.js` y sube `CACHE`.
+- `extras.js` no ve esos nombres: solo usa la API `window.Learny` (46 claves), que se crea en `js/14-eventos.js`.
+- Si añades, quitas o renombras un archivo de `js/`, cámbialo también en la lista `CORE` de `sw.js` y sube `CACHE`. La lista debe ser igual que los `<script>` de `index.html`.
+- `sw.js` trata `extras.js` y `manifest.json` como **imprescindibles**: si falta uno en el servidor, `cache.addAll` falla y el service worker no se instala. Sube siempre todos los archivos.
 - Si ya tenías `script.js` publicado, bórralo del repositorio: ya no se usa.
 
+## Lumi (compañero de estudio)
+Lumi es una abeja pixelada que acompaña en momentos concretos; es **opcional** (activada por defecto) y no guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes ⚙️ → *Disposición*, o con el «×» junto al personaje (con «Deshacer»). Desde la v37 es la única apariencia: la luciérnaga y el selector de apariencia se retiraron.
+
+- **Dibujo:** sprite 40×40 en SVG (`BEE_MAP`, sin curvas, sin degradados, sin `id`, `shape-rendering="crispEdges"`) insertado por JS en `#lumi`. Tamaños múltiplos de la rejilla: 80 px en escritorio, 60 px en móvil (≤ 820 px) y 40 px durante un bloque de enfoque.
+- **Estados y mensajes** (texto real, el dibujo es `aria-hidden`):
+  - *Neutral*: «¿Empezamos con algo corto?», una vez por visita.
+  - *Enfoque*: con el Pomodoro en marcha, sin mensajes ni animación.
+  - *Celebrar*: «Bloque completado.» al cerrar la valoración de un bloque (Inicio).
+  - *Apoyo*: «Esta vuelve pronto. Sin prisa.» tras «No lo sabía» (Práctica).
+  - *Progreso*: si en la misma tarjeta pasaste de «No lo sabía» a «Fácil» (Práctica).
+  - *Bienvenida*: tras 3 o más días sin actividad (sesiones o repasos, mismo criterio que el saludo).
+  - *Vacío*: «Crea tu primera tarjeta para empezar.» al entrar en Práctica sin tarjetas.
+- **Reglas de frecuencia** (en `LUMI_CONFIG`): mensaje visible 5 s; un solo mensaje proactivo por visita; 90 s mínimo entre apoyos y entre progresos; prioridad reacción > contexto > genérico; sin cola (una reacción en espera caduca a los 20 s); nada durante un examen, un bloque de enfoque, una ventana abierta, la portada o con la pestaña oculta.
+- **Gestos** (solo CSS, un ciclo, sin esperar a `animationend`): salto y aleteo al celebrar, antenas al dar la bienvenida, inclinación/asentimiento/antenas en apoyo, progreso y vacío. Se anulan con movimiento reducido (del sistema o de Learny), con la pestaña oculta y en enfoque.
+- **Accesibilidad:** las reacciones no se anuncian aparte (ya las cubren los avisos existentes); sin `alert` y sin mover el foco. Temas: oscuro, negro, claro, sepia, alto contraste y Cromo (con contorno propio para separar la abeja del fondo).
+- **Datos:** solo existe `settings.mascot`. `sanitizeSettings` descarta la antigua clave `mascotAvatar`, así que guardados, copias e importaciones anteriores cargan sin error.
+- **Eventos que usa** (ninguno nuevo para la app): `learny:timer`, `learny:pomodone`, `learny:rated`, `learny:examstart`, `learny:examend`, `learny:page`, `learny:render`.
+- En `index.html` hay tres piezas suyas: `#lumi` y `#lumi-msg` en Inicio, `#lumi-live` (región `aria-live` solo para lo que ningún aviso anuncia) y `#lumi-msg-card` junto a `#card-count` en Práctica.
+
 ## Probarla en tu computador
-Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa servida por `https://` o `localhost`.)
+Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa servida por `https://` o `localhost`.) Con `index.html?demo` ves Learny con datos de ejemplo, todo en memoria.
 
 ## Publicarla gratis en GitHub Pages
-1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos los iconos y `icon.svg`).
+1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v25`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v37`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -54,55 +79,45 @@ Hay dos formas; sin ninguna, Learny funciona con su guía local.
   Queda solo en su navegador y nunca se incluye en copias ni mazos. No la uses en un equipo compartido.
 - **Proxy (recomendado en producción):** despliega `proxy-worker.example.js`, define `GEMINI_API_KEY` y
   `ALLOWED_ORIGIN` como secretos/variables y pega la URL del Worker en Ajustes ⚙️ → "URL de tu proxy".
-  Con proxy activo no hace falta ninguna clave en el navegador.
+  Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-flash-latest`) y un binding `RATE_LIMITER`.
 
-Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el código.
+Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el código. La demo nunca usa IA.
 
-## Novedades (v7)
-**Flujo diario**
-- Pantalla *Hoy* con saludo, resumen ("Tienes 8 tarjetas para hoy y Parcial en 4 días") y qué lograste la última vez.
-- **Siguiente mejor acción**, calculada con reglas simples: tarjetas vencidas → plan de examen → materia débil → crear material.
-- **Sesión inteligente**: repaso de tarjetas y errores → un Pomodoro → pregunta Feynman.
-- Estadísticas con una acción al lado (repasar errores, mini quiz de la materia débil, meta semanal, racha).
-
-**Fiabilidad**
-- El temporizador sobrevive a recargas y sigue visible (píldora flotante) al cambiar de sección.
-- Indicador "Guardado" real, datos dañados conservados en `learny.corrupt`, y cada sección se aísla si falla.
-- Importación validada (estructura, tipos y versión), copia automática antes de importar/borrar,
-  descarga de respaldo antes de "Borrar todo" y botón para restaurar la copia automática.
-- Esquema de datos `version: 4` con **migraciones reales** (v1→v2→v3→v4: nombres de campo antiguos, ids únicos, tareas huérfanas, prefijos repetidos). Antes de migrar se guarda una copia que puedes restaurar en Ajustes ⚙️.
-- **Tarjetas dañadas**: ya no se descartan en silencio; se conservan y muestran «Esta tarjeta no se pudo cargar» (en el repaso y en la Biblioteca) con opciones para editarlas, posponerlas o eliminarlas. Se excluyen de los exámenes.
-- **Ventanas de confirmación propias** (en lugar de las del navegador) para borrar tarjetas, fechas o todos los datos, importar y restaurar; con foco en *Cancelar* en las acciones destructivas.
-
-**Tutor con IA**
-- Estados claros, botón **Cancelar**, límite de entrada/salida y mensajes de error accionables.
-- Tras cada respuesta: *Explicar más simple*, *Dame un ejercicio*, *Crear tarjetas* (y *Guardar en notas*).
-- **Crear tarjetas con IA** desde Practicar o desde el estado vacío.
-
-**Móvil y accesibilidad**
-- Barra inferior de 5 destinos con los mismos nombres que el menú lateral (la Guía está en el botón 📖), ventanas como hojas inferiores, áreas táctiles ≥ 44 px, temporizador siempre accesible.
-- Corregido un desbordamiento que hacía que la página se viera más ancha que la pantalla en móviles.
-- Campos con **etiqueta visible** (el buscador del tutor usa una etiqueta solo para lectores de pantalla), sin `aria-label` duplicados.
-- Sistema de diseño aplicado a todo el CSS: espaciado 8/16/24/32 px, 4 tamaños de texto (cuerpo, subtítulo, título, número) más uno de pie de texto, 2 radios (tarjetas y controles; píldoras y círculos son excepciones) y colores de error/éxito/aviso.
-- Foco visible, `aria-live` en resultados, atajos que también funcionan con un botón enfocado, `Esc` cierra ventanas
-  y se respeta `prefers-reduced-motion`.
-
-**Correcciones**
-- *Salir del examen* (antes no había forma de abandonarlo) y la pausa a mitad de bloque ya no se duplica ni se reinicia al cancelar.
-- Las tareas atrasadas ya no acumulan el prefijo "Recuperar:" ni inundan el día de hoy.
-- Las fechas pasadas ya no se pueden crear (generaban un plan vacío); borrar una fecha pide confirmación.
-- La meta semanal compara minutos con minutos; el AudioContext del aviso ya no se acumula.
-- `sw.js`: solo cachea respuestas correctas, usa la caché si la red tarda más de 4 s y avisa al actualizarse.
+## Funciones principales
+- **Hoy:** una acción recomendada con su motivo y como máximo dos alternativas; Pomodoro con intención, notas de distracción y ambientes (Biblioteca, Noche, Minimalista); misiones, meta diaria y racha con día de gracia.
+- **Practicar:** repaso SM-2 con tres calificaciones (No lo sabía = 1, Dudé = 3, Fácil = 5), modo examen, *Intercalar*, *5 minutos*, *Examen real*, *Crear con IA* con bandeja de revisión, tutor socrático o directo, Feynman, ruleta de temas, notas, lectura y dictado.
+- **Biblioteca:** tarjetas archivadas, mazos iniciales y propios, importación de CSV/Anki y de mazos JSON con vista previa.
+- **Planificar:** plan inverso por fases (comprensión → práctica → repaso → simulacro → revisión), reajuste si te atrasas con explicación, comprobación de carga y *Replanificar desde hoy*.
+- **Reforzar:** seis indicadores honestos con su muestra y periodo (7 días, 30 días o todo), materias débiles y mini quiz; informe semanal en JSON o CSV.
+- **Ajustes ⚙️:** apariencia, tipografía, disposición, estudio y avisos, IA y datos/copias; casilla de Lumi.
+- **Apariencia:** temas Automático, Oscuro, Negro (OLED), Claro, Sepia, Alto contraste y **Cromo** (negro profundo y plata, acento fijo); acento Cielo/Menta/Violeta/Ámbar/Rosa o personalizado con contraste 4,5:1; cinco **estilos rápidos** (Cuaderno, Lectura nocturna, Papel, Biblioteca, Enfoque).
+- **Portada, bienvenida y demo:** quien nunca entró ve una portada con «Probar Learny»; la bienvenida de 4 pasos es opcional.
 
 ## Atajos
-`Espacio` revela · `1` `2` `3` califican · `P` inicia/pausa el Pomodoro · `Esc` cierra ventanas.
+`Espacio` revela · `1` `2` `3` califican · `P` inicia/pausa el Pomodoro · `Z` deshace · `Esc` cierra ventanas.
 
 ## Rendimiento
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
-Los archivos no están minificados (≈ 265 KB entre HTML, CSS y JS, se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+Los archivos no están minificados (≈ 370 KB entre HTML, CSS y JS —`index.html` 42 KB, `style.css` 68 KB, `extras.js` 33 KB y `js/` 226 KB—; se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
+
+## Estado y pendientes
+- Cada bloque de Lumi y su lista de pruebas están en `CONTINUIDAD.md`. Se probaron con Chromium headless (`?demo`, 1280, 390 y 320 px).
+- **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, varias pestañas, actualización del service worker v36 → v37 en una instalación existente, importar un JSON real desde el selector de archivos, nitidez de la abeja en pantallas de 1× (a 60 px cada celda mide 1,5 px) y los seis temas a ojo.
+- Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y el de `js/16` dice «de 16»; es solo texto, pero conviene unificarlo si se vuelve a tocar esos archivos.
+
+## Novedades (v30 a v37 · Lumi y tema Cromo)
+Las versiones 26 a 29 no están documentadas en los archivos de continuidad. Todo lo siguiente conserva el esquema `version: 4`, las claves de almacenamiento, los algoritmos de repaso y la API `window.Learny`.
+- **v37 · Lumi solo con la abeja.** Se retiran la luciérnaga y el selector «Apariencia de Lumi». `GESTURE` activa también los gestos de apoyo, progreso y vacío. `sanitizeSettings` descarta `mascotAvatar`.
+- **v36 · Abeja fiel a la referencia.** Sprite 40×40 redibujado celda a celda (985 de 986 celdas coinciden con la referencia), poses en CSS (aleteo, antenas, inclinación, asentimiento), alas translúcidas y contorno por tema. Tamaños 80/60/40 px.
+- **v35 · Avatar «Abeja pixelada»** como alternativa seleccionable (`settings.mascotAvatar`), superado en la v37. Incluyó la corrección del «×» de Lumi en táctil (26 px visibles, 44 px de área de toque).
+- **v34 · Tema Cromo.** Nueva opción en Ajustes, `body.theme-chrome`, acento fijo con nota, `THEME_META.chrome` y `theme-color` `#080808`; un tema inválido cae a Oscuro.
+- **v33 · Pulido de Lumi** (Etapa C).
+- **v32 · Contexto y progreso.** Estados PROGRESS, WELCOME y EMPTY con prioridades en tres niveles; `daysSinceActivity()` en `js/06-hoy.js` (misma fórmula que el saludo) es el único cambio fuera de Lumi.
+- **v31 · Reacciones mínimas.** CELEBRATE y SUPPORT, espera única con caducidad y segundo slot de texto en Práctica (`#lumi-msg-card`).
+- **v30 · Componente y ajustes.** `js/16-lumi.js`, casilla en Ajustes, estados NEUTRAL y FOCUS, evento `learny:timer`.
 
 ## Novedades (v25 · código dividido en archivos)
-`script.js` se dividió en 15 archivos dentro de `js/` (ver «Estructura del código»). **No cambia el comportamiento ni los datos**: el código es el mismo, solo se repartió por secciones y se quitó la sangría extra de la función envolvente; esquema `version: 4`, mismas claves de almacenamiento y misma API `window.Learny` (46 claves). `sw.js` pasa a `learny-v25` y precachea los 15 archivos; `index.html` los carga en orden.
+`script.js` se dividió en 15 archivos dentro de `js/` (hoy 16, con `16-lumi.js`) (ver «Estructura del código»). **No cambia el comportamiento ni los datos**: el código es el mismo, solo se repartió por secciones y se quitó la sangría extra de la función envolvente; esquema `version: 4`, mismas claves de almacenamiento y misma API `window.Learny` (46 claves). `sw.js` pasaba entonces a `learny-v25` y precacheaba los 15 archivos (hoy son 16, con Lumi).
 
 ## Novedades (v24 · etapas 5, 6 y 7, y revisión de fiabilidad)
 **Etapa 5 · bienvenida.** La primera vez, una guía corta pregunta tu nombre, qué estudias, tu meta y cuánto tiempo quieres por bloque (10, 25 o 45 min). Todo es opcional y se puede saltar. Además, el botón «Hoy me cuesta arrancar» ofrece acciones pequeñas (repasar hasta 3 tarjetas, una sesión breve de 5 minutos, hacer una pregunta, explicar una idea) y cerrarlo no cambia nada.
@@ -111,7 +126,7 @@ Los archivos no están minificados (≈ 265 KB entre HTML, CSS y JS, se cachean 
 **Revisión de fiabilidad (fases 1 a 6).**
 - *Datos:* copias automáticas rotativas, copia del archivo dañado, estadísticas y fechas más estrictas, importación más segura.
 - *Avisos:* los avisos de arranque (migración, tarjetas omitidas, datos dañados) se muestran en cola sin pisarse; un aviso nuevo ya no cancela un «Deshacer» pendiente; Ajustes no se cierra si sueltas un arrastre fuera; Enter se ignora mientras se compone texto con IME; salir de un examen dentro de una sesión inteligente la cancela.
-- *Infraestructura:* `sw.js` (ahora `learny-v25`) borra solo cachés que empiezan por `learny-`; `viewport-fit=cover`, alturas `dvh` y cabecera pegajosa bajo el aviso de demostración en móvil; menos anuncios repetidos para lectores de pantalla; iconos en los accesos directos del manifest.
+- *Infraestructura:* `sw.js` (entonces `learny-v25`) borra solo cachés que empiezan por `learny-`; `viewport-fit=cover`, alturas `dvh` y cabecera pegajosa bajo el aviso de demostración en móvil; menos anuncios repetidos para lectores de pantalla; iconos en los accesos directos del manifest.
 - *Worker:* el límite se mide en caracteres, no en bytes, y devuelve el `Content-Type` de Google.
 - *Textos:* SM-2 se explica como No lo sabía = 1, Dudé = 3, Fácil = 5.
 
@@ -224,3 +239,40 @@ Esta entrega cubre la pantalla *Hoy*, el modo sesión y los bloques plegables (6
 - Mazos propios incluidos al compartir y al importar un mazo.
 - Proxy: varios orígenes, límite de uso y saltos de línea conservados.
 - Iconos PNG (192, 512, maskable) y `apple-touch-icon` para instalar la app.
+
+## Novedades (v7)
+**Flujo diario**
+- Pantalla *Hoy* con saludo, resumen ("Tienes 8 tarjetas para hoy y Parcial en 4 días") y qué lograste la última vez.
+- **Siguiente mejor acción**, calculada con reglas simples: tarjetas vencidas → plan de examen → materia débil → crear material.
+- **Sesión inteligente**: repaso de tarjetas y errores → un Pomodoro → pregunta Feynman.
+- Estadísticas con una acción al lado (repasar errores, mini quiz de la materia débil, meta semanal, racha).
+
+**Fiabilidad**
+- El temporizador sobrevive a recargas y sigue visible (píldora flotante) al cambiar de sección.
+- Indicador "Guardado" real, datos dañados conservados en `learny.corrupt`, y cada sección se aísla si falla.
+- Importación validada (estructura, tipos y versión), copia automática antes de importar/borrar,
+  descarga de respaldo antes de "Borrar todo" y botón para restaurar la copia automática.
+- Esquema de datos `version: 4` con **migraciones reales** (v1→v2→v3→v4: nombres de campo antiguos, ids únicos, tareas huérfanas, prefijos repetidos). Antes de migrar se guarda una copia que puedes restaurar en Ajustes ⚙️.
+- **Tarjetas dañadas**: ya no se descartan en silencio; se conservan y muestran «Esta tarjeta no se pudo cargar» (en el repaso y en la Biblioteca) con opciones para editarlas, posponerlas o eliminarlas. Se excluyen de los exámenes.
+- **Ventanas de confirmación propias** (en lugar de las del navegador) para borrar tarjetas, fechas o todos los datos, importar y restaurar; con foco en *Cancelar* en las acciones destructivas.
+
+**Tutor con IA**
+- Estados claros, botón **Cancelar**, límite de entrada/salida y mensajes de error accionables.
+- Tras cada respuesta: *Explicar más simple*, *Dame un ejercicio*, *Crear tarjetas* (y *Guardar en notas*).
+- **Crear tarjetas con IA** desde Practicar o desde el estado vacío.
+
+**Móvil y accesibilidad**
+- Barra inferior de 5 destinos con los mismos nombres que el menú lateral (la Guía está en el botón 📖), ventanas como hojas inferiores, áreas táctiles ≥ 44 px, temporizador siempre accesible.
+- Corregido un desbordamiento que hacía que la página se viera más ancha que la pantalla en móviles.
+- Campos con **etiqueta visible** (el buscador del tutor usa una etiqueta solo para lectores de pantalla), sin `aria-label` duplicados.
+- Sistema de diseño aplicado a todo el CSS: espaciado 8/16/24/32 px, 4 tamaños de texto (cuerpo, subtítulo, título, número) más uno de pie de texto, 2 radios (tarjetas y controles; píldoras y círculos son excepciones) y colores de error/éxito/aviso.
+- Foco visible, `aria-live` en resultados, atajos que también funcionan con un botón enfocado, `Esc` cierra ventanas
+  y se respeta `prefers-reduced-motion`.
+
+**Correcciones**
+- *Salir del examen* (antes no había forma de abandonarlo) y la pausa a mitad de bloque ya no se duplica ni se reinicia al cancelar.
+- Las tareas atrasadas ya no acumulan el prefijo "Recuperar:" ni inundan el día de hoy.
+- Las fechas pasadas ya no se pueden crear (generaban un plan vacío); borrar una fecha pide confirmación.
+- La meta semanal compara minutos con minutos; el AudioContext del aviso ya no se acumula.
+- `sw.js`: solo cachea respuestas correctas, usa la caché si la red tarda más de 4 s y avisa al actualizarse.
+

@@ -756,36 +756,12 @@ body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo
 /* ===== Lumi (compañero de estudio) · parte 16 =====
    Variables con alcance del componente (.lumi). No toca el tema ni el acento del usuario.
    Cromo redefine estas variables en `.theme-chrome .lumi` con grises plateados (sin amarillo). */
-.lumi { --lumi-line: #d9def2; --lumi-face: #d9def2; --lumi-body: #3a4263; --lumi-head: #454e75; --lumi-eye: #fff; --lumi-pupil: #12162b;
-  --lumi-glow: #ffd84d; --lumi-glow-core: #fff3a8; --lumi-halo: #ffd84d; --lumi-halo-op: .28; --lumi-wing: #9fb4ff; --lumi-wing-op: .35; --lumi-size: 64px;
-  position: relative; width: var(--lumi-size); height: var(--lumi-size); flex: none; }
-.theme-oled .lumi { --lumi-line: #e3e7fb; --lumi-face: #e3e7fb; }
-.theme-light .lumi { --lumi-line: #1d2247; --lumi-face: #e8ecff; --lumi-body: #2f3760; --lumi-head: #3a4370; --lumi-glow: #f5b301; --lumi-glow-core: #ffe27a; --lumi-halo: #f5b301; --lumi-halo-op: .3; --lumi-wing: #6f86e6; --lumi-wing-op: .3; }
-.theme-sepia .lumi { --lumi-line: #f6e7c6; --lumi-face: #f6e7c6; --lumi-body: #6a5738; --lumi-head: #7a6644; --lumi-glow: #ffcf5a; --lumi-glow-core: #fff0b8; --lumi-halo: #ffcf5a; --lumi-wing: #e9cf9b; }
-.theme-contrast .lumi { --lumi-line: #fff; --lumi-face: #fff; --lumi-body: #000; --lumi-head: #000; --lumi-glow: #ff0; --lumi-glow-core: #ff0; --lumi-halo: #ff0; --lumi-halo-op: 0; --lumi-wing: #000; --lumi-wing-op: 1; }
-.theme-chrome .lumi { --lumi-line: #d0d0d0; --lumi-face: #d0d0d0; --lumi-body: #2a2a2a; --lumi-head: #343434; --lumi-glow: #e6e6e6; --lumi-glow-core: #fff; --lumi-halo: #fff; --lumi-halo-op: .2; --lumi-wing: #c8c8c8; --lumi-wing-op: .3; --lumi-eye: #f5f5f5; --lumi-pupil: #0a0a0a; }
+.lumi { --lumi-size: 80px; position: relative; width: var(--lumi-size); height: var(--lumi-size); flex: none; }
 .lumi-svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.lumi-halo { fill: var(--lumi-halo); opacity: var(--lumi-halo-op); }
-.lumi-wing { fill: var(--lumi-wing); fill-opacity: var(--lumi-wing-op); stroke: var(--lumi-line); stroke-width: 1.4; stroke-opacity: .8; }
-.lumi-legs { fill: none; stroke: var(--lumi-line); stroke-width: 2; stroke-linecap: round; }
-.lumi-abdomen { fill: var(--lumi-glow); stroke: var(--lumi-line); stroke-width: 2; }
-.lumi-core { fill: var(--lumi-glow-core); opacity: .9; }
-.lumi-thorax { fill: var(--lumi-body); stroke: var(--lumi-line); stroke-width: 2; }
-.lumi-head { fill: var(--lumi-head); stroke: var(--lumi-line); stroke-width: 2; }
-.lumi-antenna { fill: none; stroke: var(--lumi-line); stroke-width: 1.8; stroke-linecap: round; }
-.lumi-dot { fill: var(--lumi-glow); stroke: var(--lumi-line); stroke-width: 1.2; }
-.lumi-eye { fill: var(--lumi-eye); }
-.lumi-pupil { fill: var(--lumi-pupil); }
-.lumi-shine { fill: #fff; }
-.lumi-mouth { fill: none; stroke: var(--lumi-face); stroke-width: 1.6; stroke-linecap: round; }
-/* Enfoque: luz muy tenue y nada se mueve. */
-.lumi[data-pose="focus"] .lumi-halo { opacity: calc(var(--lumi-halo-op) * .4); }
-.lumi[data-pose="focus"] .lumi-core { opacity: .6; }
-/* Animaciones: solo opacity/transform. Neutral: un destello suave de la luz cada ~12 s; el resto del tiempo, pose estática. */
-.lumi[data-anim="idle"] .lumi-halo { animation: lumi-glow 12s ease-in-out infinite; }
+/* Enfoque: nada se mueve (ver más abajo la regla de la abeja). */
+/* Animaciones: solo opacity/transform. Neutral: pose estática (sin movimiento continuo). */
 .lumi.is-entering { animation: lumi-in .3s ease-out both; }
 .lumi[data-paused="true"], .lumi[data-paused="true"] * { animation-play-state: paused !important; } /* pestaña oculta: nada corre */
-@keyframes lumi-glow { 0%, 82%, 100% { opacity: var(--lumi-halo-op); } 90% { opacity: calc(var(--lumi-halo-op) + .22); } }
 @keyframes lumi-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .lumi, .lumi *, .lumi-msg, .lumi-msg-card { animation: none !important; transition: none !important; } }
 .reduce-motion .lumi, .reduce-motion .lumi *, .reduce-motion .lumi-msg, .reduce-motion .lumi-msg-card { animation: none !important; transition: none !important; }
@@ -801,8 +777,6 @@ body.has-lumi #study .page-heading > .lumi { grid-column: 2; grid-row: 1 / span 
 .lumi-msg { min-height: 1.7em; margin: .35rem 0 0; color: var(--text); font-size: var(--fs-cap); opacity: 0; transition: opacity .3s ease; }
 .lumi-msg[data-on="true"] { opacity: 1; }
 body.session-study .lumi-hide, body.session-study .lumi-msg, body.session-study .lumi-msg-card { display: none; } /* sesión de enfoque: sin mensajes ni controles, solo la luz tenue */
-body.session-study .lumi { --lumi-size: 40px; }
-@media (max-width: 820px) { .lumi { --lumi-size: 48px; } body.session-study .lumi { --lumi-size: 36px; } }
 
 /* Lumi · bloque 2: segundo slot (solo texto) junto al contador de Práctica. Mismo fade y mismas reglas de movimiento reducido. */
 .lumi-msg-card { color: var(--text); font-size: var(--fs-cap); opacity: 0; transition: opacity .3s ease; }
@@ -822,7 +796,7 @@ body.has-lumi:not(.session-study) #practice .head-inline { flex: 1 1 14rem; min-
 body.has-lumi:not(.session-study) #practice .lumi-msg-card { display: block; flex: 0 0 100%; min-height: 1.5em; }
 
 /* ===== Lumi · avatar «Abeja pixelada» (bloque 2) =====
-   Arte propio en SVG local, fiel a la referencia: rejilla 40×40, cubo isométrico, colores planos por caras. Solo aparece con data-avatar="bee"; la luciérnaga sigue siendo la predeterminada.
+   Arte propio en SVG local, fiel a la referencia: rejilla 40×40, cubo isométrico, colores planos por caras. Es la única apariencia de Lumi (la luciérnaga se eliminó).
    Las variables --bee-* viven en .lumi (no tocan el tema ni el acento del usuario). El contorno exterior amarillo (--bee-rim, 1 celda) separa a la abeja de los fondos oscuros sin brillos.
    Las alas son translúcidas (interior con transparencia, como en la referencia). Alto contraste: contornos negros y blancos, colores planos. */
 .lumi { --bee-rim: #ffcc44; --bee-line: #401e1d; --bee-sided: #221310; --bee-topd: #723024; --bee-top: #fee861; --bee-toph: #ffff82;
@@ -833,20 +807,16 @@ body.has-lumi:not(.session-study) #practice .lumi-msg-card { display: block; fle
   --bee-glint: #fff; --bee-cream: #fff; --bee-stripe: #000; --bee-wing: #fff; --bee-wing-i: #fff; --bee-ant: #000; --bee-cheek: #ff7a00; }
 .theme-chrome .lumi { --bee-rim: #dcdcdc; }
 
-.lumi .lumi-svg--bee { display: none; }
-.lumi[data-avatar="bee"] .lumi-svg--bee { display: block; }
-.lumi[data-avatar="bee"] .lumi-svg--firefly { display: none; }
 .b-rim { fill: var(--bee-rim); } .b-line { fill: var(--bee-line); } .b-sideD { fill: var(--bee-sided); } .b-topD { fill: var(--bee-topd); }
 .b-top { fill: var(--bee-top); } .b-topH { fill: var(--bee-toph); } .b-side { fill: var(--bee-side); } .b-front { fill: var(--bee-front); }
 .b-glint { fill: var(--bee-glint); } .b-cream { fill: var(--bee-cream); } .b-stripe { fill: var(--bee-stripe); }
 .b-wing { fill: var(--bee-wing); } .b-wingI { fill: var(--bee-wing-i); } .b-ant { fill: var(--bee-ant); } .b-cheek { fill: var(--bee-cheek); }
 
 /* Tamaños múltiplos de la rejilla (80 = 2 px por celda; 60 = 1,5 px, 3 px físicos a 2×; 40 = 1 px): con otros tamaños las celdas salen desiguales (crispEdges). */
-.lumi[data-avatar="bee"] { --lumi-size: 80px; }
-@media (max-width: 820px) { .lumi[data-avatar="bee"] { --lumi-size: 60px; } }
-body.session-study .lumi[data-avatar="bee"] { --lumi-size: 40px; }
-body .lumi.lumi-thumb[data-avatar="bee"] { --lumi-size: 40px; }
-.lumi[data-avatar="bee"] .lumi-hide { top: -10px; } /* el sprite ocupa casi toda la rejilla: el «×» sube 4 px para tapar menos el cubo (a la derecha se queda igual: más afuera provoca desborde en móvil) */
+.lumi { --lumi-size: 80px; }
+@media (max-width: 820px) { .lumi { --lumi-size: 60px; } }
+body.session-study .lumi { --lumi-size: 40px; }
+.lumi .lumi-hide { top: -10px; } /* el sprite ocupa casi toda la rejilla: el «×» sube 4 px para tapar menos el cubo (a la derecha se queda igual: más afuera provoca desborde en móvil) */
 
 /* Poses de la abeja: solo transform (unidades del viewBox: 1 = una celda). Pivotes en el arranque de cada parte. Gestos de UN ciclo; el controlador los limpia con temporizador.
    NEUTRAL: alas en reposo (sin movimiento continuo); un aleteo muy breve solo al aparecer. FOCUS: sin ninguna animación. Con movimiento reducido (sistema o Learny) las reglas generales las anulan. */
@@ -857,29 +827,18 @@ body .lumi.lumi-thumb[data-avatar="bee"] { --lumi-size: 40px; }
 @keyframes bee-feel { 0%, 100% { transform: none; } 35% { transform: rotate(-12deg); } 70% { transform: rotate(8deg); } }
 @keyframes bee-lean { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
 @keyframes bee-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
-.lumi[data-avatar="bee"].is-entering .bee-wing-l { animation: bee-flap-l .3s ease-out 1; }
-.lumi[data-avatar="bee"].is-entering .bee-wing-r { animation: bee-flap-r .3s ease-out 1; }
-.lumi[data-avatar="bee"][data-react="celebrate"] .bee-wing-l { animation: bee-flap-l .4s ease-in-out 1; } /* además del salto lumi-hop del bloque 3 */
-.lumi[data-avatar="bee"][data-react="celebrate"] .bee-wing-r { animation: bee-flap-r .4s ease-in-out 1; }
-.lumi[data-avatar="bee"][data-react="welcome"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; } /* además de la inclinación lumi-wave */
-/* Latentes: el controlador hoy solo marca celebrate y welcome (SUPPORT, PROGRESS y EMPTY ocurren en Práctica, donde Lumi no se ve). Si algún día los marca, ya tienen pose. */
-.lumi[data-avatar="bee"][data-react="support"] .lumi-svg--bee { animation: bee-lean .4s ease-in-out 1; }
-.lumi[data-avatar="bee"][data-react="progress"] .lumi-svg--bee { animation: bee-nod .4s ease-in-out 1; }
-.lumi[data-avatar="bee"][data-react="empty"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; }
+.lumi.is-entering .bee-wing-l { animation: bee-flap-l .3s ease-out 1; }
+.lumi.is-entering .bee-wing-r { animation: bee-flap-r .3s ease-out 1; }
+.lumi[data-react="celebrate"] .bee-wing-l { animation: bee-flap-l .4s ease-in-out 1; } /* además del salto lumi-hop del bloque 3 */
+.lumi[data-react="celebrate"] .bee-wing-r { animation: bee-flap-r .4s ease-in-out 1; }
+.lumi[data-react="welcome"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; } /* además de la inclinación lumi-wave */
+/* SUPPORT, PROGRESS y EMPTY: el controlador ya los marca (GESTURE). Solo se perciben si el personaje está visible donde ocurren (hoy Lumi vive en Inicio y esos eventos pasan en Práctica). */
+.lumi[data-react="support"] .lumi-svg--bee { animation: bee-lean .4s ease-in-out 1; }
+.lumi[data-react="progress"] .lumi-svg--bee { animation: bee-nod .4s ease-in-out 1; }
+.lumi[data-react="empty"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; }
 .lumi[data-pose="focus"] .lumi-svg--bee, .lumi[data-pose="focus"] .lumi-svg--bee * { animation: none !important; } /* enfoque: pose estática */
 
-/* Miniaturas del selector de Ajustes: decorativas, tamaño fijo (no siguen el modo de enfoque ni el móvil) */
-body .lumi.lumi-thumb { --lumi-size: 44px; display: block; flex: none; }
-.lumi-avatars { margin: .75rem 0 0; padding: 0; border: 0; min-width: 0; }
-.lumi-avatars > legend { padding: 0; margin-bottom: .35rem; font-weight: 600; }
-.lumi-avatar-list { display: flex; flex-wrap: wrap; gap: .5rem; }
-.modal-content .lumi-avatar-opt { display: flex; flex-direction: row; align-items: center; gap: .6rem; flex: 1 1 11rem; min-height: 44px; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--text); cursor: pointer; } /* gana a «.modal-content label» (rejilla) */
-.lumi-avatar-opt input { flex: none; margin: 0; }
-.lumi-avatar-opt:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.lumi-avatar-opt:has(input:checked) .lumi-avatar-name::after { content: " ✓"; content: " ✓" / ""; } /* la marca no es solo color; con texto alternativo vacío no se lee en voz alta */
-.lumi-avatar-opt:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-/* Corrección móvil (aplica a ambos avatares): en táctil la regla general `button { min-height/min-width: 44px }` agrandaba el «×» a 44×44 sobre un Lumi de 48 px y lo tapaba.
+/* Corrección móvil : en táctil la regla general `button { min-height/min-width: 44px }` agrandaba el «×» a 44×44 sobre un Lumi de 48 px y lo tapaba.
    El botón visible vuelve a sus 26 px; el área de toque de 44 px ya la da `.lumi-hide::after` (inset: -9px). */
 .lumi-hide { min-width: 0; min-height: 0; }
 .lumi-hide::after { inset: -10px; } /* 24 px útiles + 2×10 = 44 px de área de toque (antes 42 por el borde) */

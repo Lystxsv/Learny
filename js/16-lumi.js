@@ -1,13 +1,13 @@
 /* Learny · parte 16 de 16 · Lumi (compañero de estudio)
-   Mascota opcional: una luciérnaga en SVG que acompaña en momentos concretos. No guarda datos propios:
+   Mascota opcional: una abeja pixelada en SVG que acompaña en momentos concretos. No guarda datos propios:
    solo lee state/timer y respeta settings.mascot. Se carga con <script defer> después de 15-inicio.js y
    comparte el ámbito global con las demás partes (no hay import/export).
    Bloque 1: componente, ajustes, accesibilidad, temas y estados NEUTRAL y FOCUS.
    Bloque 2: reacciones mínimas CELEBRATE y SUPPORT (segundo slot de texto en Práctica).
    Bloque 3: PROGRESS, WELCOME, EMPTY y prioridades completas entre estados.
    Avatar (bloque 2): la abeja se redibuja fiel a la referencia (rejilla 40×40, mapa BEE_MAP) y gana poses solo en CSS; esta lógica no cambió.
-   Avatar (bloque 1): apariencia intercambiable (settings.mascotAvatar: 'firefly' | 'bee'). El avatar solo REPRESENTA el estado que ya decide este
-   controlador (data-pose / data-anim / data-react viven en #lumi y valen para ambos); no hay listeners, cooldowns ni mensajes por avatar. */
+   Apariencia única: la abeja pixelada (se eliminó la luciérnaga y el selector de apariencia). Los estados (data-pose / data-anim / data-react) viven en #lumi;
+   no hay listeners, cooldowns ni mensajes propios del dibujo. */
 'use strict';
 
 /* Todos los valores ajustables viven aquí (tiempos en milisegundos). */
@@ -27,8 +27,6 @@ const LUMI_TEXT = Object.freeze({
   progress: 'En el repaso anterior marcaste «No lo sabía»; esta vez, «Fácil».',
   welcome: 'Bienvenido de nuevo. Podemos empezar con algo corto.', empty: 'Crea tu primera tarjeta para empezar.'
 });
-/* Apariencias: la lista permitida es MASCOT_AVATARS (01-base.js). La luciérnaga vive en index.html; la abeja se genera aquí (sin archivos externos). */
-const LUMI_AVATARS = Object.freeze({ firefly: { label: 'Luciérnaga' }, bee: { label: 'Abeja pixelada' } });
 /* Prioridad: un mensaje no interrumpe a otro de mayor prioridad. reaction = acción confirmada; context = bienvenida / estado vacío; generic = neutro. */
 const LUMI_PRIO = Object.freeze({ generic: 1, context: 2, reaction: 3 });
 
@@ -90,13 +88,13 @@ function lumiBeeSvg() {
 
 const LumiCompanion = (() => {
   const C = LUMI_CONFIG, byId = (id) => document.getElementById(id);
-  let root = null, msgEl = null, liveEl = null, cardMsgEl = null, fireflyMarkup = '';
+  let root = null, msgEl = null, liveEl = null, cardMsgEl = null;
   let enabled = false, wired = false, visitUsed = false, hiddenAt = 0;
   let msgTimer = 0, liveTimer = 0, enterTimer = 0, proactiveTimer = 0, pendingTimer = 0, reactTimer = 0;
   let curPrio = 0, curSlot = '', pending = null, lastSupportAt = 0, lastSupportRv = null, lastProgressAt = 0, lastProgressRv = null;
   const celebrated = new Set(); // ids de sesión ya celebradas (en memoria: pomodone no se repite al recargar ni llega de otra pestaña)
   const PAGE_OF = { study: 'study', practice: 'practice' };
-  const GESTURE = { celebrate: true, welcome: true }; // gestos visibles en Inicio (support/progress viven en Práctica, donde no hay personaje)
+  const GESTURE = { celebrate: true, welcome: true, support: true, progress: true, empty: true }; // gestos de la abeja; support/progress/empty solo se ven si el personaje está visible en la página donde ocurren
 
   const reduced = () => !!(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.body.classList.contains('reduce-motion'));
   const focusActive = () => typeof timer !== 'undefined' && timer.running && timer.mode === 'focus'; // enfoque realmente en marcha (en pausa no cuenta)
@@ -246,18 +244,7 @@ const LumiCompanion = (() => {
       root.dataset.pose = 'neutral'; root.dataset.anim = 'none';
     }
   }
-  /* Cambiar de apariencia: solo el atributo del contenedor (el CSS elige qué SVG se ve). Pose, mensaje, cooldowns y foco no se tocan;
-     un gesto en curso se cancela con seguridad y el nuevo avatar toma la pose actual, que ya vive en #lumi (data-pose / data-anim). */
-  function setAvatar(id) {
-    if (!root) return;
-    const next = MASCOT_AVATARS.includes(id) ? id : MASCOT_AVATARS[0];
-    if (root.dataset.avatar === next) return;
-    root.dataset.avatar = next;
-    clearTimeout(reactTimer); clearTimeout(enterTimer); root.removeAttribute('data-react'); root.classList.remove('is-entering');
-  }
-  const sync = (s) => { setAvatar(s && s.mascotAvatar); setEnabled(!!s && s.mascot === true); }; // elegir avatar NO activa a Lumi
-  /* Miniatura decorativa para Ajustes: contenedor .lumi propio (hereda las variables del tema), sin ids y fuera del árbol accesible. */
-  const thumb = (id) => { const a = MASCOT_AVATARS.includes(id) ? id : MASCOT_AVATARS[0]; return `<span class="lumi lumi-thumb" data-avatar="${a}" aria-hidden="true">${a === 'bee' ? lumiBeeSvg() : fireflyMarkup}</span>`; };
+  const sync = (s) => setEnabled(!!s && s.mascot === true);
 
   function hide() { // el botón de Lumi: oculta y ofrece deshacer (mismo patrón que el resto de la app)
     state.settings.mascot = false; save(); applyAppearance();
@@ -268,12 +255,11 @@ const LumiCompanion = (() => {
   function init() {
     root = byId('lumi'); msgEl = byId('lumi-msg'); liveEl = byId('lumi-live'); cardMsgEl = byId('lumi-msg-card');
     if (!root || !msgEl) return;
-    const fly = root.querySelector('.lumi-svg--firefly');
-    if (fly) { fireflyMarkup = fly.outerHTML; if (!root.querySelector('.lumi-svg--bee')) fly.insertAdjacentHTML('afterend', lumiBeeSvg()); }
+    if (!root.querySelector('.lumi-svg--bee')) root.insertAdjacentHTML('afterbegin', lumiBeeSvg()); // la abeja se genera aquí (sin archivos externos)
     root.querySelector('.lumi-hide')?.addEventListener('click', hide);
     sync(state.settings);
   }
-  return Object.freeze({ init, sync, thumb });
+  return Object.freeze({ init, sync });
 })();
 window.LumiCompanion = LumiCompanion;
 LumiCompanion.init();
