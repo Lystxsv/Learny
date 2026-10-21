@@ -40,7 +40,7 @@ function openSettings() {
     f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
     $('#accent-custom-wrap').hidden = f.accent.value !== 'custom'; $('#fs-out').textContent = `${f.fontSize.value} px`;
   };
-  const preview = () => { sync(); const d = { ...state.settings, ...read(), mascot: !!f.mascot?.checked }; sanitizeSettings(d, base); applyAppearance(d); };
+  const preview = () => { sync(); const d = { ...state.settings, ...read(), mascot: !!f.mascot?.checked, mascotAvatar: f.mascotAvatar?.value }; sanitizeSettings(d, base); applyAppearance(d); };
   modal(`<h2>Ajustes</h2>
       <details class="more-inline settings-group" open><summary>Apariencia</summary>
         <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
@@ -68,6 +68,7 @@ function openSettings() {
         <label class="check"><input name="reduceMotion" type="checkbox"> Reducir animaciones</label>
         <label class="check"><input name="immersiveDim" type="checkbox"> Atenuar el menú y la barra superior durante un bloque o examen</label>
         <label class="check"><input name="mascot" type="checkbox"> Compañero de estudio: Lumi</label>
+        <fieldset class="lumi-avatars"><legend>Apariencia de Lumi</legend><div class="lumi-avatar-list">${MASCOT_AVATARS.map((id) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}">${window.LumiCompanion ? LumiCompanion.thumb(id) : ''}<span class="lumi-avatar-name">${esc((typeof LUMI_AVATARS !== 'undefined' && LUMI_AVATARS[id]?.label) || id)}</span></label>`).join('')}</div></fieldset>
       </details>
       <details class="more-inline settings-group"><summary>Estudio y avisos</summary>
         <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
@@ -101,7 +102,7 @@ function openSettings() {
     if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
     Object.assign(state.settings, {
       name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
-      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on',
+      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar'),
       focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
       roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
       model: clean(data.get('model'), 80) || DEFAULT_MODEL
@@ -113,7 +114,7 @@ function openSettings() {
     save(); applyPreferences({ keepTutor: true }); closeModal(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); toast('Preferencias guardadas.');
   });
   modalTeardown = () => { const b = $('#modal-body'); b.oninput = null; b.onchange = null; $('#app-modal').onclick = null; $('#app-modal').onpointerdown = null; applyAppearance(); }; // cerrar o reemplazar sin guardar revierte la vista previa
-  put(state.settings); f.fontSize.value = String(state.settings.fontSize); sync();
+  put(state.settings); f.fontSize.value = String(state.settings.fontSize); { const r = form.querySelector(`input[name="mascotAvatar"][value="${state.settings.mascotAvatar}"]`) || form.querySelector('input[name="mascotAvatar"]'); if (r) r.checked = true; } sync();
   $('#modal-body').oninput = $('#modal-body').onchange = preview;
   { const dlg = $('#app-modal'); let down = false; dlg.onpointerdown = (e) => { down = e.target === dlg; }; dlg.onclick = (e) => { const ok = down && e.target === dlg; down = false; if (ok) closeModal(); }; } // Fase 4: solo cierra si el clic EMPEZÓ y terminó fuera (soltar un arrastre fuera no cierra) // clic fuera (solo en Ajustes): cierra y revierte la vista previa
   $$('#modal-body [data-qs]').forEach((b) => { b.onclick = () => { put(QS[b.dataset.qs]); preview(); }; });

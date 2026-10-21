@@ -29,6 +29,7 @@ const SCHEMA = 4;
 const TIMER_KEY = 'learny.timer';
 const MAX_REVIEWS = 5000;
 const MAX_CHATS = 20;
+const MASCOT_AVATARS = ['firefly', 'bee']; // apariencias permitidas de Lumi (la primera es la predeterminada); la usan 02-datos, 13-ajustes y 16-lumi
 const MIN_SAMPLE = 5; // con menos repasos no se afirma nada sobre una materia
 let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0, newerFrom = 0, newerKept = true, lastSavedRaw = null, lastTimerRaw = null, corruptRaw = null, corruptKept = true, bootHold = false, saveErrorShown = false;
 const PHASES = [
@@ -92,7 +93,7 @@ const defaults = () => ({
   version: SCHEMA,
   settings: {
     focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
-    theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, immersiveDim: true, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false, mascot: true,
+    theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, immersiveDim: true, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false, mascot: true, mascotAvatar: 'firefly',
     recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
     tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', lastRollover: '', welcomed: false
   },
