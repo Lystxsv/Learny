@@ -69,7 +69,7 @@ function sanitizeSettings(s, d) {
   s.roulettePrepare = num(s.roulettePrepare, 1, 180, d.roulettePrepare); s.rouletteExplain = num(s.rouletteExplain, 1, 180, d.rouletteExplain);
   s.fontSize = num(s.fontSize, 13, 24, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal);
   const pick = (v, list, def) => (list.includes(v) ? v : def);
-  s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
+  s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast', 'chrome'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
   s.headFont = pick(s.headFont, ['serif', 'same'], 'serif'); s.radius = pick(s.radius, ['sharp', 'soft', 'round'], 'soft'); s.cardStyle = pick(s.cardStyle, ['border', 'shadow'], 'border'); s.bgStyle = pick(s.bgStyle, ['grid', 'dots', 'plain'], 'grid');
   s.lineHeight = pick(s.lineHeight, ['compact', 'normal', 'roomy'], 'normal'); s.letterSpacing = pick(s.letterSpacing, ['normal', 'wide', 'wider'], 'normal'); s.cardText = pick(s.cardText, ['normal', 'large', 'xlarge'], 'normal');
   s.contentWidth = pick(s.contentWidth, ['narrow', 'normal', 'wide'], 'normal'); s.sidebar = pick(s.sidebar, ['full', 'icons'], 'full');

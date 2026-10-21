@@ -34,7 +34,9 @@ function openSettings() {
   const put = (o) => Object.entries(o).forEach(([k, v]) => { const el = f[k]; if (!el) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v); });
   const QS = Object.fromEntries(Object.keys(QS_DEF).map((k) => [k, quickStyle(k)]));
   const sync = () => {
-    const plain = ['sepia', 'contrast'].includes(f.theme.value); // en Sepia y Alto contraste el acento es fijo
+    const plain = ['sepia', 'contrast', 'chrome'].includes(f.theme.value); // en Sepia, Alto contraste y Cromo el acento es fijo (el guardado no se toca)
+    const mono = f.theme.value === 'chrome'; $('#accent-note').hidden = !mono; // Cromo explica por qué el acento no se puede elegir
+    if (mono) f.accent.setAttribute('aria-describedby', 'accent-note'); else f.accent.removeAttribute('aria-describedby');
     f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
     $('#accent-custom-wrap').hidden = f.accent.value !== 'custom'; $('#fs-out').textContent = `${f.fontSize.value} px`;
   };
@@ -44,9 +46,10 @@ function openSettings() {
         <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
         <p class="hint"><b>Estilos rápidos</b></p>
         <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
-        ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste']])}
-        <div class="form-row">${sel('accent', 'Color de acento (no en Sepia ni Alto contraste)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
+        ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste'], ['chrome', 'Cromo']])}
+        <div class="form-row">${sel('accent', 'Color de acento (no en Sepia, Alto contraste ni Cromo)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
         <label id="accent-custom-wrap" hidden>Color personalizado<input name="accentCustom" type="color"></label></div>
+        <p class="hint" id="accent-note" hidden>Cromo utiliza una paleta monocromática.</p>
         <div class="form-row">${sel('radius', 'Esquinas', [['sharp', 'Rectas'], ['soft', 'Suaves'], ['round', 'Redondeadas']])}${sel('cardStyle', 'Tarjetas', [['border', 'Con borde'], ['shadow', 'Con sombra']])}</div>
         <div class="form-row">${sel('bgStyle', 'Fondo', [['grid', 'Cuadriculado'], ['dots', 'Puntos'], ['plain', 'Liso']])}${sel('density', 'Densidad', [['normal', 'Normal'], ['compact', 'Compacta'], ['roomy', 'Amplia']])}</div>
       </details>

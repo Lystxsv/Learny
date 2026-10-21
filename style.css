@@ -572,6 +572,47 @@ body[data-cards="shadow"]:not(.theme-contrast) :is(.card, .metric) { border-colo
   --flash-a: #e8edff; --flash-b: #dde4fb; --flash-border: #a9b5e0; --flash-line: #a9b5e0; }
 .theme-oled { --bg: #000000; --sidebar: #000000; --surface: #0b0b0f; --surface2: #16161d; --input: #000000; --border: #2a2a36; --text: #f3f4fb; --muted: #a9aeca; --tag-bg: #1b1f3a;
   --grid: #ffffff08; --flash-a: #14172e; --flash-b: #0d0f1f; --flash-border: #3a4580; --flash-line: #3a4580; }
+/* ===== Tema Cromo (body.theme-chrome): negro profundo y plata, monocromo. Todo cuelga de ese selector: al cambiar de tema no queda nada de esto ===== */
+.theme-chrome {
+  --bg: #080808; --sidebar: #101010; --surface: #161616; --surface2: #1d1d1d; --input: #0d0d0d;
+  --border: #383838; --text: #f5f5f5; --muted: #b8b8b8;
+  --accent: #c8c8c8; --accent2: #8c8c8c; --on-accent: #0a0a0a; --tag-bg: #262626;
+  --flash-a: #1a1a1a; --flash-b: #141414; --flash-border: #4a4a4a; --flash-line: #4a4a4a;
+  --danger: #f2f2f2; --err: #ffffff; --err-bg: #2a2a2a; --ok: #ececec; --warn: #b4b4b4;
+  --grid: transparent; --dotc: transparent; --tint: #0004;
+  --shadow: inset 0 1px 0 #ffffff12, 0 10px 26px #000c;
+  --chrome-edge: #7a7a7a; --chrome-dim: #909090;
+  --chrome-metal: linear-gradient(180deg, #f4f4f4 0%, #d2d2d2 48%, #a8a8a8 100%);
+}
+/* Fondo: degradado gris muy suave y estático (sin patrón); «Liso» sigue siendo liso */
+body.theme-chrome[data-bg="grid"], body.theme-chrome[data-bg="dots"] { background-image: radial-gradient(ellipse 120% 60% at 15% -10%, #1b1b1b 0%, #080808 60%), linear-gradient(180deg, #0c0c0c 0%, #080808 100%); background-size: auto; background-repeat: no-repeat; }
+/* Tarjetas: superficie oscura, borde plateado discreto y un filo de luz arriba (no brillan) */
+body.theme-chrome[data-cards="border"] :is(.card, .metric) { border-color: #3d3d3d; box-shadow: inset 0 1px 0 #ffffff12, 0 10px 24px -14px #000; }
+/* Campos y botones secundarios: borde gris con contraste suficiente (se redefine --border solo en ellos) */
+.theme-chrome :is(input, select, textarea) { --border: var(--chrome-edge); }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button) { --border: var(--chrome-edge); }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):hover { background: #262626; }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):disabled { --border: #4a4a4a; border-style: dashed; }
+.theme-chrome ::placeholder { color: var(--chrome-dim); opacity: 1; }
+.theme-chrome :is(input, select, textarea):user-invalid { box-shadow: 0 0 0 2px #fff; }
+/* Foco: anillo blanco de alto contraste (el grosor y el desfase siguen siendo los de siempre) */
+.theme-chrome :focus-visible { outline-color: #fff; }
+/* Botón principal: plata con degradado sutil y texto oscuro; hover, active, focus y disabled distintos */
+.theme-chrome :is(.primary-button, .ask-button) { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 0 0 1px #ececec, inset 0 1px 0 #fff, 0 1px 3px #000a; }
+.theme-chrome :is(.primary-button, .ask-button):hover { background: linear-gradient(180deg, #ffffff 0%, #e2e2e2 48%, #b8b8b8 100%); filter: none; }
+.theme-chrome :is(.primary-button, .ask-button):active:not(:disabled) { background: linear-gradient(180deg, #a8a8a8 0%, #c6c6c6 100%); box-shadow: inset 0 2px 5px #0007; }
+.theme-chrome :is(.primary-button, .ask-button):disabled { background: #262626; color: #9a9a9a; box-shadow: inset 0 0 0 1px #5a5a5a; opacity: 1; }
+.theme-chrome .demo-banner .primary-button { box-shadow: none; } /* el aviso de la demo conserva sus colores */
+/* Avisos: el error se distingue por texto, icono y recuadro, no solo por el tono */
+.theme-chrome .toast { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 1px 0 #fff, 0 10px 30px #000c; }
+.theme-chrome .toast.error { background: #1d1d1d; color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 10px 30px #000c; }
+.theme-chrome .toast.error::before { content: "⚠ Error: "; font-weight: 800; }
+.theme-chrome .tag.urgent { background: #f2f2f2; color: #0a0a0a; box-shadow: 0 0 0 1px #fff; } /* urgente = claro sobre oscuro con anillo: no depende del tono ni cambia el tamaño de la etiqueta */
+.theme-chrome :is(.modal-content, .lead, .modal-tip) a { text-decoration: underline; text-underline-offset: .15em; }
+/* Ventanas y marca */
+.theme-chrome .modal { border-color: #4a4a4a; box-shadow: inset 0 1px 0 #ffffff14, 0 24px 60px #000; }
+.theme-chrome .logo { border-radius: 25%; box-shadow: 0 0 0 1px #6a6a6a, 0 2px 10px #000c; }
+.theme-chrome .logo rect { fill: #d4d4d4; } .theme-chrome .logo path { stroke: #0a0a0a; } .theme-chrome .logo circle { fill: #0a0a0a; }
 /* Disposición: misiones y dato curioso */
 body.hide-missions #missions-card, body.hide-fact .fact { display: none; }
 /* Menú lateral de iconos (solo escritorio): el texto sigue en el DOM, con font-size 0 */
@@ -714,7 +755,7 @@ body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo
 
 /* ===== Lumi (compañero de estudio) · parte 16 =====
    Variables con alcance del componente (.lumi). No toca el tema ni el acento del usuario.
-   Cromo aún no existe en Learny: cuando exista, basta con redefinir estas variables en `.theme-chrome .lumi` con grises plateados. */
+   Cromo redefine estas variables en `.theme-chrome .lumi` con grises plateados (sin amarillo). */
 .lumi { --lumi-line: #d9def2; --lumi-face: #d9def2; --lumi-body: #3a4263; --lumi-head: #454e75; --lumi-eye: #fff; --lumi-pupil: #12162b;
   --lumi-glow: #ffd84d; --lumi-glow-core: #fff3a8; --lumi-halo: #ffd84d; --lumi-halo-op: .28; --lumi-wing: #9fb4ff; --lumi-wing-op: .35; --lumi-size: 64px;
   position: relative; width: var(--lumi-size); height: var(--lumi-size); flex: none; }
@@ -722,6 +763,7 @@ body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo
 .theme-light .lumi { --lumi-line: #1d2247; --lumi-face: #e8ecff; --lumi-body: #2f3760; --lumi-head: #3a4370; --lumi-glow: #f5b301; --lumi-glow-core: #ffe27a; --lumi-halo: #f5b301; --lumi-halo-op: .3; --lumi-wing: #6f86e6; --lumi-wing-op: .3; }
 .theme-sepia .lumi { --lumi-line: #f6e7c6; --lumi-face: #f6e7c6; --lumi-body: #6a5738; --lumi-head: #7a6644; --lumi-glow: #ffcf5a; --lumi-glow-core: #fff0b8; --lumi-halo: #ffcf5a; --lumi-wing: #e9cf9b; }
 .theme-contrast .lumi { --lumi-line: #fff; --lumi-face: #fff; --lumi-body: #000; --lumi-head: #000; --lumi-glow: #ff0; --lumi-glow-core: #ff0; --lumi-halo: #ff0; --lumi-halo-op: 0; --lumi-wing: #000; --lumi-wing-op: 1; }
+.theme-chrome .lumi { --lumi-line: #d0d0d0; --lumi-face: #d0d0d0; --lumi-body: #2a2a2a; --lumi-head: #343434; --lumi-glow: #e6e6e6; --lumi-glow-core: #fff; --lumi-halo: #fff; --lumi-halo-op: .2; --lumi-wing: #c8c8c8; --lumi-wing-op: .3; --lumi-eye: #f5f5f5; --lumi-pupil: #0a0a0a; }
 .lumi-svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .lumi-halo { fill: var(--lumi-halo); opacity: var(--lumi-halo-op); }
 .lumi-wing { fill: var(--lumi-wing); fill-opacity: var(--lumi-wing-op); stroke: var(--lumi-line); stroke-width: 1.4; stroke-opacity: .8; }

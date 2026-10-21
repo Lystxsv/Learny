@@ -11,7 +11,7 @@ function syncTutorMode() { $('#ai-question').placeholder = $('#tutor-mode').valu
 
 /* ===== Apariencia (v16): applyAppearance solo toca estilos; applyPreferences además rellena los campos del tutor desde state (salvo keepTutor) ===== */
 let liveSettings = null;
-const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000' };
+const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000', chrome: '#080808' };
 const SURF = { dark: ['#171d38', '#202850', '#232d5e'], oled: ['#0b0b0f', '#16161d', '#1b1f3a'], light: ['#ffffff', '#eceff7', '#e3e8fb'] }; // surface, surface2, tag-bg
 const ACCENTS = {
   dark: { mint: ['#a7f3d0', '#46c793'], violet: ['#c4b5fd', '#8b5cf6'], amber: ['#fcd34d', '#f59e0b'], sky: ['#9db8ff', '#5b84ff'], rose: ['#fda4af', '#f43f5e'] },
@@ -38,7 +38,7 @@ function applyAppearance(s = state.settings) {
   root.style.setProperty('--accent', acc[0]); root.style.setProperty('--accent2', acc[1]); root.style.setProperty('--on-accent', onAccentFor(acc[0]));
   const R = { sharp: ['2px', '2px'], soft: ['14px', '9px'], round: ['24px', '16px'] }[s.radius] || ['14px', '9px'];
   root.style.setProperty('--r-card', R[0]); root.style.setProperty('--r-ctl', R[1]); root.style.setProperty('--radius', R[0]);
-  ['light', 'oled', 'sepia', 'contrast'].forEach((t) => b.classList.toggle(`theme-${t}`, th === t));
+  ['light', 'oled', 'sepia', 'contrast', 'chrome'].forEach((t) => b.classList.toggle(`theme-${t}`, th === t));
   root.style.colorScheme = th === 'light' ? 'light' : 'dark';
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_META[th] || THEME_META.dark);
   Object.assign(b.dataset, { density: s.density || 'normal', cards: s.cardStyle, bg: s.bgStyle, font: s.font, headfont: s.headFont, lh: s.lineHeight, ls: s.letterSpacing, cardtext: s.cardText, width: s.contentWidth, sidebar: s.sidebar });
