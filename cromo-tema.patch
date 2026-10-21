@@ -1,0 +1,143 @@
+--- a/index.html
++++ b/index.html
+@@ -511,7 +511,7 @@
+         <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i>Informe de examen</i> convierte tus fallos en un plan de recuperación de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
+       </div>
+       <article class="card spaced"><h2>Apariencia y tipografía</h2>
+-        <p class="lead">En <i>Ajustes ⚙️</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia o Alto contraste; el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
++        <p class="lead">En <i>Ajustes ⚙️</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
+       <article class="card spaced"><h2>Atajos de teclado</h2>
+         <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana · <kbd>Enter</kbd> en el resultado concreto inicia el bloque · <kbd>Z</kbd> deshace. Los atajos de tarjetas funcionan en <i>Practicar</i>. Todo el recorrido (planificar, iniciar un Pomodoro, repasar y calificar, crear una tarjeta, importar) se puede hacer solo con teclado: <kbd>Tab</kbd> avanza, <kbd>Mayús</kbd>+<kbd>Tab</kbd> retrocede, <kbd>Enter</kbd> o <kbd>Espacio</kbd> pulsan, y al cerrar una ventana el foco vuelve al botón que la abrió.</p></article>
+       <article class="card spaced"><h2>Datos, copias e instalación</h2>
+--- a/style.css
++++ b/style.css
+@@ -572,6 +572,47 @@
+   --flash-a: #e8edff; --flash-b: #dde4fb; --flash-border: #a9b5e0; --flash-line: #a9b5e0; }
+ .theme-oled { --bg: #000000; --sidebar: #000000; --surface: #0b0b0f; --surface2: #16161d; --input: #000000; --border: #2a2a36; --text: #f3f4fb; --muted: #a9aeca; --tag-bg: #1b1f3a;
+   --grid: #ffffff08; --flash-a: #14172e; --flash-b: #0d0f1f; --flash-border: #3a4580; --flash-line: #3a4580; }
++/* ===== Tema Cromo (body.theme-chrome): negro profundo y plata, monocromo. Todo cuelga de ese selector: al cambiar de tema no queda nada de esto ===== */
++.theme-chrome {
++  --bg: #080808; --sidebar: #101010; --surface: #161616; --surface2: #1d1d1d; --input: #0d0d0d;
++  --border: #383838; --text: #f5f5f5; --muted: #b8b8b8;
++  --accent: #c8c8c8; --accent2: #8c8c8c; --on-accent: #0a0a0a; --tag-bg: #262626;
++  --flash-a: #1a1a1a; --flash-b: #141414; --flash-border: #4a4a4a; --flash-line: #4a4a4a;
++  --danger: #f2f2f2; --err: #ffffff; --err-bg: #2a2a2a; --ok: #ececec; --warn: #b4b4b4;
++  --grid: transparent; --dotc: transparent; --tint: #0004;
++  --shadow: inset 0 1px 0 #ffffff12, 0 10px 26px #000c;
++  --chrome-edge: #7a7a7a; --chrome-dim: #909090;
++  --chrome-metal: linear-gradient(180deg, #f4f4f4 0%, #d2d2d2 48%, #a8a8a8 100%);
++}
++/* Fondo: degradado gris muy suave y estático (sin patrón); «Liso» sigue siendo liso */
++body.theme-chrome[data-bg="grid"], body.theme-chrome[data-bg="dots"] { background-image: radial-gradient(ellipse 120% 60% at 15% -10%, #1b1b1b 0%, #080808 60%), linear-gradient(180deg, #0c0c0c 0%, #080808 100%); background-size: auto; background-repeat: no-repeat; }
++/* Tarjetas: superficie oscura, borde plateado discreto y un filo de luz arriba (no brillan) */
++body.theme-chrome[data-cards="border"] :is(.card, .metric) { border-color: #3d3d3d; box-shadow: inset 0 1px 0 #ffffff12, 0 10px 24px -14px #000; }
++/* Campos y botones secundarios: borde gris con contraste suficiente (se redefine --border solo en ellos) */
++.theme-chrome :is(input, select, textarea) { --border: var(--chrome-edge); }
++.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button) { --border: var(--chrome-edge); }
++.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):hover { background: #262626; }
++.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):disabled { --border: #4a4a4a; border-style: dashed; }
++.theme-chrome ::placeholder { color: var(--chrome-dim); opacity: 1; }
++.theme-chrome :is(input, select, textarea):user-invalid { box-shadow: 0 0 0 2px #fff; }
++/* Foco: anillo blanco de alto contraste (el grosor y el desfase siguen siendo los de siempre) */
++.theme-chrome :focus-visible { outline-color: #fff; }
++/* Botón principal: plata con degradado sutil y texto oscuro; hover, active, focus y disabled distintos */
++.theme-chrome :is(.primary-button, .ask-button) { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 0 0 1px #ececec, inset 0 1px 0 #fff, 0 1px 3px #000a; }
++.theme-chrome :is(.primary-button, .ask-button):hover { background: linear-gradient(180deg, #ffffff 0%, #e2e2e2 48%, #b8b8b8 100%); filter: none; }
++.theme-chrome :is(.primary-button, .ask-button):active:not(:disabled) { background: linear-gradient(180deg, #a8a8a8 0%, #c6c6c6 100%); box-shadow: inset 0 2px 5px #0007; }
++.theme-chrome :is(.primary-button, .ask-button):disabled { background: #262626; color: #9a9a9a; box-shadow: inset 0 0 0 1px #5a5a5a; opacity: 1; }
++.theme-chrome .demo-banner .primary-button { box-shadow: none; } /* el aviso de la demo conserva sus colores */
++/* Avisos: el error se distingue por texto, icono y recuadro, no solo por el tono */
++.theme-chrome .toast { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 1px 0 #fff, 0 10px 30px #000c; }
++.theme-chrome .toast.error { background: #1d1d1d; color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 10px 30px #000c; }
++.theme-chrome .toast.error::before { content: "⚠ Error: "; font-weight: 800; }
++.theme-chrome .tag.urgent { background: #f2f2f2; color: #0a0a0a; box-shadow: 0 0 0 1px #fff; } /* urgente = claro sobre oscuro con anillo: no depende del tono ni cambia el tamaño de la etiqueta */
++.theme-chrome :is(.modal-content, .lead, .modal-tip) a { text-decoration: underline; text-underline-offset: .15em; }
++/* Ventanas y marca */
++.theme-chrome .modal { border-color: #4a4a4a; box-shadow: inset 0 1px 0 #ffffff14, 0 24px 60px #000; }
++.theme-chrome .logo { border-radius: 25%; box-shadow: 0 0 0 1px #6a6a6a, 0 2px 10px #000c; }
++.theme-chrome .logo rect { fill: #d4d4d4; } .theme-chrome .logo path { stroke: #0a0a0a; } .theme-chrome .logo circle { fill: #0a0a0a; }
+ /* Disposición: misiones y dato curioso */
+ body.hide-missions #missions-card, body.hide-fact .fact { display: none; }
+ /* Menú lateral de iconos (solo escritorio): el texto sigue en el DOM, con font-size 0 */
+@@ -714,7 +755,7 @@
+ 
+ /* ===== Lumi (compañero de estudio) · parte 16 =====
+    Variables con alcance del componente (.lumi). No toca el tema ni el acento del usuario.
+-   Cromo aún no existe en Learny: cuando exista, basta con redefinir estas variables en `.theme-chrome .lumi` con grises plateados. */
++   Cromo redefine estas variables en `.theme-chrome .lumi` con grises plateados (sin amarillo). */
+ .lumi { --lumi-line: #d9def2; --lumi-face: #d9def2; --lumi-body: #3a4263; --lumi-head: #454e75; --lumi-eye: #fff; --lumi-pupil: #12162b;
+   --lumi-glow: #ffd84d; --lumi-glow-core: #fff3a8; --lumi-halo: #ffd84d; --lumi-halo-op: .28; --lumi-wing: #9fb4ff; --lumi-wing-op: .35; --lumi-size: 64px;
+   position: relative; width: var(--lumi-size); height: var(--lumi-size); flex: none; }
+@@ -722,6 +763,7 @@
+ .theme-light .lumi { --lumi-line: #1d2247; --lumi-face: #e8ecff; --lumi-body: #2f3760; --lumi-head: #3a4370; --lumi-glow: #f5b301; --lumi-glow-core: #ffe27a; --lumi-halo: #f5b301; --lumi-halo-op: .3; --lumi-wing: #6f86e6; --lumi-wing-op: .3; }
+ .theme-sepia .lumi { --lumi-line: #f6e7c6; --lumi-face: #f6e7c6; --lumi-body: #6a5738; --lumi-head: #7a6644; --lumi-glow: #ffcf5a; --lumi-glow-core: #fff0b8; --lumi-halo: #ffcf5a; --lumi-wing: #e9cf9b; }
+ .theme-contrast .lumi { --lumi-line: #fff; --lumi-face: #fff; --lumi-body: #000; --lumi-head: #000; --lumi-glow: #ff0; --lumi-glow-core: #ff0; --lumi-halo: #ff0; --lumi-halo-op: 0; --lumi-wing: #000; --lumi-wing-op: 1; }
++.theme-chrome .lumi { --lumi-line: #d0d0d0; --lumi-face: #d0d0d0; --lumi-body: #2a2a2a; --lumi-head: #343434; --lumi-glow: #e6e6e6; --lumi-glow-core: #fff; --lumi-halo: #fff; --lumi-halo-op: .2; --lumi-wing: #c8c8c8; --lumi-wing-op: .3; --lumi-eye: #f5f5f5; --lumi-pupil: #0a0a0a; }
+ .lumi-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+ .lumi-halo { fill: var(--lumi-halo); opacity: var(--lumi-halo-op); }
+ .lumi-wing { fill: var(--lumi-wing); fill-opacity: var(--lumi-wing-op); stroke: var(--lumi-line); stroke-width: 1.4; stroke-opacity: .8; }
+--- a/sw.js
++++ b/sw.js
+@@ -1,4 +1,4 @@
+-const CACHE = 'learny-v33';
++const CACHE = 'learny-v34';
+ // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
+ const CORE = [
+   './', './index.html', './style.css', './extras.js', './manifest.json',
+--- a/js/02-datos.js
++++ b/js/02-datos.js
+@@ -69,7 +69,7 @@
+   s.roulettePrepare = num(s.roulettePrepare, 1, 180, d.roulettePrepare); s.rouletteExplain = num(s.rouletteExplain, 1, 180, d.rouletteExplain);
+   s.fontSize = num(s.fontSize, 13, 24, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal);
+   const pick = (v, list, def) => (list.includes(v) ? v : def);
+-  s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
++  s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast', 'chrome'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
+   s.headFont = pick(s.headFont, ['serif', 'same'], 'serif'); s.radius = pick(s.radius, ['sharp', 'soft', 'round'], 'soft'); s.cardStyle = pick(s.cardStyle, ['border', 'shadow'], 'border'); s.bgStyle = pick(s.bgStyle, ['grid', 'dots', 'plain'], 'grid');
+   s.lineHeight = pick(s.lineHeight, ['compact', 'normal', 'roomy'], 'normal'); s.letterSpacing = pick(s.letterSpacing, ['normal', 'wide', 'wider'], 'normal'); s.cardText = pick(s.cardText, ['normal', 'large', 'xlarge'], 'normal');
+   s.contentWidth = pick(s.contentWidth, ['narrow', 'normal', 'wide'], 'normal'); s.sidebar = pick(s.sidebar, ['full', 'icons'], 'full');
+--- a/js/11-apariencia.js
++++ b/js/11-apariencia.js
+@@ -11,7 +11,7 @@
+ 
+ /* ===== Apariencia (v16): applyAppearance solo toca estilos; applyPreferences además rellena los campos del tutor desde state (salvo keepTutor) ===== */
+ let liveSettings = null;
+-const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000' };
++const THEME_META = { dark: '#0e1220', oled: '#000000', light: '#f4f5fa', sepia: '#302a20', contrast: '#000000', chrome: '#080808' };
+ const SURF = { dark: ['#171d38', '#202850', '#232d5e'], oled: ['#0b0b0f', '#16161d', '#1b1f3a'], light: ['#ffffff', '#eceff7', '#e3e8fb'] }; // surface, surface2, tag-bg
+ const ACCENTS = {
+   dark: { mint: ['#a7f3d0', '#46c793'], violet: ['#c4b5fd', '#8b5cf6'], amber: ['#fcd34d', '#f59e0b'], sky: ['#9db8ff', '#5b84ff'], rose: ['#fda4af', '#f43f5e'] },
+@@ -38,7 +38,7 @@
+   root.style.setProperty('--accent', acc[0]); root.style.setProperty('--accent2', acc[1]); root.style.setProperty('--on-accent', onAccentFor(acc[0]));
+   const R = { sharp: ['2px', '2px'], soft: ['14px', '9px'], round: ['24px', '16px'] }[s.radius] || ['14px', '9px'];
+   root.style.setProperty('--r-card', R[0]); root.style.setProperty('--r-ctl', R[1]); root.style.setProperty('--radius', R[0]);
+-  ['light', 'oled', 'sepia', 'contrast'].forEach((t) => b.classList.toggle(`theme-${t}`, th === t));
++  ['light', 'oled', 'sepia', 'contrast', 'chrome'].forEach((t) => b.classList.toggle(`theme-${t}`, th === t));
+   root.style.colorScheme = th === 'light' ? 'light' : 'dark';
+   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_META[th] || THEME_META.dark);
+   Object.assign(b.dataset, { density: s.density || 'normal', cards: s.cardStyle, bg: s.bgStyle, font: s.font, headfont: s.headFont, lh: s.lineHeight, ls: s.letterSpacing, cardtext: s.cardText, width: s.contentWidth, sidebar: s.sidebar });
+--- a/js/13-ajustes.js
++++ b/js/13-ajustes.js
+@@ -34,7 +34,9 @@
+   const put = (o) => Object.entries(o).forEach(([k, v]) => { const el = f[k]; if (!el) return; if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v); });
+   const QS = Object.fromEntries(Object.keys(QS_DEF).map((k) => [k, quickStyle(k)]));
+   const sync = () => {
+-    const plain = ['sepia', 'contrast'].includes(f.theme.value); // en Sepia y Alto contraste el acento es fijo
++    const plain = ['sepia', 'contrast', 'chrome'].includes(f.theme.value); // en Sepia, Alto contraste y Cromo el acento es fijo (el guardado no se toca)
++    const mono = f.theme.value === 'chrome'; $('#accent-note').hidden = !mono; // Cromo explica por qué el acento no se puede elegir
++    if (mono) f.accent.setAttribute('aria-describedby', 'accent-note'); else f.accent.removeAttribute('aria-describedby');
+     f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
+     $('#accent-custom-wrap').hidden = f.accent.value !== 'custom'; $('#fs-out').textContent = `${f.fontSize.value} px`;
+   };
+@@ -44,9 +46,10 @@
+         <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
+         <p class="hint"><b>Estilos rápidos</b></p>
+         <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
+-        ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste']])}
+-        <div class="form-row">${sel('accent', 'Color de acento (no en Sepia ni Alto contraste)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
++        ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste'], ['chrome', 'Cromo']])}
++        <div class="form-row">${sel('accent', 'Color de acento (no en Sepia, Alto contraste ni Cromo)', [['sky', 'Cielo'], ['mint', 'Menta'], ['violet', 'Violeta'], ['amber', 'Ámbar'], ['rose', 'Rosa'], ['custom', 'Personalizado']])}
+         <label id="accent-custom-wrap" hidden>Color personalizado<input name="accentCustom" type="color"></label></div>
++        <p class="hint" id="accent-note" hidden>Cromo utiliza una paleta monocromática.</p>
+         <div class="form-row">${sel('radius', 'Esquinas', [['sharp', 'Rectas'], ['soft', 'Suaves'], ['round', 'Redondeadas']])}${sel('cardStyle', 'Tarjetas', [['border', 'Con borde'], ['shadow', 'Con sombra']])}</div>
+         <div class="form-row">${sel('bgStyle', 'Fondo', [['grid', 'Cuadriculado'], ['dots', 'Puntos'], ['plain', 'Liso']])}${sel('density', 'Densidad', [['normal', 'Normal'], ['compact', 'Compacta'], ['roomy', 'Amplia']])}</div>
+       </details>
