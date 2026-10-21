@@ -5,6 +5,7 @@
    Bloque 1: componente, ajustes, accesibilidad, temas y estados NEUTRAL y FOCUS.
    Bloque 2: reacciones mínimas CELEBRATE y SUPPORT (segundo slot de texto en Práctica).
    Bloque 3: PROGRESS, WELCOME, EMPTY y prioridades completas entre estados.
+   Avatar (bloque 2): la abeja se redibuja fiel a la referencia (rejilla 40×40, mapa BEE_MAP) y gana poses solo en CSS; esta lógica no cambió.
    Avatar (bloque 1): apariencia intercambiable (settings.mascotAvatar: 'firefly' | 'bee'). El avatar solo REPRESENTA el estado que ya decide este
    controlador (data-pose / data-anim / data-react viven en #lumi y valen para ambos); no hay listeners, cooldowns ni mensajes por avatar. */
 'use strict';
@@ -31,41 +32,60 @@ const LUMI_AVATARS = Object.freeze({ firefly: { label: 'Luciérnaga' }, bee: { l
 /* Prioridad: un mensaje no interrumpe a otro de mayor prioridad. reaction = acción confirmada; context = bienvenida / estado vacío; generic = neutro. */
 const LUMI_PRIO = Object.freeze({ generic: 1, context: 2, reaction: 3 });
 
-/* ---- Abeja pixelada: arte original generado con rejilla 32×32 (1 celda = 1 rect). Sin curvas, sin degradados y SIN id (varias copias en la página no chocan).
-   Proyección oblicua a 45°: cara frontal (cabeza), cara superior (clara) y cara lateral (oscura) → volumen por caras. Cada parte tiene su clase (.b-*) para los temas y las poses. ---- */
+/* ---- Abeja pixelada (bloque 2): arte fiel a la referencia, rejilla 40×40 (1 celda = 1 rect). Sin curvas, sin degradados y SIN id (varias copias en la página no chocan).
+   BEE_MAP es el sprite de 34×29 celdas, colocado en (3, 5) de la rejilla. Cada letra es un rol de color (clase .b-*, variables --bee-* en style.css para los temas):
+   r contorno exterior · l contorno oscuro · k lateral casi negro · b franjas marrones · y cara superior · z brillo superior · o panel ocre · f cara frontal · g brillo blanco · c reflejo crema
+   n franja translúcida del lateral · w contorno de ala · i interior de ala (translúcido) · a antena · h reflejo crema de la cara · p mejilla/lengua · E ojo (arco cerrado) · M/N boca (contorno/interior).
+   Los grupos (.bee-halo/.bee-body/.bee-wing-l/.bee-wing-r/.bee-antennae/.bee-face/.bee-eyes) son los ganchos de las poses (solo CSS). */
+const BEE_MAP = Object.freeze([
+  '.....................rr...........',
+  '...................rrbbrr.........',
+  '...wwww..........rrbbbbbbrr.......',
+  '..wiiiiww......rrbbbbbbbbbbrr.....',
+  '.wiiwiiiiww..rrbbbbyybbbbbbbbrr...',
+  '.wiiiwwwiiiwrbbyybbbbyybbbbbbbbrr.',
+  '..wiiiiiiyyaibbbbyybbbbyybbbbbbbkr',
+  '...wwiiyyabzwyybbbbyybbbbyybbbbkkr',
+  '.....wwbayyyayyyybbbbyybbbbyykkkkr',
+  '....rlbcgaayyyyyyyybbbbyybbkokkkkr',
+  '....rlfyyyyyyyyyyyyyybbbbkkkokkkkr',
+  '....rlllfyyyyyyyyynngggnnokkokkkkr',
+  '...rlllllffyyyyynyyyyookkzkkokkkkr',
+  '...rllfflffffyyygyyoozzkkonkokkkkr',
+  '....rlfffffffffyyzofooonnonkokkkkr',
+  '....rllffffEEEffoozzoookkonkokkkkr',
+  '....rllhhfEEEEEfoooozzokkzkkokkkkr',
+  '....rllhhfEfffEfooooooznnokkokkkkr',
+  '....rllllfffffffoooooookkokkokkkkr',
+  '....rllllffffhhfoNoooookkokkokkkkr',
+  '....rlfllffffhhMNNoooookkokkokkrr.',
+  '....rlppfffffMMMNNoooookkokkkrr...',
+  '....rllffffffMMMNNoooookkkkkr.....',
+  '.....rrllffffMMMNNoooookkrkkr.....',
+  '.......rrllffffMNooookkkr.rr......',
+  '.........rrllfppoookkrkkr.........',
+  '...........rrllfokkkr.rr..........',
+  '.............rrlkrkkr.............',
+  '...............rr.rr..............'
+]);
+const BEE_CELL = Object.freeze({ r: 'rim', l: 'line', k: 'sideD', b: 'topD', y: 'top', z: 'topH', o: 'side', f: 'front', g: 'glint', c: 'cream', n: 'stripe', w: 'wing', i: 'wingI', a: 'ant', h: 'cream', p: 'cheek', E: 'line', M: 'line', N: 'sideD' });
 function lumiBeeSvg() {
-  const N = 32, FX0 = 5, FX1 = 18, FY0 = 15, FY1 = 25, DEPTH = 8; // cara frontal x5..18, y15..25; profundidad 8 (hacia arriba y a la derecha)
-  const mk = () => Array.from({ length: N }, () => Array(N).fill(''));
-  const body = mk(), wingL = mk(), wingR = mk(), ant = mk(), eyes = mk(), face = mk();
-  const put = (g, x, y, c) => { if (x >= 0 && y >= 0 && x < N && y < N) g[y][x] = c; };
-  const rect = (g, x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(g, x, y, c); };
-  const stripe = (k) => k === 5 || k === 6 || k === 8; // franjas oscuras a lo largo del cuerpo
-  rect(body, FX0, FY0, FX1, FY1, 'front');
-  for (let k = 1; k <= DEPTH; k++) {
-    rect(body, FX0 + k, FY0 - k, FX1 + k, FY0 - k, stripe(k) ? 'topD' : 'top');
-    rect(body, FX1 + k, FY0 - k + 1, FX1 + k, FY1 - k, stripe(k) ? 'sideD' : 'side');
-  }
-  [8, 15].forEach((x) => rect(body, x, FY1 + 1, x, FY1 + 2, 'leg')); // patas discretas
-  const wing = (g, x0, dir) => { for (let y = 8; y >= 3; y--) { const s = x0 + dir * Math.floor((8 - y) / 2); for (let x = s; x < s + 4; x++) put(g, x, y, y === 8 ? 'wingS' : 'wing'); } }; // paralelogramo 4×6 inclinado hacia fuera
-  wing(wingL, 12, -1); wing(wingR, 17, 1);
-  [9, 16].forEach((x) => { rect(ant, x, 11, x, 13, 'ant'); put(ant, x, 10, 'tip'); }); // antenas cortas
-  rect(eyes, 8, 18, 9, 20, 'eye'); rect(eyes, 14, 18, 15, 20, 'eye'); put(eyes, 8, 18, 'eyeH'); put(eyes, 14, 18, 'eyeH'); // ojos 2×3 con un punto de luz
-  [[6, 21], [7, 21], [16, 21], [17, 21]].forEach(([x, y]) => put(face, x, y, 'cheek'));
-  [[10, 21], [11, 22], [12, 22], [13, 21]].forEach(([x, y]) => put(face, x, y, 'mouth')); // sonrisa tranquila
-  const layers = [body, wingL, wingR, ant, eyes, face];
-  const filled = (x, y) => x >= 0 && y >= 0 && x < N && y < N && layers.some((g) => g[y][x]);
-  const line = mk(), rim = mk();
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!filled(x, y) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => filled(x + dx, y + dy))) line[y][x] = 'line';
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!filled(x, y) && !line[y][x] && [-1, 0, 1].some((dy) => [-1, 0, 1].some((dx) => (dx || dy) && (filled(x + dx, y + dy) || (line[y + dy] && line[y + dy][x + dx]))))) rim[y][x] = 'rim';
-  const emit = (g) => { // celdas → rects por tramos horizontales, agrupados por clase
-    const by = {};
-    for (let y = 0; y < N; y++) for (let x = 0; x < N;) { const c = g[y][x]; if (!c) { x++; continue; } let w = 1; while (x + w < N && g[y][x + w] === c) w++; (by[c] ||= []).push(`<rect x="${x}" y="${y}" width="${w}" height="1"/>`); x += w; }
-    return Object.entries(by).map(([c, r]) => `<g class="b-${c}">${r.join('')}</g>`).join('');
-  };
+  const N = 40, OX = 3, OY = 5, SPLIT = 7; // posición del sprite en la rejilla; las columnas < SPLIT del ala pertenecen al ala izquierda
+  const layerOf = (ch, x) => (ch === 'r' ? 'halo' : ch === 'w' || ch === 'i' ? (x < SPLIT ? 'wl' : 'wr') : ch === 'a' ? 'ant' : ch === 'E' ? 'eyes' : 'hpMN'.includes(ch) ? 'face' : 'body');
+  const L = { halo: {}, body: {}, wl: {}, wr: {}, ant: {}, eyes: {}, face: {} };
+  BEE_MAP.forEach((row, y) => {
+    for (let x = 0; x < row.length;) { // tramos horizontales del mismo rol y grupo → un rect
+      const ch = row[x], cls = BEE_CELL[ch]; if (!cls) { x++; continue; }
+      const layer = layerOf(ch, x); let w = 1;
+      while (x + w < row.length && row[x + w] === ch && layerOf(ch, x + w) === layer) w++;
+      (L[layer][cls] ||= []).push(`<rect x="${x + OX}" y="${y + OY}" width="${w}" height="1"/>`); x += w;
+    }
+  });
+  const emit = (g) => Object.entries(g).map(([c, r]) => `<g class="b-${c}">${r.join('')}</g>`).join('');
   return `<svg class="lumi-svg lumi-svg--bee" viewBox="0 0 ${N} ${N}" shape-rendering="crispEdges" aria-hidden="true" focusable="false">`
-    + `<g class="bee-halo">${emit(rim)}${emit(line)}</g><g class="bee-body">${emit(body)}</g>`
-    + `<g class="bee-wings"><g class="bee-wing bee-wing-l">${emit(wingL)}</g><g class="bee-wing bee-wing-r">${emit(wingR)}</g></g>`
-    + `<g class="bee-antennae">${emit(ant)}</g><g class="bee-face"><g class="bee-eyes">${emit(eyes)}</g>${emit(face)}</g></svg>`;
+    + `<g class="bee-halo">${emit(L.halo)}</g><g class="bee-body">${emit(L.body)}</g>`
+    + `<g class="bee-wings"><g class="bee-wing bee-wing-l">${emit(L.wl)}</g><g class="bee-wing bee-wing-r">${emit(L.wr)}</g></g>`
+    + `<g class="bee-antennae">${emit(L.ant)}</g><g class="bee-face"><g class="bee-eyes">${emit(L.eyes)}</g>${emit(L.face)}</g></svg>`;
 }
 
 const LumiCompanion = (() => {

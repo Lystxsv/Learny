@@ -821,27 +821,52 @@ body.session-study .lumi { --lumi-size: 40px; }
 body.has-lumi:not(.session-study) #practice .head-inline { flex: 1 1 14rem; min-width: 0; }
 body.has-lumi:not(.session-study) #practice .lumi-msg-card { display: block; flex: 0 0 100%; min-height: 1.5em; }
 
-/* ===== Lumi · avatar «Abeja pixelada» (bloque 1) =====
-   Arte propio en SVG local (rejilla 32×32, colores planos por caras). Solo aparece con data-avatar="bee"; la luciérnaga sigue siendo la predeterminada.
-   Las variables --bee-* viven en .lumi (no tocan el tema ni el acento del usuario). --bee-rim es un contorno exterior de 1 celda: separa a la abeja
-   de los fondos oscuros sin depender de brillos. Las poses y gestos propios de la abeja llegan en el bloque 2. */
-.lumi { --bee-line: #24140c; --bee-rim: rgba(255, 226, 140, .85);
-  --bee-top: #ffe36e; --bee-topd: #7a4a25; --bee-front: #f5b62a; --bee-side: #c98a14; --bee-sided: #3b2314; --bee-leg: #5a3a22;
-  --bee-wing: #f4f9ff; --bee-wing-s: #c4d8f2; --bee-ant: #24140c; --bee-tip: #ffd23f; --bee-eye: #1d1109; --bee-eye-h: #fff; --bee-cheek: #ff8f70; --bee-mouth: #7a3b1a; }
-.theme-light .lumi { --bee-rim: transparent; --bee-wing-s: #a9c3e6; }
-.theme-sepia .lumi { --bee-rim: rgba(255, 220, 130, .85); }
-.theme-contrast .lumi { --bee-line: #000; --bee-rim: #fff; --bee-top: #ffff00; --bee-topd: #000; --bee-front: #ffd400; --bee-side: #ffb000; --bee-sided: #000; --bee-leg: #000;
-  --bee-wing: #fff; --bee-wing-s: #fff; --bee-ant: #000; --bee-tip: #ffff00; --bee-eye: #000; --bee-cheek: #ff7a00; --bee-mouth: #000; }
-.theme-chrome .lumi { --bee-rim: #dcdcdc; --bee-wing-s: #b8c4d6; }
+/* ===== Lumi · avatar «Abeja pixelada» (bloque 2) =====
+   Arte propio en SVG local, fiel a la referencia: rejilla 40×40, cubo isométrico, colores planos por caras. Solo aparece con data-avatar="bee"; la luciérnaga sigue siendo la predeterminada.
+   Las variables --bee-* viven en .lumi (no tocan el tema ni el acento del usuario). El contorno exterior amarillo (--bee-rim, 1 celda) separa a la abeja de los fondos oscuros sin brillos.
+   Las alas son translúcidas (interior con transparencia, como en la referencia). Alto contraste: contornos negros y blancos, colores planos. */
+.lumi { --bee-rim: #ffcc44; --bee-line: #401e1d; --bee-sided: #221310; --bee-topd: #723024; --bee-top: #fee861; --bee-toph: #ffff82;
+  --bee-side: #d99021; --bee-front: #ffb236; --bee-glint: #f9fff9; --bee-cream: #fff3ba; --bee-stripe: #8a4d3b;
+  --bee-wing: #f9fff9; --bee-wing-i: rgba(255, 255, 255, .55); --bee-ant: #9a4f30; --bee-cheek: #ff7345; }
+.theme-light .lumi { --bee-rim: #f0b429; --bee-wing: #8fa7d1; --bee-wing-i: rgba(143, 167, 209, .35); } /* sobre fondo claro el contorno blanco de las alas desaparecería */
+.theme-contrast .lumi { --bee-rim: #fff; --bee-line: #000; --bee-sided: #000; --bee-topd: #000; --bee-top: #ffff00; --bee-toph: #ffff00; --bee-side: #ffb000; --bee-front: #ffd400;
+  --bee-glint: #fff; --bee-cream: #fff; --bee-stripe: #000; --bee-wing: #fff; --bee-wing-i: #fff; --bee-ant: #000; --bee-cheek: #ff7a00; }
+.theme-chrome .lumi { --bee-rim: #dcdcdc; }
 
 .lumi .lumi-svg--bee { display: none; }
 .lumi[data-avatar="bee"] .lumi-svg--bee { display: block; }
 .lumi[data-avatar="bee"] .lumi-svg--firefly { display: none; }
-.b-rim { fill: var(--bee-rim); } .b-line { fill: var(--bee-line); }
-.b-front { fill: var(--bee-front); } .b-top { fill: var(--bee-top); } .b-topD { fill: var(--bee-topd); } .b-side { fill: var(--bee-side); } .b-sideD { fill: var(--bee-sided); } .b-leg { fill: var(--bee-leg); }
-.b-wing { fill: var(--bee-wing); } .b-wingS { fill: var(--bee-wing-s); }
-.b-ant { fill: var(--bee-ant); } .b-tip { fill: var(--bee-tip); }
-.b-eye { fill: var(--bee-eye); } .b-eyeH { fill: var(--bee-eye-h); } .b-cheek { fill: var(--bee-cheek); } .b-mouth { fill: var(--bee-mouth); }
+.b-rim { fill: var(--bee-rim); } .b-line { fill: var(--bee-line); } .b-sideD { fill: var(--bee-sided); } .b-topD { fill: var(--bee-topd); }
+.b-top { fill: var(--bee-top); } .b-topH { fill: var(--bee-toph); } .b-side { fill: var(--bee-side); } .b-front { fill: var(--bee-front); }
+.b-glint { fill: var(--bee-glint); } .b-cream { fill: var(--bee-cream); } .b-stripe { fill: var(--bee-stripe); }
+.b-wing { fill: var(--bee-wing); } .b-wingI { fill: var(--bee-wing-i); } .b-ant { fill: var(--bee-ant); } .b-cheek { fill: var(--bee-cheek); }
+
+/* Tamaños múltiplos de la rejilla (80 = 2 px por celda; 60 = 1,5 px, 3 px físicos a 2×; 40 = 1 px): con otros tamaños las celdas salen desiguales (crispEdges). */
+.lumi[data-avatar="bee"] { --lumi-size: 80px; }
+@media (max-width: 820px) { .lumi[data-avatar="bee"] { --lumi-size: 60px; } }
+body.session-study .lumi[data-avatar="bee"] { --lumi-size: 40px; }
+body .lumi.lumi-thumb[data-avatar="bee"] { --lumi-size: 40px; }
+.lumi[data-avatar="bee"] .lumi-hide { top: -10px; } /* el sprite ocupa casi toda la rejilla: el «×» sube 4 px para tapar menos el cubo (a la derecha se queda igual: más afuera provoca desborde en móvil) */
+
+/* Poses de la abeja: solo transform (unidades del viewBox: 1 = una celda). Pivotes en el arranque de cada parte. Gestos de UN ciclo; el controlador los limpia con temporizador.
+   NEUTRAL: alas en reposo (sin movimiento continuo); un aleteo muy breve solo al aparecer. FOCUS: sin ninguna animación. Con movimiento reducido (sistema o Learny) las reglas generales las anulan. */
+.bee-wing-l { transform-origin: 11px 13px; } .bee-wing-r { transform-origin: 14px 13px; } .bee-antennae { transform-origin: 13px 14px; }
+.lumi-svg--bee { transform-origin: 50% 85%; }
+@keyframes bee-flap-l { 0%, 100% { transform: none; } 35% { transform: translateY(-1px) rotate(9deg); } 70% { transform: rotate(-3deg); } }
+@keyframes bee-flap-r { 0%, 100% { transform: none; } 35% { transform: translateY(-1px) rotate(-9deg); } 70% { transform: rotate(3deg); } }
+@keyframes bee-feel { 0%, 100% { transform: none; } 35% { transform: rotate(-12deg); } 70% { transform: rotate(8deg); } }
+@keyframes bee-lean { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
+@keyframes bee-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
+.lumi[data-avatar="bee"].is-entering .bee-wing-l { animation: bee-flap-l .3s ease-out 1; }
+.lumi[data-avatar="bee"].is-entering .bee-wing-r { animation: bee-flap-r .3s ease-out 1; }
+.lumi[data-avatar="bee"][data-react="celebrate"] .bee-wing-l { animation: bee-flap-l .4s ease-in-out 1; } /* además del salto lumi-hop del bloque 3 */
+.lumi[data-avatar="bee"][data-react="celebrate"] .bee-wing-r { animation: bee-flap-r .4s ease-in-out 1; }
+.lumi[data-avatar="bee"][data-react="welcome"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; } /* además de la inclinación lumi-wave */
+/* Latentes: el controlador hoy solo marca celebrate y welcome (SUPPORT, PROGRESS y EMPTY ocurren en Práctica, donde Lumi no se ve). Si algún día los marca, ya tienen pose. */
+.lumi[data-avatar="bee"][data-react="support"] .lumi-svg--bee { animation: bee-lean .4s ease-in-out 1; }
+.lumi[data-avatar="bee"][data-react="progress"] .lumi-svg--bee { animation: bee-nod .4s ease-in-out 1; }
+.lumi[data-avatar="bee"][data-react="empty"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; }
+.lumi[data-pose="focus"] .lumi-svg--bee, .lumi[data-pose="focus"] .lumi-svg--bee * { animation: none !important; } /* enfoque: pose estática */
 
 /* Miniaturas del selector de Ajustes: decorativas, tamaño fijo (no siguen el modo de enfoque ni el móvil) */
 body .lumi.lumi-thumb { --lumi-size: 44px; display: block; flex: none; }
