@@ -947,3 +947,51 @@ body.has-mini .lumi-dock { bottom: calc(var(--s3) + 56px); }
 /* ===== Idioma (v45): botón EN/ES de la barra superior. En móvil (≤ 600 px) no cabe: se cambia en Ajustes → Idioma. ===== */
 .lang-toggle { font-weight: 700; letter-spacing: .02em; }
 @media (max-width: 600px) { .lang-toggle { display: none; } }
+
+/* ===== Lumi · avatar Daniel Carreon (bloque 1) =====
+   Cuarta apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'daniel'). El arte es el SVG de js/16-lumi-daniel.js (pixel art, 56×74 celdas en una rejilla 76×76).
+   Conserva sus colores en todos los temas (tiene contorno casi negro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--dn-rim).
+   Caja propia: 76 px (1 px por celda; 2 px físicos a 2×) en escritorio y móvil, y 38 px en sesión de enfoque. Sus poses (Bloque 2) irán en un bloque aparte. */
+.lumi .lumi-svg--daniel { display: none; }
+.lumi[data-avatar="daniel"] .lumi-svg--daniel { display: block; }
+.lumi[data-avatar="daniel"] .lumi-svg--bee { display: none; }
+.lumi { --dn-ink: #0a0a28; --dn-hd: #3a1e10; --dn-hl: #5c3820; --dn-sk: #f3c192; --dn-ss: #cd845c; --dn-gr: #1c8034; --dn-gd: #105220; --dn-bl: #3e7ed6; --dn-bd: #245494; --dn-gy: #bebec4; --dn-wh: #ffffff; --dn-rim: transparent; }
+.theme-contrast .lumi { --dn-rim: #fff; }
+.d-rim { fill: var(--dn-rim); } .d-ink { fill: var(--dn-ink); } .d-hd { fill: var(--dn-hd); } .d-hl { fill: var(--dn-hl); } .d-sk { fill: var(--dn-sk); } .d-ss { fill: var(--dn-ss); }
+.d-gr { fill: var(--dn-gr); } .d-gd { fill: var(--dn-gd); } .d-bl { fill: var(--dn-bl); } .d-bd { fill: var(--dn-bd); } .d-gy { fill: var(--dn-gy); } .d-wh { fill: var(--dn-wh); }
+.lumi[data-avatar="daniel"] { --lumi-size: 76px; }
+body.session-study .lumi[data-avatar="daniel"] { --lumi-size: 38px; }
+.lumi-svg--daniel { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--daniel, .lumi[data-pose="focus"] .lumi-svg--daniel * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="daniel"] { --lumi-size: 76px; }
+
+/* ===== Lumi · poses de Daniel Carreon (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 76; el sprite está desplazado (10, 1)); pivotes en transform-origin en esas unidades.
+   Un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend). Movimiento reducido (sistema y Learny), pestaña oculta (data-paused) y desactivación de Lumi
+   los cubren las reglas generales sobre .lumi *; en FOCUS la regla del bloque anterior anula toda animación.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un ladeo mínimo de cabeza. CELEBRATE y WELCOME suman al salto/saludo general (lumi-hop / lumi-wave).
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+.daniel-head { transform-origin: 38px 47px; }  /* cuello */
+.daniel-eyes { transform-origin: 38px 33px; }  /* centro de los ojos */
+.daniel-arm-l { transform-origin: 28px 53px; } /* hombro izquierdo (del dibujo) */
+.daniel-arm-r { transform-origin: 56px 51px; } /* hombro derecho */
+@keyframes daniel-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes daniel-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes daniel-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(3deg); } }
+@keyframes daniel-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes daniel-arm-l-up { 0%, 100% { transform: none; } 40% { transform: rotate(12deg); } }
+@keyframes daniel-arm-r-up { 0%, 100% { transform: none; } 40% { transform: rotate(-12deg); } }
+@keyframes daniel-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-26deg); } 55% { transform: rotate(-8deg); } 80% { transform: rotate(-20deg); } }
+.lumi[data-avatar="daniel"].is-entering .daniel-eyes { animation: daniel-blink .3s ease-in-out 1; }
+.lumi[data-avatar="daniel"].is-entering .daniel-head { animation: daniel-tilt .3s ease-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-arm-l { animation: daniel-arm-l-up .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-arm-r { animation: daniel-arm-r-up .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-eyes { animation: daniel-blink .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="welcome"] .daniel-arm-r { animation: daniel-wave .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="welcome"] .daniel-head { animation: daniel-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="support"] .lumi-svg--daniel { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="support"] .daniel-head { animation: daniel-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="progress"] .lumi-svg--daniel { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="progress"] .daniel-head { animation: daniel-nod .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="empty"] .daniel-head { animation: daniel-tilt-r .4s ease-in-out 1; }

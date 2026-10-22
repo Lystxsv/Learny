@@ -3,6 +3,8 @@
 Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la última versión aceptada y conserva todo lo anterior.
 
 ## Bloques completados
+- **Daniel Carreon · Bloque 2 «Animaciones»** (`learny-v46` → `learny-v47`): poses solo en CSS. Ver «Daniel Carreon · Bloque 2» al final.
+- **Daniel Carreon · Bloque 1 «Aspecto»** (`learny-v45` → `learny-v46`): cuarta apariencia de Lumi (`'daniel'`). Ver «Daniel Carreon · Bloque 1» al final. (Bloque 2 hecho.)
 - **Idioma · inglés por defecto + español** (`learny-v44` → `learny-v45`): ver «Idioma» al final.
 - **WALL·E en el precaché + proyecto unificado** (`learny-v43` → `learny-v44`): WALL·E se trata igual que Abeja y Eevee. Ver «WALL·E · como las demás apariencias» al final.
 - **Lumi · reacciona en cualquier sección** (`learny-v42` → `learny-v43`). Ver «Lumi · reacciones en todas las secciones» al final.
@@ -501,3 +503,32 @@ Decisión del usuario: WALL·E queda igual que Eevee y la abeja. Esto **sustituy
 - Cambio: botón `#lang-toggle` (EN/ES) en la barra superior (oculto ≤ 600 px) y selector «Idioma» en Ajustes → Apariencia (con vista previa; cancelar revierte). `applyAppearance` llama a `LearnyI18n.sync`.
 - Archivos: `js/18-idioma.js`, `js/01-base.js`, `js/02-datos.js`, `js/11-apariencia.js`, `js/13-ajustes.js`, `index.html`, `style.css`, `sw.js`, `README.md`.
 - NO probado en navegador (solo `node --check` y pruebas del motor de traducción en Node). Pendiente: revisar cada sección en inglés buscando textos que sigan en español y ampliar `EX`/`RULES`; fechas (`toLocaleDateString('es')`) solo se traducen los formatos «12 oct» y «el martes»; lector de pantalla; 320/360 px con el botón oculto.
+
+
+---
+## Daniel Carreon · Bloque 1 «Aspecto» (`learny-v45` → `learny-v46`)
+Cuarta apariencia de Lumi (`settings.mascotAvatar = 'daniel'`, nombre visible «Daniel Carreon»). Mismo patrón que Eevee y WALL·E: un solo controlador, el arte solo representa. La abeja sigue siendo la predeterminada.
+- **Autorización:** el responsable indica contar con el permiso del artista del pixel art para usar la imagen; por eso el arte va en el precaché (`CORE`). Para retirarlo: borrar `js/16-lumi-daniel.js`, su `<script>`, su línea en `CORE` y `'daniel'` de `MASCOT_AVATARS` (sin el archivo el selector no lo ofrece y un `daniel` guardado se muestra como abeja).
+- **Archivos:** `js/16-lumi-daniel.js` (nuevo: `DANIEL_MAP` 56×74 celdas en rejilla 76×76 y `lumiDanielSvg()`; sin ids, `crispEdges`, sin degradados), `js/01-base.js` (`MASCOT_AVATARS`), `js/16-lumi.js` (una entrada en `ART`), `index.html` (`<script>` antes de `16-lumi.js`), `style.css` (bloque «Lumi · avatar Daniel Carreon» al final), `sw.js` (`learny-v46` + arte en `CORE`). `13-ajustes.js` y `02-datos.js` no cambian: el selector y la validación leen `MASCOT_AVATARS`/`LumiCompanion.avatars()`.
+- **Arte:** rejilla de la imagen ≈ 15,7 px por celda (56×74). Muestreo del centro de cada celda y mapeo a 11 colores; el fondo blanco se separa de las zapatillas blancas por relleno desde el borde. Se limpió el ruido del JPEG (celdas azules/grises sueltas fuera de pantalón y zapatillas). Render comparado con la referencia: misma silueta, pelo en dos tonos, ojos, boca «ᴗ» y camiseta.
+- **Grupos listos para el Bloque 2:** `.daniel-head` (pelo y cara), `.daniel-eyes` (ojos, dentro de la cabeza), `.daniel-arm-l`, `.daniel-arm-r`, `.daniel-body` (torso, piernas, zapatillas) y `.daniel-rim` (contorno de 1 celda, solo en Alto contraste).
+- **Caja:** 76 px (1 px por celda) en escritorio y móvil; 38 px en enfoque; miniatura del selector 76 px. Es más alto que la abeja (80 px de rejilla 40).
+- **Poses:** hoy usa solo los gestos generales (`lumi-hop` al celebrar, `lumi-wave` en la bienvenida). Estático en FOCUS.
+- **Pruebas:** `node --check`; render del SVG en Chromium. NO probado en la app completa (selector con 4 opciones, vista previa, 320/390 px, seis temas, PWA v45 → v46).
+- **Siguiente:** Bloque 2 · animaciones de Daniel (cabeza, ojos/parpadeo en entrada, brazos) solo con CSS.
+
+
+---
+## Daniel Carreon · Bloque 2 «Animaciones» (`learny-v46` → `learny-v47`)
+Solo **representación**: `16-lumi.js` y el resto de la lógica no cambian (estados, textos, frecuencias, prioridades, cooldowns, eventos). Archivos tocados: `style.css` (bloque «Lumi · poses de Daniel Carreon» al final) y `sw.js` (`learny-v47`).
+- **Cómo funciona:** solo `transform` sobre `.daniel-head` (pivote en el cuello), `.daniel-eyes`, `.daniel-arm-l` y `.daniel-arm-r` (pivotes en los hombros); un ciclo de ≤ 400 ms que el controlador limpia con temporizador. Movimiento reducido, pestaña oculta y desactivación de Lumi los cubren las reglas generales; FOCUS anula toda animación.
+- **NEUTRAL:** pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un ladeo de cabeza de 4°.
+- **FOCUS:** estático.
+- **CELEBRATE:** salto general `lumi-hop` + ambos brazos suben 12° + parpadeo.
+- **WELCOME:** saludo general `lumi-wave` + el brazo derecho saluda (balanceo de hasta 26°) + ladeo de cabeza.
+- **SUPPORT:** inclinación `lumi-lean` + ladeo de cabeza de 4° (curiosidad, no tristeza).
+- **PROGRESS:** asentimiento `lumi-nod` + cabeza 1 celda abajo.
+- **EMPTY:** ladeo de cabeza de 3° hacia el otro lado.
+- **Pruebas (Chromium, app completa con `?demo`, 1000 y 390 px):** el selector ofrece 4 apariencias; cada estado usa las animaciones previstas en las partes previstas, con un ciclo de 400 ms; FOCUS con un gesto marcado: 0 animaciones; movimiento reducido del sistema: 0; sin errores de página; 76 px en escritorio y móvil sin desborde horizontal. Captura de CELEBRATE y WELCOME revisada a ojo.
+- **Pendiente:** seis temas a ojo, lector de pantalla, Alto contraste real, PWA v46 → v47 sobre instalación existente, móvil físico, vista previa y guardado del selector con Daniel de punta a punta.
+- **Límite conocido:** al moverse una parte pueden aparecer costuras mínimas (el dibujo está partido en grupos sin solapes); con ≤ 12° y 400 ms apenas se notan.
