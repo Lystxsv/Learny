@@ -1,7 +1,7 @@
-const CACHE = 'learny-v40';
+const CACHE = 'learny-v45';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
-  './', './index.html', './style.css', './extras.js', './manifest.json',
+  './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json',
   // Partes de la app (antes script.js); mantén esta lista igual que los <script> de index.html.
   './js/01-base.js',
   './js/02-datos.js',
@@ -19,9 +19,11 @@ const CORE = [
   './js/14-eventos.js',
   './js/15-inicio.js',
   './js/16-lumi-eevee.js',
-  './js/16-lumi.js'
+  './js/16-lumi-walle.js',
+  './js/16-lumi.js',
+  './js/17-movimiento.js',
+  './js/18-idioma.js'
 ];
-// js/16-lumi-walle.js NO está en CORE ni en OPTIONAL: personaje de terceros fuera del precaché hasta confirmar la autorización (ver CONTINUIDAD.md).
 const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;
 const ASSET_TIMEOUT = 10000;

@@ -40,10 +40,11 @@ function openSettings() {
     f.accent.disabled = plain; f.accentCustom.disabled = plain || f.accent.value !== 'custom';
     $('#accent-custom-wrap').hidden = f.accent.value !== 'custom'; $('#fs-out').textContent = `${f.fontSize.value} px`;
   };
-  const preview = () => { sync(); const d = { ...state.settings, ...read(), mascot: !!f.mascot?.checked, mascotAvatar: f.mascotAvatar?.value || state.settings.mascotAvatar }; sanitizeSettings(d, base); applyAppearance(d); };
+  const preview = () => { sync(); const d = { ...state.settings, ...read(), mascot: !!f.mascot?.checked, mascotAvatar: f.mascotAvatar?.value || state.settings.mascotAvatar, lang: f.lang?.value || state.settings.lang }; sanitizeSettings(d, base); applyAppearance(d); };
   modal(`<h2>Ajustes</h2>
       <details class="more-inline settings-group" open><summary>Apariencia</summary>
         <p class="hint">Los cambios se ven al instante y solo se guardan con «Guardar preferencias».</p>
+        ${sel('lang', 'Idioma', [['en', 'English'], ['es', 'Español']])}
         <p class="hint"><b>Estilos rápidos</b></p>
         <div class="actions" role="group" aria-label="Estilos rápidos"><button class="outline-button" type="button" data-qs="cuaderno">Cuaderno</button><button class="outline-button" type="button" data-qs="noche">Lectura nocturna</button><button class="outline-button" type="button" data-qs="papel">Papel</button><button class="outline-button" type="button" data-qs="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-qs="enfoque">Enfoque</button><button class="text-button" type="button" id="reset-look">Restablecer apariencia</button></div>
         ${sel('theme', 'Tema', [['auto', 'Automático (según tu sistema)'], ['dark', 'Oscuro'], ['oled', 'Negro (OLED)'], ['light', 'Claro'], ['sepia', 'Sepia'], ['contrast', 'Alto contraste'], ['chrome', 'Cromo']])}
@@ -105,7 +106,7 @@ function openSettings() {
     if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
     Object.assign(state.settings, {
       name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
-      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar'),
+      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar'), lang: data.get('lang'),
       focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
       roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
       model: clean(data.get('model'), 80) || DEFAULT_MODEL

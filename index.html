@@ -14,6 +14,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="motion.css">
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
@@ -134,6 +135,7 @@
       <div class="topbar-tools">
         <span id="save-status" class="save-status"></span>
         <button class="icon-button" data-page="guide" aria-label="Guía de uso">📖</button>
+        <button id="lang-toggle" class="icon-button lang-toggle" type="button" translate="no"></button>
         <button id="font-down" class="icon-button" aria-label="Reducir tamaño de texto">A−</button>
         <button id="font-up" class="icon-button" aria-label="Aumentar tamaño de texto">A+</button>
         <button id="settings-button" class="icon-button" aria-label="Ajustes">⚙️</button>
@@ -179,13 +181,6 @@
       <div class="page-heading">
         <h1 id="greeting">Tu día de estudio</h1>
         <p id="home-summary" class="lead"></p>
-        <!-- Lumi (compañero de estudio opcional). El SVG es decorativo; el mensaje es texto real. Se muestra solo si settings.mascot está activo. -->
-        <div class="lumi" id="lumi" data-avatar="bee" data-pose="neutral" data-anim="none" hidden>
-          <!-- El dibujo de Lumi (SVG decorativo: abeja pixelada o Eevee) lo inserta js/16-lumi.js al iniciar -->
-          <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span aria-hidden="true">×</span></button>
-        </div>
-        <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
-        <span id="lumi-live" class="sr-only" aria-live="polite"></span>
       </div>
 
       <article class="card today-queue" id="today-queue" aria-label="Qué hacer ahora"></article>
@@ -273,7 +268,7 @@
       <div class="grid study-grid">
         <article class="card">
           <div class="card-head">
-            <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span><span id="lumi-msg-card" class="lumi-msg-card" data-on="false" hidden></span></div>
+            <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
             <div class="actions tight">
               <button id="add-card" class="outline-button">+ Crear</button>
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
@@ -514,6 +509,15 @@
   <button class="nav-button" data-page="analysis"><span aria-hidden="true">📊</span><small>Reforzar</small></button>
 </nav>
 
+<!-- Lumi (compañero de estudio opcional): dock fijo, visible en todas las secciones. El SVG es decorativo; el mensaje es texto real. Solo se muestra si settings.mascot está activo. -->
+<div class="lumi-dock" id="lumi-dock">
+  <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
+  <div class="lumi" id="lumi" data-avatar="bee" data-pose="neutral" data-anim="none" hidden>
+    <!-- El dibujo de Lumi (SVG decorativo) lo inserta js/16-lumi.js al iniciar -->
+    <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span aria-hidden="true">×</span></button>
+  </div>
+  <span id="lumi-live" class="sr-only" aria-live="polite"></span>
+</div>
 <datalist id="subject-list"></datalist>
 <dialog id="app-modal" class="modal" aria-label="Ventana de Learny">
   <form id="modal-form" class="modal-content">
@@ -553,6 +557,8 @@
 <script src="js/16-lumi-eevee.js" defer></script>
 <script src="js/16-lumi-walle.js" defer></script>
 <script src="js/16-lumi.js" defer></script>
+<script src="js/17-movimiento.js" defer></script>
+<script src="js/18-idioma.js" defer></script>
 <script src="extras.js" defer></script>
 </body>
 </html>

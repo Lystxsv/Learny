@@ -1,0 +1,109 @@
+/* Learny · motion.css · Movimiento (Bloques 1 a 4: base, controles, flashcards, listas, vistas, modales, avisos, pulso del temporizador y barras) · base learny-v37 → learny-v38
+   Se carga DESPUÉS de style.css (mismo nivel de especificidad: gana el último) y no cambia paletas, fuentes, radios ni distribución.
+   Solo añade tokens de movimiento y refina hover / active / disabled / loading de los botones. Sin transition: all.
+   Con movimiento reducido (sistema o Learny) todos los tokens valen 0: lo nuevo es instantáneo por diseño.
+   Lumi (.lumi-hide y todo .lumi) queda fuera de este archivo. */
+
+/* ===== Tokens ===== */
+:root {
+  --dur-fast: 140ms;   /* feedback de controles; salida de toast (bloque 4) */
+  --dur-base: 220ms;   /* estándar: listas, revelar respuesta, entrada de toast */
+  --dur-reveal: 180ms; /* revelar la respuesta de una tarjeta */
+  --dur-view: 260ms;   /* cambio de vista (bloque 3) */
+  --dur-out: 150ms;    /* salidas */
+  --dur-done: 320ms;   /* fin de bloque (bloque 4) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);  /* entradas y respuesta */
+  --ease-move: ease-in-out;                    /* movimiento dentro de la pantalla */
+  --ease-in: ease-in;                          /* salidas */
+  --move-y: 6px;                               /* desplazamiento pequeño de entradas */
+  --press: .98;                                /* escala al pulsar */
+  --modal-scale: .98;                          /* escala inicial / final de un modal */
+}
+/* Movimiento reducido del sistema o de Learny (body.reduce-motion): sin duraciones, sin desplazamientos, sin escala */
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-reveal: 0ms; --dur-view: 0ms; --dur-out: 0ms; --dur-done: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; }
+}
+.reduce-motion { --dur-fast: 0ms; --dur-base: 0ms; --dur-reveal: 0ms; --dur-view: 0ms; --dur-out: 0ms; --dur-done: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; }
+
+/* ===== Botones: propiedades concretas (sustituye la lista corta de style.css) ===== */
+button:not(.lumi-hide) {
+  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+/* Active: respuesta breve solo en controles activos */
+button:not(.lumi-hide):active:not(:disabled) { transform: scale(var(--press)); }
+
+/* Disabled: sin hover ni presión (en style.css, .primary-button:hover ganaba en especificidad a button:disabled) */
+button:disabled:hover, button:disabled:active { filter: none; transform: none; }
+:is(.outline-button, .option-button, .topic-chip, .icon-button, .nav-button):disabled:hover { border-color: var(--border); }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip):disabled:hover { background: var(--surface2); }
+.theme-chrome .icon-button:disabled:hover { background: var(--surface); }
+
+/* Loading: botón ocupado (aria-busy="true"); no se cablea todavía en JS, queda listo para el bloque 2 y siguientes */
+button[aria-busy="true"] { cursor: progress; opacity: .7; }
+button[aria-busy="true"]:hover, button[aria-busy="true"]:active { filter: none; transform: none; }
+
+/* Foco: nada lo retrasa. style.css solo pinta outline (no se transiciona); se deja explícito para que no lo cambie otra regla. */
+:focus-visible { transition-property: none; }
+
+/* ===== Hover solo donde existe (en táctil no debe quedarse «pegado» tras tocar) ===== */
+@media (hover: none) {
+  button:hover:not(:disabled) { filter: none; }
+  :is(.outline-button, .topic-chip, .icon-button, .stuck-opt, .seg-btn:not([aria-pressed="true"]), .option-button:not(.easy)):hover { border-color: var(--border); }
+  .nav-button:not(.active):hover { color: var(--muted); background: transparent; border-color: transparent; }
+  /* Cromo: el hover de style.css cambia el fondo; se devuelve el fondo de reposo */
+  .theme-chrome :is(.outline-button, .option-button, .topic-chip):hover { background: var(--surface2); }
+  .theme-chrome .icon-button:hover { background: var(--surface); }
+  .theme-chrome :is(.primary-button, .ask-button):hover { background: var(--chrome-metal); }
+}
+
+/* ===== Bloque 2: flashcards y listas ===== */
+/* Las entradas, la revelación y la salida las hace js/17-movimiento.js (Web Animations API, solo cuando algo realmente cambia).
+   Aquí se neutralizan las animaciones CSS antiguas, que se repetían en cada renderAll() porque la tarjeta se reescribe con innerHTML:
+   card-in (cada reescritura) y fb-good / fb-soft (aro de color con box-shadow distinto según la nota; ahora el feedback es común). */
+.flashcard > div { animation: none; }
+.flashcard.fb-good, .flashcard.fb-soft { animation: none; }
+
+/* ===== Bloque 3: modales (<dialog>) ===== */
+/* open/close siguen siendo síncronos (showModal(), close(), Escape, foco, onClose, modalOpen()): la animación es solo visual y no retrasa nada.
+   Entrada: @starting-style (sin soporte, el modal aparece sin animar). Salida: transición de display/overlay con allow-discrete; el dialog sigue
+   dibujándose unos ms con [open] ya quitado, sin recibir clics. Sin soporte de overlay/allow-discrete, se cierra al instante (comportamiento anterior).
+   Con movimiento reducido todos los tiempos valen 0 y --modal-scale 1. */
+dialog.modal[open] { transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+@supports (overlay: auto) and (transition-behavior: allow-discrete) {
+  dialog.modal {
+    opacity: 0; transform: translateY(var(--move-y)) scale(var(--modal-scale)); pointer-events: none;
+    transition: opacity var(--dur-out) var(--ease-in), transform var(--dur-out) var(--ease-in),
+      overlay var(--dur-out) var(--ease-in) allow-discrete, display var(--dur-out) var(--ease-in) allow-discrete;
+  }
+  dialog.modal[open] { opacity: 1; transform: none; pointer-events: auto; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
+  dialog.modal:not([open])::backdrop { opacity: 0; pointer-events: none; } /* el velo desaparece al cerrar y no bloquea la página mientras el modal se desvanece */
+}
+/* @starting-style va DESPUÉS de las reglas [open]: con la misma especificidad gana la última y, si fuera antes, el estado inicial sería ya opacity:1 */
+@starting-style { dialog.modal[open] { opacity: 0; transform: translateY(var(--move-y)) scale(var(--modal-scale)); } }
+/* Móvil: el modal ya era una hoja inferior (sheet-up en style.css). Se refina con los mismos tokens; la animación CSS antigua se anula para no duplicarla. */
+@media (max-width: 820px) {
+  .modal { animation: none; }
+  @supports (overlay: auto) and (transition-behavior: allow-discrete) { dialog.modal { transform: translateY(24px); } dialog.modal[open] { transform: none; } }
+  @starting-style { dialog.modal[open] { transform: translateY(24px); } }
+}
+
+/* ===== Bloque 4: avisos (toast), pulso del temporizador y barras ===== */
+/* Toast: style.css tenía «transition: .25s» (= all) y .toast:not(.show) pasa a visibility:hidden de golpe, lo que cortaba cualquier salida.
+   Entrada --dur-base (--ease-out), salida --dur-fast (--ease-in), distancia pequeña (3 × --move-y; 0 con movimiento reducido).
+   visibility se transiciona con retraso solo al salir: sigue visible mientras se desvanece y pointer-events:none (style.css) evita clics.
+   El JS de toast()/offerUndo() no cambia: el plazo del «Deshacer» (8 s), la tecla Z y el texto aparecen exactamente igual. */
+.toast {
+  transform: translate(-50%, calc(var(--move-y) * 3));
+  transition: transform var(--dur-fast) var(--ease-in), opacity var(--dur-fast) var(--ease-in), visibility 0s linear var(--dur-fast);
+}
+.toast.show { transition: transform var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out), visibility 0s; }
+
+/* Pulso de fin de bloque: UN ciclo de --dur-done (320 ms) en vez de 2 × 0,8 s. #timer-clock es un <span> en línea, donde transform no se aplica
+   (el «scale» original nunca se veía); con inline-block (mismo flujo y mismo tamaño de texto) sí. */
+#timer-clock.pulse, .timer.pulse #timer-clock { display: inline-block; animation: done-pulse var(--dur-done) var(--ease-out) 1; }
+@keyframes done-pulse { 40% { color: var(--accent); transform: scale(1.03); } }
+
+/* Barras del gráfico de foco: crecen/encogen desde la base (js/17-movimiento.js anima solo las que cambian de valor) */
+.bar { transform-origin: 50% 100%; }

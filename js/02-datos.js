@@ -76,6 +76,7 @@ function sanitizeSettings(s, d) {
   s.accentCustom = typeof s.accentCustom === 'string' && /^#[0-9a-f]{6}$/i.test(s.accentCustom) ? s.accentCustom.toLowerCase() : d.accentCustom;
   s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose', 'custom'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
   s.mascotAvatar = pick(s.mascotAvatar, MASCOT_AVATARS, 'bee'); // ausente, inválido o antiguo («firefly») → abeja; Eevee solo si el usuario lo elige
+  s.lang = pick(s.lang, ['en', 'es'], 'en'); // idioma de la interfaz: inglés por defecto
   s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
   s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
   ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed', 'mascot'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });

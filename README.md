@@ -2,15 +2,15 @@
 
 App web de estudio: Pomodoro con descanso, flashcards con repaso espaciado (SM-2), método Feynman,
 ruleta de temas, planificador inverso, estadísticas, un tutor socrático opcional con IA y **Lumi**,
-un compañero de estudio opcional (una abeja pixelada). Todo se guarda en el navegador de cada persona;
+un compañero de estudio opcional (abeja pixelada, Eevee o WALL·E). Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v37` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v45` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `extras.js` y la carpeta `js/` (16 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (hoy 17 archivos más el arte de Lumi: Eevee y WALL·E) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `sw.js`, `manifest.json`, `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Modo sin conexión e instalación como app (PWA) con sus iconos. |
 | `proxy-worker.example.js` | Ejemplo de proxy (Cloudflare Worker) para usar IA sin exponer tu clave. |
 | `CONTINUIDAD.md` | Cuaderno de trabajo de Lumi: qué se hizo en cada bloque, decisiones, reglas de frecuencia, pruebas y pendientes. Léelo antes de tocar `js/16-lumi.js`. |
@@ -35,7 +35,9 @@ El antiguo `script.js` está dividido en 16 archivos dentro de `js/`, en el mism
 | `js/13-ajustes.js` | Ajustes: Estilos rápidos, ambientes, ventana de Ajustes (con la casilla de Lumi), recordatorios y contexto del tutor. |
 | `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny`. |
 | `js/15-inicio.js` | Inicio: Bienvenida, portada, banner de la demo y arranque. |
+| `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas, cambio de vista y barras con la Web Animations API. Todo vale 0 con movimiento reducido. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (SVG generado por `lumiBeeSvg()`), controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
+| `js/18-idioma.js` | Idioma: inglés por defecto y español opcional (`settings.lang`). Diccionario es→en + reglas, traducción del DOM con `MutationObserver`, guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido. Botón EN/ES en la barra superior y selector en Ajustes → Apariencia. |
 
 Reglas para tocarlos:
 - **El orden de los `<script>` en `index.html` importa.** Lo que se ejecuta al cargar solo puede usar nombres definidos en archivos anteriores; lo demás (manejadores, funciones) se resuelve cuando se usa.
@@ -52,8 +54,8 @@ Lumi es una abeja pixelada que acompaña en momentos concretos; es **opcional** 
 - **Estados y mensajes** (texto real, el dibujo es `aria-hidden`):
   - *Neutral*: «¿Empezamos con algo corto?», una vez por visita.
   - *Enfoque*: con el Pomodoro en marcha, sin mensajes ni animación.
-  - *Celebrar*: «Bloque completado.» al cerrar la valoración de un bloque (Inicio).
-  - *Apoyo*: «Esta vuelve pronto. Sin prisa.» tras «No lo sabía» (Práctica).
+  - *Celebrar*: «Bloque completado.» al cerrar la valoración de un bloque (en cualquier sección).
+  - *Apoyo*: «Esta vuelve pronto. Sin prisa.» tras «No lo sabía» (en cualquier sección).
   - *Progreso*: si en la misma tarjeta pasaste de «No lo sabía» a «Fácil» (Práctica).
   - *Bienvenida*: tras 3 o más días sin actividad (sesiones o repasos, mismo criterio que el saludo).
   - *Vacío*: «Crea tu primera tarjeta para empezar.» al entrar en Práctica sin tarjetas.
@@ -62,7 +64,7 @@ Lumi es una abeja pixelada que acompaña en momentos concretos; es **opcional** 
 - **Accesibilidad:** las reacciones no se anuncian aparte (ya las cubren los avisos existentes); sin `alert` y sin mover el foco. Temas: oscuro, negro, claro, sepia, alto contraste y Cromo (con contorno propio para separar la abeja del fondo).
 - **Datos:** solo existe `settings.mascot`. `sanitizeSettings` descarta la antigua clave `mascotAvatar`, así que guardados, copias e importaciones anteriores cargan sin error.
 - **Eventos que usa** (ninguno nuevo para la app): `learny:timer`, `learny:pomodone`, `learny:rated`, `learny:examstart`, `learny:examend`, `learny:page`, `learny:render`.
-- En `index.html` hay tres piezas suyas: `#lumi` y `#lumi-msg` en Inicio, `#lumi-live` (región `aria-live` solo para lo que ningún aviso anuncia) y `#lumi-msg-card` junto a `#card-count` en Práctica.
+- En `index.html` hay tres piezas suyas: `#lumi`, `#lumi-msg` y `#lumi-live` (región `aria-live` solo para lo que ningún aviso anuncia) dentro de `#lumi-dock`, un dock fijo visible en todas las secciones. `#lumi-msg-card` ya no existe.
 
 ## Probarla en tu computador
 Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa servida por `https://` o `localhost`.) Con `index.html?demo` ves Learny con datos de ejemplo, todo en memoria.
@@ -71,7 +73,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v37`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v45`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.

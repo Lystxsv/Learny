@@ -163,10 +163,10 @@ const LumiCompanion = (() => {
   const scheduleProactive = (ms = C.proactiveDelayMs) => { clearTimeout(proactiveTimer); proactiveTimer = setTimeout(maybeProactive, ms); };
 
   /* ---- Reacciones (bloque 2). Una sola en espera como máximo: sin cola, caduca a los pendingTtlMs. ---- */
-  // true = resuelta (mostrada o descartada); false = se conserva en espera (ventana abierta, otra página, pestaña oculta)
+  // true = resuelta (mostrada o descartada); false = se conserva en espera (ventana abierta, pestaña oculta)
   function tryShow(r) {
     if (!enabled || focusActive() || examOn()) return true;
-    if (blocked() || document.hidden || currentPage !== PAGE_OF[r.slot]) return false;
+    if (blocked() || document.hidden) return false; // las reacciones salen en cualquier sección (Lumi vive en el dock global)
     if (!say(r.text, { prio: LUMI_PRIO.reaction, slot: r.slot })) return false;
     visitUsed = true; // una reacción cuenta como la intervención de la visita: el mensaje proactivo no llega justo detrás
     if (r.kind === 'support') lastSupportAt = Date.now(); else if (r.kind === 'progress') lastProgressAt = Date.now();
@@ -210,7 +210,7 @@ const LumiCompanion = (() => {
   function onExamStart() { clearMessage(); dropPending(); }
 
   /* ---- Eventos (solo se escuchan mientras Lumi está activa) ---- */
-  const onPage = () => { syncPose(); if (curSlot && PAGE_OF[curSlot] !== currentPage) clearMessage(); flushPending(); if (!visitUsed) scheduleProactive(400); };
+  const onPage = () => { syncPose(); if (curSlot && curPrio < LUMI_PRIO.reaction && PAGE_OF[curSlot] !== currentPage) clearMessage(); flushPending(); if (!visitUsed) scheduleProactive(400); };
   const onReset = () => { clearMessage(); syncPose(); };
   const onDialogClose = () => { flushPending(); if (!visitUsed) scheduleProactive(400); };
   function onVisibility() {
@@ -267,7 +267,7 @@ const LumiCompanion = (() => {
   }
 
   function init() {
-    root = byId('lumi'); msgEl = byId('lumi-msg'); liveEl = byId('lumi-live'); cardMsgEl = byId('lumi-msg-card');
+    root = byId('lumi'); msgEl = byId('lumi-msg'); liveEl = byId('lumi-live'); cardMsgEl = byId('lumi-msg-card') || msgEl; // el slot de Práctica ya no existe: todos los mensajes salen en el dock (visible en todas las secciones)
     if (!root || !msgEl) return;
     setAvatar(state.settings.mascotAvatar); // inserta el dibujo elegido (sin archivos externos)
     root.querySelector('.lumi-hide')?.addEventListener('click', hide);

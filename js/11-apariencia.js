@@ -48,7 +48,8 @@ function applyAppearance(s = state.settings) {
     const label = [...btn.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
     if (s.sidebar === 'icons' && label) btn.title = label; else btn.removeAttribute('title');
   });
-  try { window.LumiCompanion?.sync(s); } catch (e) { console.error('Learny · Lumi', e); } // la mascota sigue la preferencia (también en la vista previa de Ajustes)
+  try { window.LumiCompanion?.sync(s); } catch (e) { console.error('Learny · Lumi', e); }
+  try { window.LearnyI18n?.sync(s); } catch (e) { console.error('Learny · idioma', e); } // idioma de la interfaz (también en la vista previa de Ajustes) // la mascota sigue la preferencia (también en la vista previa de Ajustes)
 }
 try { // el tema Automático sigue al sistema
   const mq = window.matchMedia('(prefers-color-scheme: dark)'), onScheme = () => { if (liveSettings?.theme === 'auto') applyAppearance(liveSettings); };
