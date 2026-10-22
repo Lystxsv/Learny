@@ -6,7 +6,7 @@
    Bloque 2: reacciones mínimas CELEBRATE y SUPPORT (segundo slot de texto en Práctica).
    Bloque 3: PROGRESS, WELCOME, EMPTY y prioridades completas entre estados.
    Avatar (bloque 2): la abeja se redibuja fiel a la referencia (rejilla 40×40, mapa BEE_MAP) y gana poses solo en CSS; esta lógica no cambió.
-   Apariencias (bloque 1 de Eevee): 'bee' (predeterminada, abajo) y 'eevee' (arte en 16-lumi-eevee.js). La luciérnaga no existe. Un solo controlador: elegir apariencia solo cambia data-avatar en #lumi.
+   Apariencias: 'bee' (predeterminada, abajo), 'eevee' (arte en 16-lumi-eevee.js) y 'walle' (arte en 16-lumi-walle.js). La luciérnaga no existe. Un solo controlador: elegir apariencia solo cambia data-avatar en #lumi.
    Antes: la abeja pixelada era la única apariencia. Los estados (data-pose / data-anim / data-react) viven en #lumi;
    no hay listeners, cooldowns ni mensajes propios del dibujo. */
 'use strict';
@@ -95,7 +95,7 @@ const LumiCompanion = (() => {
   let curPrio = 0, curSlot = '', pending = null, lastSupportAt = 0, lastSupportRv = null, lastProgressAt = 0, lastProgressRv = null;
   const celebrated = new Set(); // ids de sesión ya celebradas (en memoria: pomodone no se repite al recargar ni llega de otra pestaña)
   const PAGE_OF = { study: 'study', practice: 'practice' };
-  const ART = { bee: ['Abeja pixelada', () => lumiBeeSvg()], eevee: ['Eevee', typeof lumiEeveeSvg === 'function' ? () => lumiEeveeSvg() : null] }; // apariencias disponibles (id → [nombre, dibujo]); sin el archivo del arte, solo la abeja
+  const ART = { bee: ['Abeja pixelada', () => lumiBeeSvg()], eevee: ['Eevee', typeof lumiEeveeSvg === 'function' ? () => lumiEeveeSvg() : null], walle: ['WALL·E', typeof lumiWalleSvg === 'function' ? () => lumiWalleSvg() : null] }; // apariencias disponibles (id → [nombre, dibujo]); sin el archivo del arte, solo la abeja
   let avatar = 'bee';
   const GESTURE = { celebrate: true, welcome: true, support: true, progress: true, empty: true }; // gestos de la abeja; support/progress/empty solo se ven si el personaje está visible en la página donde ocurren
 
