@@ -846,7 +846,7 @@ body.session-study .lumi { --lumi-size: 40px; }
 /* ===== Lumi · avatar Eevee (bloque 1) =====
    Segunda apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'bee' | 'eevee'; la abeja es la predeterminada). El arte es el SVG de js/16-lumi-eevee.js (pixel art propio, trazado de la imagen de referencia).
    Eevee conserva sus colores en todos los temas (la referencia es pixel art con contornos oscuros); solo en Alto contraste se añade un contorno blanco de 1 celda (--ev-rim) para que la silueta no se pierda sobre negro.
-   Tiene caja propia (rejilla 56×56): 84 px en escritorio, 56 px en móvil (≤ 820 px) y 42 px en sesión de enfoque, múltiplos de la rejilla para que las celdas salgan nítidas. Las poses (orejas, cola) llegan en el bloque 2. */
+   Tiene caja propia (rejilla 56×56): 84 px en escritorio, 56 px en móvil (≤ 820 px) y 42 px en sesión de enfoque, múltiplos de la rejilla para que las celdas salgan nítidas. Sus poses (orejas, cola) están en el bloque «Lumi · poses de Eevee y WALL·E». */
 .lumi .lumi-svg--eevee { display: none; }
 .lumi[data-avatar="eevee"] .lumi-svg--eevee { display: block; }
 .lumi[data-avatar="eevee"] .lumi-svg--bee { display: none; }
@@ -877,3 +877,63 @@ body .lumi.lumi-thumb { display: block; pointer-events: none; }
 body .lumi.lumi-thumb[data-avatar="bee"] { --lumi-size: 60px; }
 body .lumi.lumi-thumb[data-avatar="eevee"] { --lumi-size: 56px; }
 .lumi-thumb, .lumi-thumb * { animation: none !important; transition: none !important; }
+
+/* ===== Lumi · avatar WALL·E =====
+   Tercera apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'walle'). El arte es el SVG de js/16-lumi-walle.js (pixel art propio, trazado de la imagen de referencia; 36×36 celdas en una rejilla 40×40).
+   Conserva sus colores en todos los temas; solo en Alto contraste se añade un contorno blanco de 1 celda (--wl-rim). Usa la misma caja que la abeja (80 / 60 / 40 px): múltiplos de 40, celdas nítidas.
+   Sus poses (cabeza, brazos) están en el bloque «Lumi · poses de Eevee y WALL·E». */
+.lumi .lumi-svg--walle { display: none; }
+.lumi[data-avatar="walle"] .lumi-svg--walle { display: block; }
+.lumi[data-avatar="walle"] .lumi-svg--bee { display: none; }
+.lumi { --wl-ink: #2e2827; --wl-dark: #4b4540; --wl-mid: #71685e; --wl-light: #c8c5c2; --wl-tan: #a99782; --wl-gold: #d7bc83; --wl-line: #725836; --wl-white: #fff; --wl-rim: transparent; }
+.theme-contrast .lumi { --wl-rim: #fff; }
+.w-rim { fill: var(--wl-rim); } .w-ink { fill: var(--wl-ink); } .w-dark { fill: var(--wl-dark); } .w-mid { fill: var(--wl-mid); } .w-light { fill: var(--wl-light); }
+.w-tan { fill: var(--wl-tan); } .w-gold { fill: var(--wl-gold); } .w-line { fill: var(--wl-line); } .w-white { fill: var(--wl-white); }
+.lumi[data-pose="focus"] .lumi-svg--walle, .lumi[data-pose="focus"] .lumi-svg--walle * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="walle"] { --lumi-size: 60px; }
+
+/* ===== Lumi · poses de Eevee y WALL·E (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda; pivotes en el arranque de cada parte), un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend).
+   Las reglas generales ya cubren movimiento reducido (sistema y Learny), la pestaña oculta (data-paused) y la desactivación de Lumi; en FOCUS las reglas de cada avatar anulan toda animación.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; solo un gesto breve al aparecer. CELEBRATE y WELCOME suman al salto/saludo general (lumi-hop / lumi-wave).
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+@keyframes lumi-lean { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes lumi-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
+.lumi-svg--eevee, .lumi-svg--walle { transform-origin: 50% 85%; }
+
+/* Eevee: orejas y cola */
+.eevee-ear-l { transform-origin: 13px 16px; } .eevee-ear-r { transform-origin: 29px 17px; } .eevee-tail { transform-origin: 34px 32px; }
+@keyframes eevee-flick-l { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(2deg); } }
+@keyframes eevee-flick-r { 0%, 100% { transform: none; } 35% { transform: rotate(6deg); } 70% { transform: rotate(-2deg); } }
+@keyframes eevee-wag { 0%, 100% { transform: none; } 30% { transform: rotate(7deg); } 65% { transform: rotate(-5deg); } }
+@keyframes eevee-sway { 0%, 100% { transform: none; } 50% { transform: rotate(4deg); } }
+.lumi[data-avatar="eevee"].is-entering .eevee-ear-l { animation: eevee-flick-l .3s ease-out 1; }
+.lumi[data-avatar="eevee"].is-entering .eevee-ear-r { animation: eevee-flick-r .3s ease-out 1; }
+.lumi[data-avatar="eevee"].is-entering .eevee-tail { animation: eevee-wag .3s ease-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-ear-l { animation: eevee-flick-l .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-tail { animation: eevee-wag .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="welcome"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="welcome"] .eevee-tail { animation: eevee-sway .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="support"] .lumi-svg--eevee { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="progress"] .lumi-svg--eevee { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="progress"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="empty"] .eevee-tail { animation: eevee-sway .4s ease-in-out 1; }
+
+/* WALL·E: cabeza y brazos */
+.walle-head { transform-origin: 20px 17px; } .walle-arm-l { transform-origin: 14px 19px; } .walle-arm-r { transform-origin: 30px 21px; }
+@keyframes walle-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
+@keyframes walle-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(4deg); } }
+@keyframes walle-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes walle-arm-l-up { 0%, 100% { transform: none; } 40% { transform: rotate(7deg); } }
+@keyframes walle-arm-r-up { 0%, 100% { transform: none; } 40% { transform: rotate(-7deg); } }
+@keyframes walle-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-12deg); } 55% { transform: rotate(4deg); } 80% { transform: rotate(-6deg); } }
+.lumi[data-avatar="walle"].is-entering .walle-head { animation: walle-tilt .3s ease-out 1; }
+.lumi[data-avatar="walle"][data-react="celebrate"] .walle-arm-l { animation: walle-arm-l-up .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="celebrate"] .walle-arm-r { animation: walle-arm-r-up .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="welcome"] .walle-arm-r { animation: walle-wave .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="welcome"] .walle-head { animation: walle-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="support"] .walle-head { animation: walle-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="progress"] .walle-head { animation: walle-nod .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="empty"] .walle-head { animation: walle-tilt-r .4s ease-in-out 1; }
