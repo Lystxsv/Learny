@@ -6,7 +6,8 @@
    Bloque 2: reacciones mínimas CELEBRATE y SUPPORT (segundo slot de texto en Práctica).
    Bloque 3: PROGRESS, WELCOME, EMPTY y prioridades completas entre estados.
    Avatar (bloque 2): la abeja se redibuja fiel a la referencia (rejilla 40×40, mapa BEE_MAP) y gana poses solo en CSS; esta lógica no cambió.
-   Apariencia única: la abeja pixelada (se eliminó la luciérnaga y el selector de apariencia). Los estados (data-pose / data-anim / data-react) viven en #lumi;
+   Apariencias (bloque 1 de Eevee): 'bee' (predeterminada, abajo) y 'eevee' (arte en 16-lumi-eevee.js). La luciérnaga no existe. Un solo controlador: elegir apariencia solo cambia data-avatar en #lumi.
+   Antes: la abeja pixelada era la única apariencia. Los estados (data-pose / data-anim / data-react) viven en #lumi;
    no hay listeners, cooldowns ni mensajes propios del dibujo. */
 'use strict';
 
@@ -94,6 +95,8 @@ const LumiCompanion = (() => {
   let curPrio = 0, curSlot = '', pending = null, lastSupportAt = 0, lastSupportRv = null, lastProgressAt = 0, lastProgressRv = null;
   const celebrated = new Set(); // ids de sesión ya celebradas (en memoria: pomodone no se repite al recargar ni llega de otra pestaña)
   const PAGE_OF = { study: 'study', practice: 'practice' };
+  const ART = { bee: ['Abeja pixelada', () => lumiBeeSvg()], eevee: ['Eevee', typeof lumiEeveeSvg === 'function' ? () => lumiEeveeSvg() : null] }; // apariencias disponibles (id → [nombre, dibujo]); sin el archivo del arte, solo la abeja
+  let avatar = 'bee';
   const GESTURE = { celebrate: true, welcome: true, support: true, progress: true, empty: true }; // gestos de la abeja; support/progress/empty solo se ven si el personaje está visible en la página donde ocurren
 
   const reduced = () => !!(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || document.body.classList.contains('reduce-motion'));
@@ -244,7 +247,18 @@ const LumiCompanion = (() => {
       root.dataset.pose = 'neutral'; root.dataset.anim = 'none';
     }
   }
-  const sync = (s) => setEnabled(!!s && s.mascot === true);
+  /* Apariencia: solo cambia qué dibujo se ve. No toca pose, mensaje, temporizadores, cooldowns ni foco; solo cancela con seguridad un gesto en curso (era del dibujo anterior). */
+  function setAvatar(id) {
+    if (!root) return;
+    const next = ART[id]?.[1] ? id : 'bee'; // valor desconocido o arte ausente → abeja
+    if (!root.querySelector(`.lumi-svg--${next}`)) root.insertAdjacentHTML('afterbegin', ART[next][1]());
+    if (next === avatar && root.dataset.avatar === next) return;
+    clearTimeout(reactTimer); root.removeAttribute('data-react');
+    avatar = next; root.dataset.avatar = next;
+  }
+  const avatars = () => Object.entries(ART).filter(([, a]) => a[1]).map(([id, a]) => [id, a[0]]);
+  const thumb = (id) => (ART[id]?.[1] ? `<span class="lumi lumi-thumb" data-avatar="${id}" aria-hidden="true">${ART[id][1]()}</span>` : ''); // miniatura decorativa para Ajustes: sin estados, sin animaciones y sin id
+  const sync = (s) => { setAvatar(s && s.mascotAvatar); setEnabled(!!s && s.mascot === true); };
 
   function hide() { // el botón de Lumi: oculta y ofrece deshacer (mismo patrón que el resto de la app)
     state.settings.mascot = false; save(); applyAppearance();
@@ -255,11 +269,11 @@ const LumiCompanion = (() => {
   function init() {
     root = byId('lumi'); msgEl = byId('lumi-msg'); liveEl = byId('lumi-live'); cardMsgEl = byId('lumi-msg-card');
     if (!root || !msgEl) return;
-    if (!root.querySelector('.lumi-svg--bee')) root.insertAdjacentHTML('afterbegin', lumiBeeSvg()); // la abeja se genera aquí (sin archivos externos)
+    setAvatar(state.settings.mascotAvatar); // inserta el dibujo elegido (sin archivos externos)
     root.querySelector('.lumi-hide')?.addEventListener('click', hide);
     sync(state.settings);
   }
-  return Object.freeze({ init, sync });
+  return Object.freeze({ init, sync, avatars, thumb });
 })();
 window.LumiCompanion = LumiCompanion;
 LumiCompanion.init();

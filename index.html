@@ -180,8 +180,8 @@
         <h1 id="greeting">Tu día de estudio</h1>
         <p id="home-summary" class="lead"></p>
         <!-- Lumi (compañero de estudio opcional). El SVG es decorativo; el mensaje es texto real. Se muestra solo si settings.mascot está activo. -->
-        <div class="lumi" id="lumi" data-pose="neutral" data-anim="none" hidden>
-          <!-- La abeja pixelada (SVG decorativo) la inserta js/16-lumi.js al iniciar -->
+        <div class="lumi" id="lumi" data-avatar="bee" data-pose="neutral" data-anim="none" hidden>
+          <!-- El dibujo de Lumi (SVG decorativo: abeja pixelada o Eevee) lo inserta js/16-lumi.js al iniciar -->
           <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span aria-hidden="true">×</span></button>
         </div>
         <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
@@ -550,6 +550,7 @@
 <script src="js/13-ajustes.js" defer></script>
 <script src="js/14-eventos.js" defer></script>
 <script src="js/15-inicio.js" defer></script>
+<script src="js/16-lumi-eevee.js" defer></script>
 <script src="js/16-lumi.js" defer></script>
 <script src="extras.js" defer></script>
 </body>

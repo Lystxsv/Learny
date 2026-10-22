@@ -8,6 +8,7 @@ Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la últ
 - **Bloque 3 · Contexto y progreso** (Etapa B; `learny-v31` → `learny-v32`).
 - **Etapa C (pulido)**: `sw.js` quedó en `learny-v33` (base recibida para el trabajo del avatar).
 - **Tema Cromo** (`cromo-tema.patch`; `learny-v33` → `learny-v34`): aplicado y verificado, ver «Tema Cromo» abajo.
+- **Eevee · Bloque 1 «Segunda apariencia + selector»** (`learny-v37` → `learny-v38`): arte de Eevee, `settings.mascotAvatar` ('bee' | 'eevee'), selector en Ajustes y caja propia. Ver «Eevee · Bloque 1» al final. Bloques 2 (estados) y 3 (pruebas y pulido) pendientes.
 - **Avatar · Retirada de la luciérnaga + gestos activados** (`learny-v36` → `learny-v37`): Lumi queda SOLO con la «Abeja pixelada». Ver sección «Retirada de la luciérnaga (v37)» abajo.
 - **Avatar · Bloque 2 «Abeja fiel a la referencia + poses»** (`learny-v35` → `learny-v36`): sprite 40×40 redibujado desde la referencia y poses en CSS, ver «Avatar · Bloque 2» al final.
 - **Avatar · Bloque 1 «Abeja pixelada»** (`learny-v34` → `learny-v35`): avatar y selector, ver «Avatar alternativo» abajo. Superado por el Bloque 2 (abajo).
@@ -95,7 +96,7 @@ Gestos con movimiento reducido del sistema y de Learny (hoy solo garantizado por
 - Un usuario con 0 tarjetas pero con sesiones recibe EMPTY en Práctica y neutro en Inicio (visitas independientes por página).
 
 ## Próximo bloque
-**Bloque 4 · Pruebas y pulido (Etapa C)**: móvil (320 y 390 px) en dispositivo, teclado, lector de pantalla, alto contraste del sistema, pausar/reanudar, recarga con enfoque en marcha, varias pestañas, actualización PWA real (v35 → v36), importación de copias con/sin `mascot`, regresiones en Hoy, Práctica y Ajustes. El Bloque 2 del avatar está hecho.
+**Eevee · Bloque 2 — estados e integración**: poses de Eevee (orejas, cola, inclinación) con los ganchos `.eevee-ear-l`, `.eevee-ear-r`, `.eevee-tail`, `.eevee-body`, solo CSS y sin cambiar la lógica del controlador; movimiento reducido y cambio de apariencia ya cubiertos por las reglas generales. Después, **Bloque 3** (pruebas y pulido, p. ej. móvil real, PWA real, lector de pantalla). Sigue pendiente también el refinado de animación de la abeja descrito en la sección v37.
 
 
 ## Tema Cromo (parche `cromo-tema.patch`, base `learny-v33` → `learny-v34`)
@@ -193,3 +194,54 @@ Decisión del usuario: Lumi ya no tiene luciérnaga ni selector de apariencia. L
 - **Revisión estática**: `node --check` en todos los JS; grep sin restos de `firefly`, `data-avatar`, `lumi-thumb`, `lumi-avatar`, `MASCOT_AVATARS`; llaves de CSS balanceadas.
 - **Pendiente en navegador/dispositivo**: ver los gestos nuevos con Lumi visible en móvil real, los seis temas (incl. Cromo) a ojo, reduce-motion del sistema, y la actualización del Service Worker (v36 → v37) en una instalación existente.
 - **Próximo paso**: si se aprueba, bloques de refinado de animación (1: estructura/neutral/focus/reduce-motion/cancelación; 2: reacciones y transiciones; 3: pruebas y pulido).
+
+
+## Eevee · Bloque 1 (`learny-v37` → `learny-v38`)
+Segunda apariencia de Lumi, elegible en Ajustes. **Un solo controlador** (`LumiCompanion`): elegir apariencia solo cambia `data-avatar` en `#lumi`; estados, mensajes, prioridades, cooldowns, deduplicación, silencio en enfoque y examen, y demo no cambiaron. La luciérnaga no existe y no vuelve. La abeja sigue siendo la predeterminada y no cambió de diseño ni de animaciones.
+
+### Alcance de uso
+Eevee es un personaje de terceros. El proyecto declara (según indicó el responsable) **contar con autorización**, por eso su arte va en el precaché público. No se descargó ningún recurso oficial, no hay logos ni se sugiere una colaboración oficial. El dibujo se trazó en pixel art a partir de la imagen de referencia aportada. Si la autorización cambiara, basta con quitar `js/16-lumi-eevee.js`, su `<script>` en `index.html` y su línea en `CORE` de `sw.js`: sin ese archivo el selector solo ofrece la abeja y un `mascotAvatar: 'eevee'` guardado se muestra como abeja.
+
+### Archivos
+- `js/16-lumi-eevee.js` (nuevo): `EEVEE_MAP` (47×49 celdas en una rejilla 56×56) y `lumiEeveeSvg()`. Carga ANTES de `16-lumi.js` (su `init()` se ejecuta al final y necesita encontrar la función). Sin ids, `crispEdges`, sin degradados, sin recursos externos. Grupos: `.eevee-rim`, `.eevee-body` (cabeza, collar, cuerpo y patas), `.eevee-ear-l`, `.eevee-ear-r`, `.eevee-tail`.
+- `js/01-base.js`: `MASCOT_AVATARS = ['bee', 'eevee']`; `mascotAvatar: 'bee'` por defecto.
+- `js/02-datos.js`: `sanitizeSettings` valida `mascotAvatar` (ausente, inválido, tipo erróneo o «firefly» → `bee`). Cubre cargar, importar, guardar Ajustes y la vista previa.
+- `js/13-ajustes.js`: grupo de radios «Apariencia de Lumi» bajo la casilla de Lumi (Ajustes → Disposición); la vista previa y el guardado incluyen `mascotAvatar`.
+- `js/16-lumi.js`: `setAvatar` (inserta el dibujo elegido de forma perezosa, cancela con seguridad un gesto en curso y no toca mensajes, temporizadores ni foco), `avatars()` y `thumb()` (miniatura decorativa). `sync` aplica la apariencia y después la activación.
+- `index.html`: `data-avatar="bee"` en `#lumi` y el `<script>` del arte. `style.css`: bloque «Lumi · avatar Eevee» y estilos del selector. `sw.js`: `learny-v38` y el arte en `CORE`.
+
+### Preferencia
+`settings.mascot` sigue siendo la activación; `settings.mascotAvatar` solo decide el dibujo. Elegir apariencia no activa Lumi si estaba desactivada. No cambian claves de almacenamiento ni se borran preferencias. Eevee solo se selecciona por acción explícita; los usuarios actuales conservan la abeja.
+
+### Arte y fidelidad
+La imagen tiene celdas de 9,19 px (rejilla regular, ≈47×49). Se muestreó celda a celda con 10 colores y se compararon ambas a la misma escala. Es una **aproximación**: la fuente es un JPEG con ruido y mezclas en los bordes, así que algunos tonos intermedios (sobre todo en la cara y el collar) son interpretaciones y el brillo de la cabeza es algo menos suave que en la imagen. Conserva el estilo pixel art de la referencia, los contornos selectivos y la paleta. En temas oscuros los contornos casi negros se funden con el fondo (como en la referencia); solo en **Alto contraste** se añade un contorno blanco de 1 celda.
+
+### Caja propia
+Eevee usa 84 px en escritorio, 56 px en móvil (≤ 820 px) y 42 px en sesión de enfoque (la abeja: 80/60/40). Son múltiplos de su rejilla de 56 para que las celdas salgan nítidas. Al alternar, la cabecera de Inicio mantiene el mismo alto (141 px escritorio, 149 px móvil) y la posición de Lumi cambia como mucho 4 px. Las miniaturas del selector miden 60 px (abeja) y 56 px (Eevee).
+
+### Selector
+Radios nativos con tarjeta (teclado: flechas). La opción elegida se distingue por borde de 2 px, «✓» y negrita, no solo por color. Cada opción tiene nombre accesible («Abeja pixelada», «Eevee»); las miniaturas son `aria-hidden`, sin estados ni animaciones y sin ids.
+
+### Pruebas ejecutadas (Chromium headless, Playwright; sitio local con `extras.js` y `manifest.json` de relleno)
+18 de 18 correctas, sin errores de página ni de consola:
+1. Usuario actual sin el campo → abeja (solo su SVG en el DOM).
+2. Valores `firefly`, `dragon`, `Eevee`, `5`, `null`, `{}`, `[]`, `__proto__` y vacío → abeja; `eevee` se conserva.
+3. Importar copias sin campo, con `firefly`, inválida y con `eevee` (flujo real `importData`).
+4. Selector: 2 opciones con nombre accesible, flechas del teclado, marca visible no solo por color, miniaturas sin animación ni ids, sin ids duplicados.
+5. Vista previa, cancelar (Esc y ×), guardar y recargar.
+6. Con Lumi desactivada: se elige y guarda sin activarla.
+7. Cambio de apariencia con mensaje visible (no alarga su tiempo), durante un gesto, desactivando Lumi, durante FOCUS y con el cooldown de SUPPORT (90 s) intacto.
+8. Examen: sin mensajes ni celebración.
+9. Sin desborde horizontal a 390 y 320 px (6 páginas + Ajustes con el selector); alto de cabecera sin cambio.
+10. Movimiento reducido (sistema y Learny) y FOCUS: sin animaciones.
+11. Demo: elegir apariencia no toca los datos personales.
+12. Caché PWA `learny-v38` con el arte y sin cachés antiguas.
+Además: capturas de los seis temas y del selector, y comparación con la referencia a 12 px por celda.
+
+### Pendiente de navegador o dispositivo real
+Lector de pantalla, alto contraste real del sistema, varias pestañas, actualización PWA real v37 → v38 (la prueba usó una instalación nueva), importar con el selector de archivos del sistema, nitidez en un móvil físico y en pantallas 1× (a 84 px cada celda mide 1,5 px).
+
+### Límites conocidos de este bloque
+- **Eevee aún no tiene poses propias.** Hasta el Bloque 2 usa los gestos generales ya existentes (`lumi-hop` en CELEBRATE y `lumi-wave` en WELCOME, sobre todo el dibujo); SUPPORT, PROGRESS y EMPTY no tienen gesto visible. En FOCUS está estático.
+- El «×» de Lumi puede rozar la punta de la oreja derecha de Eevee en escritorio.
+- Aproximación del trazado (ver «Arte y fidelidad»).
