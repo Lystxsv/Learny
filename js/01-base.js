@@ -29,7 +29,7 @@ const SCHEMA = 4;
 const TIMER_KEY = 'learny.timer';
 const MAX_REVIEWS = 5000;
 const MAX_CHATS = 20;
-const MASCOT_AVATARS = ['bee', 'eevee', 'walle']; // apariencias de Lumi (la primera es la predeterminada); las usan 02-datos, 13-ajustes y 16-lumi
+const MASCOT_AVATARS = ['bee', 'eevee', 'walle', 'daniel']; // apariencias de Lumi (la primera es la predeterminada); las usan 02-datos, 13-ajustes y 16-lumi
 const MIN_SAMPLE = 5; // con menos repasos no se afirma nada sobre una materia
 let rev = 0, currentPage = 'study', loadProblem = false, droppedCards = 0, migratedFrom = 0, newerFrom = 0, newerKept = true, lastSavedRaw = null, lastTimerRaw = null, corruptRaw = null, corruptKept = true, bootHold = false, saveErrorShown = false;
 const PHASES = [
