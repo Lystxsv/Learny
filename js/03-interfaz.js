@@ -4,11 +4,11 @@
    (los const/let/function de nivel superior son visibles entre archivos; no hay import/export). */
 'use strict';
 
-function confirmDialog({ title = '¿Seguro?', message = '', ok = 'Confirmar', danger = false } = {}) {
+function confirmDialog({ title = '¿Seguro?', message = '', ok = 'Confirmar', cancel = 'Cancelar', danger = false } = {}) {
   return new Promise((resolve) => {
     const d = $('#confirm-modal'), okBtn = $('#confirm-ok');
     $('#confirm-title').textContent = title; $('#confirm-message').textContent = message;
-    okBtn.textContent = ok; okBtn.className = danger ? 'danger-button' : 'primary-button';
+    okBtn.textContent = ok; $('#confirm-cancel').textContent = cancel; okBtn.className = danger ? 'danger-button' : 'primary-button';
     d.returnValue = 'cancel';
     d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
     d.showModal(); (danger ? $('#confirm-cancel') : okBtn).focus();
@@ -35,7 +35,7 @@ const save = () => {
   if (state.reviews.length > MAX_REVIEWS + 200) state.reviews.splice(0, state.reviews.length - MAX_REVIEWS);
   if (newerStored()) {
     setSaved(false);
-    if (!save.newerShown) { save.newerShown = true; toast('Otra pestaña usa una versión más nueva de Learny. Para no pisar sus datos, esta pestaña no guarda: recárgala para actualizarla.', 'error'); }
+    if (!save.newerShown) { save.newerShown = true; toast('Los datos guardados son de una versión más nueva de Learny. Para no pisarlos, esta versión no guarda cambios: actualiza la app (recarga la página).', 'error'); }
     return false;
   }
   let json = null;
@@ -76,7 +76,18 @@ function clearUndo() { // retira el «Deshacer» pendiente: tecla Z, botón visi
   undoRun = null; toast.undo = null;
   document.querySelector('#toast .toast-action')?.remove();
 }
+/* Un <dialog> abierto con showModal() vive en la capa superior del navegador y tapa cualquier elemento de la página, por mucho z-index que tenga:
+   los avisos (p. ej. «Ya existe un mazo con ese nombre») quedaban detrás del velo y el formulario parecía no hacer nada.
+   Mientras haya un diálogo abierto, el aviso se coloca dentro de él (capa superior); al cerrarse, vuelve al <body>. */
+function placeToast() {
+  const el = $('#toast'); if (!el) return;
+  const confirmOn = $('#confirm-modal')?.open, host = confirmOn ? $('#confirm-modal') : modalOpen() ? $('#app-modal') : document.body;
+  if (el.parentElement === host) return;
+  host.append(el); void el.offsetWidth; // reflujo: la entrada del aviso sigue siendo una transición, no un salto
+}
+['app-modal', 'confirm-modal'].forEach((id) => $(`#${id}`)?.addEventListener('close', placeToast));
 function toast(message, type = 'ok', action = null) {
+  placeToast();
   const el = $('#toast'), isErr = type === 'error', now = Date.now();
   el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
   toast.undo = action ? { action, until: now + 8000 } : null; // un aviso sin acción sustituye al anterior y su «Deshacer»

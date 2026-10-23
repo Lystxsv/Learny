@@ -106,15 +106,17 @@ if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.ha
 if (loadProblem) {
   if (corruptKept) queueToast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
   else queueToast('Tus datos guardados estaban dañados y NO pude guardar una copia (sin espacio o almacenamiento bloqueado). No los he tocado hasta que hagas un cambio: descarga el archivo original ahora.', 'error', { label: 'Descargar original', run: () => {
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([corruptRaw || ''], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const safeRaw = String(corruptRaw || '').replace(/"apiKey"\s*:\s*"(?:[^"\\]|\\.)*"?/g, '"apiKey":""'); // JS-009: el archivo se suele compartir para pedir ayuda: nunca lleva tu clave de Gemini
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([safeRaw], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Archivo descargado. Se quitó tu clave de Gemini del contenido; el resto de tus datos sigue ahí.');
   } });
 }
 if (newerFrom) queueToast(newerKept
-  ? `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). Guardé una copia intacta (learny.newer); al guardar aquí podrían perderse campos nuevos. Actualiza la app.`
-  : `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}) y NO pude guardar una copia intacta (sin espacio). Al guardar aquí podrían perderse campos nuevos: actualiza la app.`, 'error');
+  ? `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos (hay además una copia intacta en learny.newer). Actualiza la app.`
+  : `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos, pero NO pude guardar una copia aparte (sin espacio). Actualiza la app.`, 'error');
 if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
 if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
   else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes ⚙️.`, 'error'); }
 bootHold = false;
-if (corruptKept || !loadProblem) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, no se pisa la clave principal en el arranque
+if ((corruptKept || !loadProblem) && !newerFrom) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, o de una versión más nueva (JS-004), no se pisa la clave principal en el arranque: lo guardado queda intacto y el resto de guardados los frena newerStored()
 if (!state.settings.welcomed && !landingOn) setTimeout(welcomeFlow, 350); // Etapa 5 (con portada, la bienvenida abre al pulsar «Probar Learny»)

@@ -4,9 +4,12 @@
    (los const/let/function de nivel superior son visibles entre archivos; no hay import/export). */
 'use strict';
 
+/* JS-012: todo id es una cadena no vacía (los atributos data-* del DOM son cadenas: un id numérico dejaba los botones inertes) y único dentro de su lista. */
+const idOf = (v) => (v == null || String(v).trim() === '' ? uid() : String(v).slice(0, 100));
+const uniqueIds = (list) => { const seen = new Set(); list.forEach((x) => { if (seen.has(x.id)) x.id = uid(); seen.add(x.id); }); };
 const isBrokenCard = (c) => typeof c.question !== 'string' || !c.question.trim() || typeof c.answer !== 'string' || !c.answer.trim();
 const normalizeCard = (c) => ({
-  id: c.id || uid(),
+  id: idOf(c.id),
   corrupt: isBrokenCard(c),
   subject: String(c.subject || 'Sin materia'),
   question: String(c.question || ''),
@@ -114,12 +117,12 @@ function hydrate(raw) {
   state.cards = rawCards.filter((c) => c && typeof c === 'object' && !Array.isArray(c)).map(normalizeCard);
   droppedCards += rawCards.length - state.cards.length;
   state.sessions = state.sessions.filter((s) => s && isDay(s.date)).map((s) => ({
-    ...s, id: s.id || uid(), minutes: Number(s.minutes) || 0, energy: s.energy ? Number(s.energy) : null,
+    ...s, id: idOf(s.id), minutes: Number(s.minutes) || 0, energy: s.energy ? Number(s.energy) : null,
     label: String(s.label || s.subject || ''), achieved: typeof s.achieved === 'boolean' ? s.achieved : null,
     abandon: s.abandon || null, intention: String(s.intention || ''), distractions: cleanNotes(s.distractions)
   }));
   state.deadlines = state.deadlines.filter((d) => d && String(d.title || '').trim() && isDay(d.date)).map((d) => ({
-    id: d.id || uid(), title: String(d.title), subject: String(d.subject || ''), date: d.date,
+    id: idOf(d.id), title: String(d.title), subject: String(d.subject || ''), date: d.date,
     difficulty: num(d.difficulty, 1, 5, 3), dailyMinutes: num(d.dailyMinutes, 15, 240, 45), skipped: num(d.skipped, 0, 999, 0),
     debtMin: d.debtMin == null ? num(d.skipped, 0, 999, 0) * num(d.dailyMinutes, 15, 240, 45) : num(d.debtMin, 0, 240000, 0)
   }));
@@ -127,19 +130,20 @@ function hydrate(raw) {
   const dayOf = isDay;
   const taskRef = (m) => ({ phase: String(m?.phase || '').slice(0, 20), from: dayOf(m?.from) ? m.from : today() });
   state.planLog = state.planLog.filter((e) => e && dayOf(e.date)).slice(-30).map((e) => ({
-    id: e.id || uid(), date: e.date, deadlineId: String(e.deadlineId || ''), title: String(e.title || '').slice(0, 80), kind: e.kind === 'replan' ? 'replan' : 'late',
+    id: idOf(e.id), date: e.date, deadlineId: String(e.deadlineId || ''), title: String(e.title || '').slice(0, 80), kind: e.kind === 'replan' ? 'replan' : 'late',
     minutes: num(e.minutes, 0, 240, 0), moved: arr(e.moved).slice(0, 10).map(taskRef), dropped: arr(e.dropped).slice(0, 40).map(taskRef)
   }));
-  state.topics = state.topics.filter((t) => t && String(t.name || '').trim()).map((t) => ({ id: t.id || uid(), name: String(t.name), category: String(t.category || 'Personal') }));
+  state.topics = state.topics.filter((t) => t && String(t.name || '').trim()).map((t) => ({ id: idOf(t.id), name: String(t.name), category: String(t.category || 'Personal') }));
   state.reviews = state.reviews.filter(okReview).slice(-MAX_REVIEWS).map((r) => ({ ...r, subject: String(r.subject || ''), cardId: String(r.cardId || ''), quality: qualityOf(r.rating) }));
-  state.notes = state.notes.filter(okNote).map((n) => ({ id: String(n.id || uid()), date: isDay(n.date) ? n.date : today(), text: n.text.trim().slice(0, 2000) })).slice(-500);
+  state.notes = state.notes.filter(okNote).map((n) => ({ id: idOf(n.id), date: isDay(n.date) ? n.date : today(), text: n.text.trim().slice(0, 2000) })).slice(-500);
   state.exams = state.exams.filter(okExam).map((e) => ({ date: e.date, score: Math.round(Number(e.score)), total: Math.round(Number(e.total)) })).slice(-500);
   state.feynman = [...new Set(state.feynman.filter(isDay))].slice(-1000);
   state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
-    id: t.id || uid(), deadlineId: t.deadlineId, date: t.date, phase: t.phase || 'comprension',
+    id: idOf(t.id), deadlineId: String(t.deadlineId), date: t.date, phase: t.phase || 'comprension',
     title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
   }));
   const liveDl = new Set(state.deadlines.map((d) => d.id)); state.tasks = state.tasks.filter((t) => liveDl.has(t.deadlineId)); // sin fecha no hay tarea
+  ['cards', 'sessions', 'deadlines', 'topics', 'tasks', 'notes', 'planLog'].forEach((k) => uniqueIds(state[k])); // JS-012: ids repetidos en una copia editada a mano
   state.chats = state.chats.filter((c) => c && c.topic).slice(-MAX_CHATS).map((c) => ({
     topic: String(c.topic).slice(0, 60), messages: Array.isArray(c.messages) ? c.messages.slice(-20) : []
   }));
@@ -240,7 +244,7 @@ let migrationBackup = true; // ¿se pudo guardar la copia previa a la migración
   if (Object.keys(merged).length && !(Number(merged.version) >= SCHEMA)) {
     const { apiKey, chats, ...safe } = merged; migrationBackup = pushBackup(`migración desde v${Number(merged.version) || 1}`, safe);
   }
-  bootHold = loadProblem && !corruptKept; // datos dañados sin copia: ningún guardado automático del arranque pisa la clave principal
+  bootHold = (loadProblem && !corruptKept) || newerFrom > 0; // datos dañados sin copia, o de una versión más nueva: ningún guardado automático del arranque pisa la clave principal
   hydrate(merged);
   // Etapa 5: quien ya tiene datos (o cuyo archivo estaba dañado) nunca verá la bienvenida; se marca una vez y se guarda al final del arranque.
   if (!state.settings.welcomed && (loadProblem || hasUserData())) state.settings.welcomed = true;

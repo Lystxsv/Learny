@@ -111,6 +111,8 @@ function replanDeadline(id) {
       <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="${suggested}" required></label>
       <p class="modal-tip">Ahora: ${d.dailyMinutes} min/día. ${esc(loadMessage(r))}</p>
       <button class="primary-button">Replanificar</button>`, (data) => {
+    const d = state.deadlines.find((x) => x.id === id); // otra pestaña pudo sustituir state.deadlines mientras el formulario estaba abierto: se trabaja con el objeto vigente
+    if (!d) { closeModal(); return toast('Esa fecha ya no existe (otra pestaña la cambió). No se replanificó nada.', 'error'); }
     const rr = loadReport(d); // con los minutos actuales: cuánto trabajo queda, incluido lo descartado
     const before = { mins: d.dailyMinutes, skipped: d.skipped || 0, debt: d.debtMin, tasks: state.tasks.filter((t) => t.deadlineId === d.id).map((t) => ({ ...t })) };
     const debt = rr.needed - rr.open * before.mins;

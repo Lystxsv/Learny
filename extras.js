@@ -142,11 +142,14 @@
       <label>Tarjetas<textarea name="rows" required maxlength="6000" placeholder="¿Capital de Francia? | París"></textarea></label>
       <button class="primary-button">Guardar mazo</button>`, (d) => {
       const name = clean(d.get('name'), 60);
-      const cards = String(d.get('rows')).split('\n').map((l) => l.split('|').map((x) => x.trim())).filter((r) => r[0] && r[1]).map((r) => [r[0].slice(0, 500), r[1].slice(0, 1200)]);
+      /* Se separa en la PRIMERA barra: la respuesta conserva las suyas («|x| | valor absoluto» ya no pierde texto). */
+      const lines = String(d.get('rows')).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      const cards = lines.map((l) => { const i = l.indexOf('|'); return i < 0 ? null : [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }).filter((r) => r && r[0] && r[1]).map((r) => [r[0].slice(0, 500), r[1].slice(0, 1200)]);
+      const skipped = lines.length - cards.length;
       if (!name) return toast('El mazo necesita un nombre (no puede quedar en blanco).', 'error');
-      if (!cards.length) return toast('Usa el formato pregunta | respuesta en cada línea.', 'error');
+      if (!cards.length) return toast('Escribe una tarjeta por línea, con una barra | entre la pregunta y la respuesta.', 'error');
       if (Object.prototype.hasOwnProperty.call(allDecks(), name)) return toast('Ya existe un mazo con ese nombre.', 'error');
-      state.decks.push({ name, cards }); save(); closeModal(); renderDecks(); toast(`Mazo «${name}» creado con ${plural(cards.length, 'tarjeta', 'tarjetas')}.`);
+      state.decks.push({ name, cards }); save(); closeModal(); renderDecks(); toast(`Mazo «${name}» creado con ${plural(cards.length, 'tarjeta', 'tarjetas')}.${skipped ? ` Líneas omitidas por no tener el formato pregunta | respuesta: ${skipped}.` : ''}`);
     });
   }
   $('#topic-library').onclick = (e) => {
@@ -186,6 +189,7 @@
     <button class="primary-button">Crear plan</button>`, (d) => {
     const item = { id: uid(), title: clean(d.get('title'), 80), subject: clean(d.get('subject'), 60), date: d.get('date'),
       difficulty: Math.min(5, Math.max(1, Number(d.get('difficulty')) || 3)), dailyMinutes: Math.min(240, Math.max(15, Number(d.get('mins')) || 60)) };
+    if (!item.title || !item.subject) return toast('Escribe un nombre y una materia (no pueden quedar en blanco).', 'error'); // un plan sin título se perdía al recargar (hydrate lo descarta)
     if (!L.validDeadlineDate(item.date)) return toast('Elige una fecha entre hoy y los próximos 2 años.', 'error');
     state.deadlines.push(item); L.rebuildTasks(item, false);
     const pom = Math.max(1, Math.round(item.dailyMinutes / state.settings.focus)), mine = state.tasks.filter((t) => t.deadlineId === item.id);

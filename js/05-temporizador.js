@@ -38,7 +38,7 @@ function restoreTimer(raw) {
     timer.endAt = Number(t.endAt); timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
     if (timer.remaining <= 0) {
       if (Date.now() - timer.endAt < AWAY_MS) { finishPhase(); return; }
-      discardAway(); return;
+      lateBlock(); return;
     }
     timer.running = true; timer.id = setInterval(tick, 500);
   } else timer.remaining = num(t.remaining, 0, total, total);
@@ -81,7 +81,23 @@ function renderTimer() {
 }
 
 /* Fase 2: un bloque que terminó mientras la pestaña dormía o estaba cerrada (más de AWAY_MS después de su hora) no se registra como sesión completa: no hay forma de saber si estudiaste. */
-const AWAY_MS = 20000;
+/* Hasta AWAY_MS de retraso se acepta sin preguntar: una pestaña oculta (o con el límite de temporizadores del navegador) detecta el fin con hasta un minuto de retraso.
+   Más allá no hay forma de saber si estudiaste (¿el equipo se suspendió?): se pregunta en vez de descartar o aceptar en silencio. */
+const AWAY_MS = 120000;
+let askingLate = false;
+function lateBlock() {
+  if (timer.mode !== 'focus') { discardAway(); return; } // un descanso que terminó fuera no se registra: no hay nada que perder
+  clearInterval(timer.id); timer.id = null; timer.running = false; timer.remaining = 0; renderTimer();
+  if (askingLate) return;
+  askingLate = true;
+  const id = timer.runId, mins = Math.max(1, Math.round(timer.total / 60)), late = Math.max(1, Math.round((Date.now() - timer.endAt) / 60000));
+  confirmDialog({ title: '¿Estudiaste este bloque?', message: `Tu bloque de ${plural(mins, 'minuto', 'minutos')} terminó hace unos ${plural(late, 'minuto', 'minutos')}, con Learny en segundo plano o el equipo en suspensión. ¿Lo registramos como sesión completada?`, ok: 'Sí, registrarlo', cancel: 'No, descartarlo' }).then((yes) => {
+    askingLate = false;
+    if (!timer.started || timer.runId !== id || timer.running) return; // mientras decidías, otra pestaña o tú reiniciaron el temporizador
+    if (yes) finishPhase();
+    else { resetTimer('focus'); toast('Bloque descartado: no se contó como sesión.'); }
+  });
+}
 function discardAway() {
   const wasFocus = timer.mode === 'focus';
   resetTimer('focus');
@@ -89,7 +105,7 @@ function discardAway() {
 }
 function tick() {
   timer.remaining = Math.max(0, Math.ceil((timer.endAt - Date.now()) / 1000));
-  if (timer.remaining <= 0) { if (Date.now() - timer.endAt > AWAY_MS) { clearInterval(timer.id); timer.id = null; discardAway(); return; } renderTimer(); finishPhase(); return; }
+  if (timer.remaining <= 0) { if (Date.now() - timer.endAt > AWAY_MS) { lateBlock(); return; } renderTimer(); finishPhase(); return; }
   renderTimer();
 }
 
@@ -113,6 +129,7 @@ function addDistraction() {
 
 function askAbandon(onContinue) {
   if (timer.mode !== 'focus' || !timer.started || timer.remaining >= timer.total) { onContinue(); return; }
+  const runId = timer.runId; // el temporizador sigue corriendo con la ventana abierta: puede terminar (o reiniciarse en otra pestaña) antes de que elijas
   modal(`<h2>Reiniciar a mitad de bloque</h2><p>El bloque se descartará. ¿Qué pasó?</p>
       <fieldset class="choice-list"><div class="scale">
         <label><input type="radio" name="why" value="distraccion" required> Distracción</label>
@@ -120,6 +137,9 @@ function askAbandon(onContinue) {
         <label><input type="radio" name="why" value="interrupcion"> Interrupción</label>
       </div></fieldset>
       <button class="primary-button">Guardar y reiniciar</button>`, (data) => {
+    if (timer.runId !== runId || timer.mode !== 'focus' || !timer.started) { // el bloque ya terminó o cambió: no se registra un abandono con datos de otro bloque
+      closeModal(); toast('El bloque ya había terminado o cambiado mientras decidías; no se registró ningún abandono.'); return;
+    }
     state.sessions.push({
       id: uid(), date: today(), minutes: Math.max(1, Math.round((timer.total - timer.remaining) / 60)),
       intention: timer.intention, label: timer.label, energy: null, abandon: data.get('why'), achieved: false, distractions: timer.distractions.slice()
@@ -194,8 +214,10 @@ function completePhase() {
       <p class="modal-tip">1 = muy baja · 5 = muy alta. Ya puedes iniciar tu descanso de ${plural(state.settings.rest, 'minuto', 'minutos')}.</p>
       <button class="primary-button">Guardar</button>`,
   (data) => {
-    session.energy = data.get('energy') ? Number(data.get('energy')) : null;
-    session.achieved = data.get('achieved') === 'yes';
+    let mine = state.sessions.find((x) => x.id === session.id); // otra pestaña pudo sustituir state.sessions mientras valorabas: se escribe en el objeto vigente
+    if (!mine) { mine = session; state.sessions.push(mine); } // si la sesión se perdió en la sincronización, se recupera
+    mine.energy = data.get('energy') ? Number(data.get('energy')) : null;
+    mine.achieved = data.get('achieved') === 'yes';
     save(); closeModal(); renderAll();
   }, () => { renderAll(); document.dispatchEvent(new Event('learny:pomodone')); showClosure('focus', session); });
   if (!modalOpen()) { showDone(); return; }
