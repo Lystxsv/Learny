@@ -2,10 +2,10 @@
 
 App web de estudio: Pomodoro con descanso, flashcards con repaso espaciado (SM-2), método Feynman,
 ruleta de temas, planificador inverso, estadísticas, un tutor socrático opcional con IA y **Lumi**,
-un compañero de estudio opcional (abeja pixelada, Eevee, WALL·E, Daniel Carreon o Yor Forger). Todo se guarda en el navegador de cada persona;
+un compañero de estudio opcional (abeja pixelada, Eevee, WALL·E, Daniel Carreon, Yor Forger o Cat Black). Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v55` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v57` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -73,7 +73,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v55`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v57`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -106,6 +106,12 @@ Los archivos no están minificados (≈ 370 KB entre HTML, CSS y JS —`index.ht
 - Cada bloque de Lumi y su lista de pruebas están en `CONTINUIDAD.md`. Se probaron con Chromium headless (`?demo`, 1280, 390 y 320 px).
 - **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, varias pestañas, actualización del service worker v36 → v37 en una instalación existente, importar un JSON real desde el selector de archivos, nitidez de la abeja en pantallas de 1× (a 60 px cada celda mide 1,5 px) y los seis temas a ojo.
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y el de `js/16` dice «de 16»; es solo texto, pero conviene unificarlo si se vuelve a tocar esos archivos.
+
+## Novedades (v57 · Cat Black se mueve)
+Poses propias de Cat Black, solo CSS (`transform` sobre `.gato-eyes`, `.gato-ear-r` y `.gato-tail`; un ciclo de ≤ 400 ms): parpadeo y meneo de cola al aparecer; al celebrar, salto + cola + oreja + parpadeo; al dar la bienvenida, saludo + cola + oreja; apoyo, progreso y estado vacío con gestos mínimos; estático en enfoque. El dibujo se reparte en grupos (el contorno acompaña a cada parte) y lleva pelaje oscuro bajo los ojos para que el parpadeo no deje ver el fondo. Sin cambios de lógica, textos, frecuencias, datos ni esquema (`version: 4`).
+
+## Novedades (v56 · Cat Black)
+Sexta apariencia de Lumi (`settings.mascotAvatar = 'gato'`, nombre visible «Cat Black»): un gato negro de ojos blancos en pixel art (`js/16-lumi-gato.js`, 50×58 celdas en rejilla 64×64). Solo aspecto: sin cambios de estados, textos, frecuencias, datos ni esquema (`version: 4`). Las demás apariencias (abeja, Eevee, WALL·E, Daniel Carreon y Yor Forger) quedan intactas. Poses propias (Bloque 2) pendientes: hoy usa los gestos generales.
 
 ## Novedades (v30 a v37 · Lumi y tema Cromo)
 Las versiones 26 a 29 no están documentadas en los archivos de continuidad. Todo lo siguiente conserva el esquema `version: 4`, las claves de almacenamiento, los algoritmos de repaso y la API `window.Learny`.

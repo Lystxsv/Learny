@@ -20,7 +20,24 @@
  */
 const MAX_BODY = 24000;     // caracteres aceptados (como mide Learny; los acentos no cuentan doble)
 const MAX_PROMPT = 9000;    // caracteres enviados a Gemini (igual que Learny)
+const MAX_BYTES = MAX_BODY * 4; // un carácter ocupa hasta 4 bytes en UTF-8
 const hits = new Map();     // límite de reserva por IP (por instancia; no sustituye a RATE_LIMITER)
+
+/* Lee el cuerpo como texto cortando en cuanto supera maxBytes (devuelve null). */
+async function readLimited(request, maxBytes) {
+  if (!request.body) return '';
+  const reader = request.body.getReader(), chunks = []; let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) { try { await reader.cancel(); } catch { /* ya cerrado */ } return null; }
+    chunks.push(value);
+  }
+  const buf = new Uint8Array(total); let at = 0;
+  for (const c of chunks) { buf.set(c, at); at += c.byteLength; }
+  return new TextDecoder().decode(buf);
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -52,9 +69,9 @@ export default {
       if (hits.size > 5000) hits.clear();
     }
 
-    if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY * 4) return json({ error: { message: 'Solicitud demasiado grande' } }, 413); // sin leer el cuerpo (un carácter ocupa hasta 4 bytes)
-    const raw = await request.text();
-    if (raw.length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
+    if (Number(request.headers.get('Content-Length') || 0) > MAX_BYTES) return json({ error: { message: 'Solicitud demasiado grande' } }, 413); // sin leer el cuerpo
+    const raw = await readLimited(request, MAX_BYTES); // JS-015: sin Content-Length (envío por trozos) la comprobación anterior no actúa; el límite se aplica mientras se lee
+    if (raw === null || raw.length > MAX_BODY) return json({ error: { message: 'Solicitud demasiado grande' } }, 413);
     let payload;
     try { payload = JSON.parse(raw); } catch { return json({ error: { message: 'JSON inválido' } }, 400); }
 
