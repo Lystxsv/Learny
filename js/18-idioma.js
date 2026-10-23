@@ -26,7 +26,7 @@
     'Nivel de explicación': 'Explanation level', 'Como si tuviera 12 años': 'As if I were 12', 'Nivel universitario': 'University level', 'Con un ejemplo de mi carrera': 'With an example from my field',
     'Carrera / contexto': 'Field / context', 'p. ej. medicina, programación': 'e.g. medicine, programming', 'Cómo quieres que te ayude': 'How you want me to help',
     'Guíame con preguntas': 'Guide me with questions', 'Dame una explicación directa': 'Give me a direct explanation', 'Guardar contexto': 'Save context',
-    'Dictar': 'Dictate', 'Modo error': 'Error mode', 'Borrar historial del tema': 'Clear topic history', 'Borrar historial': 'Clear history',
+    'Dictar': 'Dictate', 'Modo error': 'Error mode', '🎤 Escuchando… (pulsa para parar)': '🎤 Listening… (press to stop)', 'Tu navegador no admite dictado. Prueba con Chrome o Edge.': 'Your browser does not support dictation. Try Chrome or Edge.', 'No se pudo dictar. Revisa el permiso del micrófono.': 'Dictation failed. Check the microphone permission.', 'Borrar historial del tema': 'Clear topic history', 'Borrar historial': 'Clear history',
     /* ---- Hoy / Pomodoro ---- */
     'Tu día de estudio': 'Your study day', 'Qué hacer ahora': 'What to do now', 'Foco': 'Focus', 'Descanso': 'Break',
     '¿Qué resultado concreto quieres lograr?': 'What concrete outcome do you want to achieve?', 'Resultado concreto de este bloque': 'Concrete outcome for this block',
@@ -269,7 +269,7 @@
 
   /* ---- DOM: traduce y recuerda el original para poder volver al español ---- */
   const SKIP = '[translate="no"], textarea, script, style, noscript';
-  const STRICT = '#flashcard, #library-list, #notes-list, #source-out, #feynman-guide, .ai-answer, .tutor-block'; // contenido del usuario o de la IA: solo rótulos exactos
+  const STRICT = '#flashcard, #library-list, #notes-list, #source-out, #feynman-guide, .ai-answer, .tutor-block, #topic-results, .review-card, #distraction-list, #concept-map b, #deadline-list > .session-item > b, #week-calendar .tag'; // contenido del usuario o de la IA: solo rótulos exactos
   const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
   const tStore = new WeakMap(), aStore = new WeakMap();
   let cur = null, obs = null, titleObs = null, guideEs = null;
@@ -361,7 +361,7 @@
   function patchGlobals() {
     try {
       if (typeof askGemini === 'function' && !askGemini.__i18n) {
-        const o = askGemini, w = (p) => o(cur === 'en' ? String(p) + AI_NOTE : p); w.__i18n = true;
+        const o = askGemini, w = (p) => { if (cur !== 'en') return o(p); const b = cleanMl(p, MAX_PROMPT - AI_NOTE.length); return o(b ? b + AI_NOTE : b); }; w.__i18n = true; // JS-013: el recorte de askGemini (MAX_PROMPT) ya no se come la nota: se recorta el prompt y luego se añade
         window.askGemini = w; if (window.Learny) window.Learny.askGemini = w;
       }
       if (typeof localGuide === 'function' && !localGuide.__i18n) {

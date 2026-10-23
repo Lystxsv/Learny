@@ -1,4 +1,4 @@
-const CACHE = 'learny-v50';
+const CACHE = 'learny-v55';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
   './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json',
@@ -21,6 +21,7 @@ const CORE = [
   './js/16-lumi-eevee.js',
   './js/16-lumi-walle.js',
   './js/16-lumi-daniel.js',
+  './js/16-lumi-yor.js',
   './js/16-lumi.js',
   './js/17-movimiento.js',
   './js/18-idioma.js'
@@ -55,19 +56,20 @@ self.addEventListener('fetch', (event) => {
   }).then((res) => {
     if (res && res.ok && res.type === 'basic') {
       const copy = res.clone();
-      caches.open(CACHE).then((cache) => cache.put(request, copy));
+      event.waitUntil(caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => { /* sin espacio: la respuesta se sirve igual */ })); // JS-015: sin waitUntil el navegador podía parar el service worker antes de que terminara de guardar
     }
     return res;
   });
 
-  event.respondWith(
-    fromNetwork.catch(async () => {
-      const cached = await caches.match(request, { ignoreSearch: true });
-      if (cached) return cached;
-      if (request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
-      return Response.error();
-    })
-  );
+  const offline = async () => {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+    if (request.mode === 'navigate') return (await caches.match('./index.html')) || Response.error();
+    return Response.error();
+  };
+  /* JS-015: un 404 o 5xx del servidor (despliegue a medias, caída de GitHub Pages) también cae a la caché; si no hay copia, se devuelve esa respuesta tal cual.
+     Otros 4xx (401, 403…) se devuelven sin más. Solo se guardan respuestas correctas (arriba). */
+  event.respondWith(fromNetwork.then(async (res) => (res.status === 404 || res.status >= 500 ? ((await caches.match(request, { ignoreSearch: true })) || res) : res), offline));
 });
 
 // Al pulsar un aviso: enfoca Learny si ya está abierta; si no, la abre.

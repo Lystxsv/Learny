@@ -28,6 +28,7 @@ function setAmbient(name) {
 }
 function openSettings() {
   const base = defaults().settings;
+  const LC = window.LumiCompanion, lumiAvatars = LC ? LC.avatars() : []; // JS-007: si 16-lumi.js no cargó, Ajustes abre igual (sin selector de apariencia)
   const sel = (name, label, list) => `<label>${label}<select name="${name}">${list.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>`;
   const form = $('#modal-form'), f = form.elements;
   const read = () => { const o = {}; APP_KEYS.forEach((k) => { const el = f[k]; o[k] = el.type === 'checkbox' ? el.checked : k === 'fontSize' ? Number(el.value) : el.value; }); return o; };
@@ -69,10 +70,10 @@ function openSettings() {
         <label class="check"><input name="reduceMotion" type="checkbox"> Reducir animaciones</label>
         <label class="check"><input name="immersiveDim" type="checkbox"> Atenuar el menú y la barra superior durante un bloque o examen</label>
         <label class="check"><input name="mascot" type="checkbox"> Compañero de estudio: Lumi</label>
-        <fieldset class="lumi-avatar-group"><legend>Apariencia de Lumi</legend>
-          <div class="lumi-avatar-opts">${LumiCompanion.avatars().map(([id, name]) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}"><span class="lumi-avatar-card">${LumiCompanion.thumb(id)}<span class="lumi-avatar-name">${esc(name)}</span><span class="lumi-avatar-check" aria-hidden="true">✓</span></span></label>`).join('')}</div>
+        ${lumiAvatars.length ? `<fieldset class="lumi-avatar-group"><legend>Apariencia de Lumi</legend>
+          <div class="lumi-avatar-opts">${lumiAvatars.map(([id, name]) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}"><span class="lumi-avatar-card">${LC.thumb(id)}<span class="lumi-avatar-name">${esc(name)}</span><span class="lumi-avatar-check" aria-hidden="true">✓</span></span></label>`).join('')}</div>
           <p class="hint">Solo cambia el dibujo: Lumi se comporta igual. Se ve al instante y se guarda con «Guardar preferencias».</p>
-        </fieldset>
+        </fieldset>` : ''}
       </details>
       <details class="more-inline settings-group"><summary>Estudio y avisos</summary>
         <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
@@ -106,7 +107,7 @@ function openSettings() {
     if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
     Object.assign(state.settings, {
       name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
-      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar'), lang: data.get('lang'),
+      sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar') || state.settings.mascotAvatar, lang: data.get('lang'),
       focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
       roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
       model: clean(data.get('model'), 80) || DEFAULT_MODEL

@@ -58,21 +58,23 @@
   document.addEventListener('learny:cardchange', () => { $('#recall-answer').value = ''; });
 
   /* ---- Dictado ---- */
-  const dictate = (btn, target) => {
-    const label = btn.textContent; let active = null;
+  /* JS-013: la etiqueta de reposo se pasa en español (el código está en español y 18-idioma.js traduce el DOM); antes se leía del botón ya traducido
+     y al volver al español el botón se quedaba en inglés. El idioma del reconocimiento sigue al de la interfaz. */
+  const dictate = (btn, target, label) => {
+    let active = null;
     btn.onclick = () => {
       if (active) { active.stop(); return; }
       const R = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!R) return toast('Tu navegador no admite dictado. Prueba con Chrome o Edge.', 'error');
-      const r = new R(); r.lang = /^es/i.test(navigator.language || '') ? navigator.language : 'es-ES'; btn.textContent = '🎤 Escuchando… (pulsa para parar)';
+      const r = new R(); const nav = navigator.language || '', en = L.state.settings.lang !== 'es'; r.lang = en ? (/^en/i.test(nav) ? nav : 'en-US') : (/^es/i.test(nav) ? nav : 'es-ES'); btn.textContent = '🎤 Escuchando… (pulsa para parar)';
       r.onresult = (e) => { target().value = `${target().value} ${e.results[0][0].transcript}`.trim(); target().dispatchEvent(new Event('input')); };
       r.onend = () => { active = null; btn.textContent = label; };
       r.onerror = () => toast('No se pudo dictar. Revisa el permiso del micrófono.', 'error');
       try { r.start(); active = r; } catch { btn.textContent = label; }
     };
   };
-  dictate($('#tutor-voice'), () => $('#ai-question'));
-  dictate($('#feynman-voice'), () => $('#feynman-text'));
+  dictate($('#tutor-voice'), () => $('#ai-question'), '🎤 Dictar');
+  dictate($('#feynman-voice'), () => $('#feynman-text'), '🎤 Dictar explicación');
 
   /* ---- Tutor: ejercicios y modo error ---- */
   $('#tutor-exercises').onclick = () => L.gemini(
@@ -230,6 +232,11 @@
     save();
   }
   document.addEventListener('learny:reset', () => { Object.keys(drafts).forEach((k) => delete drafts[k]); try { localStorage?.removeItem(DRAFT_KEY); } catch { /* ignorar */ } });
+  /* JS-014: «Borrar todo» en OTRA pestaña no disparaba learny:reset aquí: los borradores en memoria seguían vivos y el siguiente tecleo los reescribía todos en el almacenamiento.
+     Ahora, si otra pestaña borra los borradores o todos los datos (o limpia el almacenamiento), esta también vacía los suyos en memoria. */
+  window.addEventListener('storage', (e) => {
+    if (e.key === null || (!e.newValue && (e.key === DRAFT_KEY || e.key === 'learny.v3'))) Object.keys(drafts).forEach((k) => delete drafts[k]); // 'learny.v3' = KEY de js/01-base.js
+  });
   ['#quick-note', '#feynman-text', '#feynman-topic', '#source-text', '#intention-input', '#ai-question'].forEach((sel) => {
     const el = $(sel); if (!el) return;
     if (drafts[sel] && !el.value) { el.value = drafts[sel]; L.reveal(el); } // un borrador guardado no queda escondido en un bloque plegado

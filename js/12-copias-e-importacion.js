@@ -25,14 +25,23 @@ function exportDeck() {
   toast('Mazo exportado sin progreso personal.');
 }
 
+const MAX_DECK_CARDS = 500; // tope de tarjetas por mazo propio (el mismo que aplica hydrate)
+const BUILTIN_DECK_NAMES = ['Cálculo básico', 'Método científico', 'Programación']; // mazos iniciales de extras.js (DECKS): un mazo propio con ese nombre los taparía; mantener igual que allí
 const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'];
 function validateBackup(data) {
   if (data?.type === 'learny-deck') {
     if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
     const good = data.cards.filter((c) => c && typeof c.question === 'string' && typeof c.answer === 'string' && c.question.trim() && c.answer.trim());
-    const decks = (Array.isArray(data.decks) ? data.decks : []).filter(okDeck)
-      .map((d) => ({ name: d.name.trim().slice(0, 60), cards: okDeckCards(d.cards).map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) })).filter((d) => d.cards.length);
-    return { ok: true, deck: good, decks, dropped: data.cards.length - good.length }; // los errores se detallan en la vista previa
+    /* JS-011: igual que hydrate() (la ruta de copias completas): nombre recortado, sin nombres repetidos dentro del archivo y como máximo MAX_DECK_CARDS tarjetas por mazo propio. */
+    const seen = new Set(), decks = []; let dupDecks = 0, cutCards = 0;
+    (Array.isArray(data.decks) ? data.decks : []).filter(okDeck).forEach((d) => {
+      const name = d.name.trim().slice(0, 60);
+      if (seen.has(name)) { dupDecks++; return; }
+      seen.add(name);
+      const all = okDeckCards(d.cards); cutCards += Math.max(0, all.length - MAX_DECK_CARDS);
+      decks.push({ name, cards: all.slice(0, MAX_DECK_CARDS).map((c) => [c[0].slice(0, 500), c[1].slice(0, 1200)]) });
+    });
+    return { ok: true, deck: good, decks, dupDecks, cutCards, dropped: data.cards.length - good.length }; // los errores se detallan en la vista previa
   }
   if (!isLearnyBackup(data)) return { ok: false, error: 'Ese archivo no parece una copia de Learny.' };
   if (Number(data.version) > SCHEMA) return { ok: false, error: `La copia es de una versión más nueva de Learny (v${data.version}). Actualiza la app e inténtalo de nuevo.` };
@@ -100,8 +109,11 @@ function importData(file) {
       const records = data.cards.map((c, i) => (isObj(c)
         ? { n: i + 1, label: 'Tarjeta', question: cleanMl(typeof c.question === 'string' ? c.question : '', 500), answer: cleanMl(typeof c.answer === 'string' ? c.answer : '', 1200), subject: clean(typeof c.subject === 'string' ? c.subject : '', 60) || 'Sin materia' }
         : { n: i + 1, label: 'Tarjeta', bad: 'no es una tarjeta' }));
-      const A = analyzeCards(records), newDecks = (check.decks || []).filter((d) => !state.decks.some((x) => x.name === d.name));
-      if (!(await previewCards('Importar mazo', records.length, A, { extra: newDecks.length ? [{ n: newDecks.length, label: newDecks.length === 1 ? 'mazo propio nuevo' : 'mazos propios nuevos' }] : [] }))) return;
+      const A = analyzeCards(records), all = check.decks || [];
+      const newDecks = all.filter((d) => !state.decks.some((x) => x.name === d.name) && !BUILTIN_DECK_NAMES.includes(d.name)); // JS-011: sin nombres que ya existen
+      const skipped = check.dupDecks + (all.length - newDecks.length);
+      const notes = [skipped ? `${plural(skipped, 'mazo propio se omite', 'mazos propios se omiten')} porque su nombre ya existe o está repetido en el archivo.` : '', check.cutCards ? `${plural(check.cutCards, 'tarjeta', 'tarjetas')} de mazos propios pasan del límite de ${MAX_DECK_CARDS} por mazo y no se leerán.` : ''].filter(Boolean).join(' ');
+      if (!(await previewCards('Importar mazo', records.length, A, { note: notes, extra: newDecks.length ? [{ n: newDecks.length, label: newDecks.length === 1 ? 'mazo propio nuevo' : 'mazos propios nuevos' }] : [] }))) return;
       const backed = snapshot('import'); // solo añade tarjetas: no se bloquea si no cabe la copia, pero se dice
       A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); newDecks.forEach((d) => state.decks.push(d));
       save(); closeModal(); renderAll(); toast(`Mazo importado: ${plural(A.fresh.length, 'tarjeta nueva', 'tarjetas nuevas')}.${backed ? '' : ' No hubo espacio para la copia automática previa.'}`, backed ? 'ok' : 'error');
@@ -185,8 +197,16 @@ function parseCsv(text) {
   }
   if (q) throw Object.assign(new Error(`Hay unas comillas sin cerrar que empiezan en la línea ${qLine}. Ciérralas o quítalas y vuelve a importar.`), { user: true });
   row.push(cur.trim()); rows.push(row);
-  return rows.filter((r) => r.some(Boolean) && !/^#[A-Za-z][\w ]*:/.test(String(r[0])));
+  /* JS-010: solo se descartan las líneas de directiva REALES de Anki y solo al principio del archivo («#separator:tab», «#html:true», «#guid column:1»…).
+     Antes cualquier fila cuya primera celda empezara por «#palabra:» (p. ej. una pregunta «#include: ¿para qué sirve?») se perdía sin avisar. */
+  let head = true;
+  return rows.filter((r) => {
+    if (!r.some(Boolean)) return false;
+    if (head && ANKI_DIRECTIVE.test(String(r[0]))) return false;
+    head = false; return true;
+  });
 }
+const ANKI_DIRECTIVE = /^#(?:separator|html|guid column|notetype column|deck column|tags column|notetype|deck|tags|columns|file version)\s*:/i;
 
 // Anki guarda HTML en los campos: <br> pasa a salto de línea y solo se quitan etiquetas HTML reales (nombre conocido y atributos con forma nombre="valor").
 // Así «Si a<b y c>d» o «x<y» se conservan tal cual (antes «<b y c>» se tomaba por una etiqueta y se perdía texto).
@@ -207,6 +227,7 @@ async function readTextFile(file) {
 /* Columnas del CSV. Anki (exportar como texto) escribe líneas «#separator:tab», «#html:true», «#guid column:1», «#deck column:3», «#tags column:6»…:
    las columnas marcadas son metadatos y los campos (pregunta, respuesta…) son el resto, en orden; en un export de Anki la tercera columna son ETIQUETAS, no la materia.
    Sin esas líneas, una cabecera conocida (pregunta/respuesta/materia…) decide el orden; sin cabecera: pregunta, respuesta, materia. */
+const CSV_META = /^(id|guid|nid|cid|n\.?|#|n[uú]m(?:ero)?|tags?|etiquetas?|notetype|tipo|fecha|date)$/;
 const CSV_HEAD = { q: /^(pregunta|question|front|anverso)$/, a: /^(respuesta|answer|back|reverso)$/, s: /^(materia|subject|tema|deck|mazo)$/ };
 function csvLayout(text, rows) {
   const dir = {}; for (const m of text.matchAll(/^#(guid|notetype|deck|tags) column:\s*(\d+)/gim)) dir[m[1].toLowerCase()] = Number(m[2]) - 1;
@@ -219,8 +240,10 @@ function csvLayout(text, rows) {
   const head = rows[0].map((h) => h.toLowerCase().trim());
   const qi = head.findIndex((h) => CSV_HEAD.q.test(h)), ai = head.findIndex((h) => CSV_HEAD.a.test(h)), si = head.findIndex((h) => CSV_HEAD.s.test(h));
   if (qi < 0 && ai < 0 && si < 0) return { body: rows, q: 0, a: 1, s: 2 };
-  const free = [0, 1, 2].filter((c) => ![qi, ai, si].includes(c));
-  return { body: rows.slice(1), q: qi >= 0 ? qi : free.shift(), a: ai >= 0 ? ai : free.shift(), s: si >= 0 ? si : (free.shift() ?? -1) };
+  /* JS-010: con cabecera, una columna de metadatos («id», «guid», «tags»…) no puede ser pregunta, respuesta ni materia, y la materia solo sale de una columna llamada como tal
+     (antes, en «id,pregunta,respuesta» la columna id pasaba a ser la materia). */
+  const free = head.map((h, c) => c).filter((c) => ![qi, ai, si].includes(c) && !CSV_META.test(head[c]));
+  return { body: rows.slice(1), q: qi >= 0 ? qi : (free.shift() ?? -1), a: ai >= 0 ? ai : (free.shift() ?? -1), s: si };
 }
 function csvToRecords(text) {
   const rows = parseCsv(text.replace(/^\uFEFF/, ''));

@@ -131,8 +131,8 @@ document.addEventListener('keydown', (e) => {
   if (landingOn || modalOpen() || $('#confirm-modal').open || e.ctrlKey || e.metaKey || e.altKey) return; // Etapa 6: con la portada visible, los atajos no actúan
   const t = e.target;
   if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return;
-  if (e.key.toLowerCase() === 'z' && undoRun) { e.preventDefault(); undoRun(); return; }
-  if (e.key.toLowerCase() === 'p') { e.preventDefault(); startPomodoro(); return; }
+  if (e.key.toLowerCase() === 'z' && undoRun) { e.preventDefault(); if (!e.repeat) undoRun(); return; } // JS-008: mantener la tecla pulsada no repite la acción
+  if (e.key.toLowerCase() === 'p') { e.preventDefault(); if (!e.repeat) startPomodoro(); return; } // JS-008: con P mantenida el temporizador se iniciaba y pausaba sin parar
   if (currentPage !== 'practice' || (!activeCard && !exam)) return;
   const shown = exam ? exam.revealed : revealed;
   if (e.key === ' ' && !shown) { if (t.closest?.('button, a, summary')) return; e.preventDefault(); revealCard(); return; }

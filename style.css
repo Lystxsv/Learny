@@ -995,3 +995,55 @@ body .lumi.lumi-thumb[data-avatar="daniel"] { --lumi-size: 76px; }
 .lumi[data-avatar="daniel"][data-react="progress"] .lumi-svg--daniel { animation: lumi-nod .4s ease-in-out 1; }
 .lumi[data-avatar="daniel"][data-react="progress"] .daniel-head { animation: daniel-nod .4s ease-in-out 1; }
 .lumi[data-avatar="daniel"][data-react="empty"] .daniel-head { animation: daniel-tilt-r .4s ease-in-out 1; }
+
+
+/* ===== Lumi · avatar Yor Forger (bloque 1) =====
+   Quinta apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'yor'). El arte es el SVG de js/16-lumi-yor.js (pixel art, 19×22 celdas en una rejilla 24×24).
+   Conserva sus colores en todos los temas (tiene contorno casi negro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--yr-rim).
+   Caja propia: 72 px (3 px por celda) en escritorio y móvil, y 36 px en sesión de enfoque. Sus poses (Bloque 2) irán en un bloque aparte. */
+.lumi .lumi-svg--yor { display: none; }
+.lumi[data-avatar="yor"] .lumi-svg--yor { display: block; }
+.lumi[data-avatar="yor"] .lumi-svg--bee { display: none; }
+.lumi { --yr-ink: #0b0b12; --yr-hair: #2c2c3c; --yr-skin: #f6d5bc; --yr-blush: #e98f8f; --yr-tan: #8a6a2c; --yr-gold: #d6aa3a; --yr-pale: #f1dc8e; --yr-shine: #fff3b4;
+  --yr-eyed: #8c1022; --yr-eye: #d9283e; --yr-deep: #5a0a16; --yr-white: #ffffff; --yr-rim: transparent; }
+.theme-contrast .lumi { --yr-rim: #fff; }
+.y-rim { fill: var(--yr-rim); } .y-ink { fill: var(--yr-ink); } .y-hair { fill: var(--yr-hair); } .y-skin { fill: var(--yr-skin); } .y-blush { fill: var(--yr-blush); } .y-tan { fill: var(--yr-tan); }
+.y-gold { fill: var(--yr-gold); } .y-pale { fill: var(--yr-pale); } .y-shine { fill: var(--yr-shine); } .y-eyed { fill: var(--yr-eyed); } .y-eye { fill: var(--yr-eye); } .y-deep { fill: var(--yr-deep); } .y-white { fill: var(--yr-white); }
+.lumi[data-avatar="yor"] { --lumi-size: 72px; }
+body.session-study .lumi[data-avatar="yor"] { --lumi-size: 36px; }
+.lumi-svg--yor { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--yor, .lumi[data-pose="focus"] .lumi-svg--yor * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="yor"] { --lumi-size: 72px; }
+
+/* ===== Lumi · poses de Yor Forger (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 24; el sprite está desplazado (3, 1)); pivotes en transform-origin en esas unidades.
+   Un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend). Movimiento reducido (sistema y Learny), pestaña oculta (data-paused) y desactivación de Lumi
+   los cubren las reglas generales sobre .lumi *; en FOCUS la regla del bloque anterior anula toda animación.
+   Los ojos (.yor-eyes) y los adornos (.yor-gem-l/-r) son grupos hermanos de .yor-body, no hijos de la cabeza: por eso NO se gira la cabeza (se despegarían del cuerpo); los gestos de cuerpo entero
+   (inclinación, asentimiento, salto, saludo) se aplican al SVG con los keyframes generales (lumi-lean, lumi-nod, lumi-hop, lumi-wave) y las partes solo hacen movimientos pequeños propios.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un movimiento mínimo de los adornos. CELEBRATE y WELCOME suman al salto/saludo general.
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+.yor-gem-l { transform-origin: 7.5px 11px; }   /* base del adorno izquierdo (junto al pelo) */
+.yor-gem-r { transform-origin: 17.5px 11px; }  /* base del adorno derecho */
+.yor-eyes { transform-origin: 12.5px 15px; }   /* centro de los ojos */
+@keyframes yor-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes yor-flick-l { 0%, 100% { transform: none; } 35% { transform: rotate(6deg); } 70% { transform: rotate(-2deg); } }
+@keyframes yor-flick-r { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(2deg); } }
+@keyframes yor-perk-l { 0%, 100% { transform: none; } 45% { transform: rotate(4deg); } }
+@keyframes yor-perk-r { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes yor-sway-r { 0%, 100% { transform: none; } 25% { transform: rotate(-9deg); } 55% { transform: rotate(3deg); } 80% { transform: rotate(-5deg); } }
+@keyframes yor-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(3deg); } }
+.lumi[data-avatar="yor"].is-entering .yor-eyes { animation: yor-blink .3s ease-in-out 1; }
+.lumi[data-avatar="yor"].is-entering .yor-gem-l { animation: yor-flick-l .3s ease-out 1; }
+.lumi[data-avatar="yor"].is-entering .yor-gem-r { animation: yor-flick-r .3s ease-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-gem-l { animation: yor-flick-l .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-gem-r { animation: yor-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-eyes { animation: yor-blink .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="welcome"] .yor-gem-r { animation: yor-sway-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .lumi-svg--yor { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .yor-gem-l { animation: yor-perk-l .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .yor-gem-r { animation: yor-perk-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="progress"] .lumi-svg--yor { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="progress"] .yor-eyes { animation: yor-blink .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="empty"] .lumi-svg--yor { animation: yor-tilt-r .4s ease-in-out 1; }
