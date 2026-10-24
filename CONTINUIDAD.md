@@ -2,7 +2,11 @@
 
 Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la última versión aceptada y conserva todo lo anterior.
 
+## Regla de proporción
+Cada novedad ornamental (Lumi, temas, animaciones) exige antes una mejora del núcleo de estudio (repaso, tarjetas, copias, pruebas).
+
 ## Bloques completados
+- **Fase 6 «Red de seguridad»** (`learny-v67` → `learny-v68`): suite Playwright y copia automática a archivo. Ver «Fase 6» al final.
 - **Movimiento · Fase 5 «Visibilidad del repaso»** (`learny-v66` → `learny-v67`): intervalo en los botones de calificar (`nextSchedule()`) y previsión de 7 días en Reforzar. Ver «Fase 5» al final.
 - **Movimiento · Fase 4 «Pulido»** (`learny-v65` → `learny-v66`): escalonado de listas y velo al calificar. Ver «Fase 4» al final.
 - **Movimiento · Fase 3 «Continuidad visual»** (`learny-v64` → `learny-v65`): fundido cruzado entre páginas y borrado continuo en listas. Ver «Fase 3» al final.
@@ -756,3 +760,16 @@ Paquete PARCIAL, acumulativo sobre la Fase 4 (añadir al final de `CONTINUIDAD.m
 - **No probado:** móvil físico, lector de pantalla real, los seis temas a ojo (usa solo `--muted`), actualización PWA v66 → v67 sobre una instalación existente, colecciones de miles de tarjetas (la previsión es una pasada por tarjeta; sin medir).
 - **Límites conocidos:** el intervalo se muestra siempre en días («d»), también en 100+ días. La previsión no incluye lo que se falle o repase antes. Los textos nuevos del botón solo se redibujan al revelar: si cambia el día con la tarjeta revelada, se actualizan en la siguiente.
 - **Siguiente:** Fase 6 · red de seguridad (suite Playwright empezando por `nextSchedule()`, que ahora es una función pura fácil de probar).
+
+---
+## Fase 6 «Red de seguridad» (`learny-v67` → `learny-v68`)
+Paquete PARCIAL, acumulativo sobre la Fase 5. Archivos nuevos: `package.json`, `playwright.config.js`, `.gitignore`, `tests/sm2.spec.js`, `tests/copia-archivo.spec.js`, `js/19-copia-archivo.js`. Modificados: `js/13-ajustes.js` (2 líneas), `js/18-idioma.js`, `index.html`, `sw.js` (`CORE` + `learny-v68`), `README.md` y esta nota. SM-2, modelo de datos y copias rotativas no cambian.
+- **Comprobado antes de empezar:** no había pruebas ni código de File System Access (grep sin coincidencias).
+- **Suite Playwright:** `npm install` · `npx playwright install chromium` · `npx playwright test`. Servidor local con `http-server` (puerto 4173), service worker bloqueado, todo en `?demo`.
+  - `sm2.spec.js` (11): 1 d / 6 d / ×EF, «Dudé» (EF 2,36; maduro ×1,2 sin sumar repeticiones), «No lo sabía», tope 180 d, suelo de EF 1,3, repaso anticipado, `nextSchedule` pura, `schedule` aplica lo mostrado, historial ≤ 40, propiedad con 5 000 casos aleatorios.
+  - `copia-archivo.spec.js` (6): sin API (no hay botón), demo (nunca activa), botón en Ajustes, escritura sin `apiKey` y solo si hay cambios, permiso caducado → «en pausa» → reactivar, `bootHold` no escribe.
+- **Copia automática a archivo (`js/19-copia-archivo.js`, `LearnyFileBackup`):** opcional, solo con `showSaveFilePicker` (Chrome/Edge de escritorio). La persona elige UN archivo; se reescribe cada ~60 s y al ocultar la pestaña, solo si `lastSavedRaw` cambió. Sin clave API. No en demo; no con `bootHold` ni `newerStored()`. El archivo se recuerda en IndexedDB (`learny-file-backup`). Si caduca el permiso no pide nada solo (hace falta un clic): Ajustes → «Reactivar copia automática». Sin la API no aparece nada y siguen igual `learny.backup` y «Descargar copia».
+- **Pruebas ejecutadas:** 17/17 en Chromium headless; `node --check` de todos los `.js`; `CORE` == `<script>`.
+- **No probado:** el selector de archivos real de Chrome/Edge (en las pruebas es simulado), que el handle sobreviva al reinicio del navegador (IndexedDB real), Firefox/Safari, móvil, textos en inglés a ojo (hay entradas en `EX` y una regla en `RULES`), actualización PWA v67 → v68.
+- **Límites conocidos:** solo copia mientras Learny esté abierta (no hay segundo plano); un único archivo; no restaura desde ese archivo (se restaura con «Importar JSON»).
+- **Siguiente:** decidir Fases 7–10 tras probar con 3–4 estudiantes.

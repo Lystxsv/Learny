@@ -1,0 +1,12 @@
+{
+  "name": "learny-tests",
+  "private": true,
+  "description": "Solo para las pruebas automáticas. La app en sí no necesita instalación.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "http-server": "^14.1.1"
+  }
+}

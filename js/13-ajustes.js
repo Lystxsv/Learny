@@ -101,6 +101,7 @@ function openSettings() {
         ${readBackups().length ? '<button id="restore-backup" class="outline-button" type="button">Restaurar copia automática</button>' : ''}
         <button id="reset-data" class="outline-button" type="button">${DEMO ? 'Reiniciar demo' : 'Borrar todo'}</button>
         </div>
+        ${typeof LearnyFileBackup !== 'undefined' && LearnyFileBackup.supported ? '<div id="file-backup-box"></div>' : ''}
       </details>
       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
       <button class="primary-button">Guardar preferencias</button>`, (data) => {
@@ -126,6 +127,7 @@ function openSettings() {
   $$('#modal-body [data-qs]').forEach((b) => { b.onclick = () => { put(QS[b.dataset.qs]); preview(); }; });
   $('#reset-look').onclick = () => { const o = {}; APP_KEYS.filter((k) => k !== 'reduceMotion').forEach((k) => { o[k] = base[k]; }); put(o); preview(); toast('Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.'); };
   $('#export-data').onclick = () => exportData();
+  if ($('#file-backup-box')) LearnyFileBackup.mount($('#file-backup-box')); // Fase 6: copia automática a archivo (solo donde existe la API)
   if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); ['learny.corrupt', 'learny.newer'].forEach((k) => { const v = store.get(k); if (v) store.set(k, scrubKey(v)); }); /* JS-110 */ closeModal(); toast('Clave eliminada de este navegador.'); };
   if ($('#restore-backup')) $('#restore-backup').onclick = restoreBackup;
   $('#export-deck').onclick = exportDeck;

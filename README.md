@@ -6,19 +6,20 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v67` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v68` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (23 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (24 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `package.json`, `playwright.config.js`, `tests/` | Pruebas automáticas (solo para quien desarrolla; la app no las necesita). Ver «Pruebas». |
 | `sw.js`, `manifest.json` | Modo sin conexión e instalación como app (PWA). |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Iconos de la app (ya subidos al repositorio). Son opcionales para `sw.js`, pero `manifest.json` los referencia. |
 | `proxy-worker.example.js` | Ejemplo de proxy (Cloudflare Worker) para usar IA sin exponer tu clave. Es el único archivo de proxy: la copia `proxy-worker_example.js` era idéntica y se eliminó. |
 | `CONTINUIDAD.md` | Cuaderno de trabajo de Lumi, del movimiento y de la auditoría: qué se hizo en cada bloque, decisiones, pruebas y pendientes. Léelo antes de tocar `js/16-lumi*.js`. |
 
 ## Estructura del código
-El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo orden en que se cargan. Son scripts clásicos (no módulos), así que `index.html` sigue funcionando con doble clic. Las partes 01–15 son la app; las 16 son Lumi (arte + controlador), la 17 es el movimiento y la 18 el idioma.
+El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo orden en que se cargan. Son scripts clásicos (no módulos), así que `index.html` sigue funcionando con doble clic. Las partes 01–15 son la app; las 16 son Lumi (arte + controlador), la 17 es el movimiento, la 18 el idioma y la 19 la copia automática a archivo.
 
 | Archivo | Contenido |
 |---|---|
@@ -109,9 +110,19 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 Los resultados de cálculo se memorizan y solo se dibuja la sección visible; pensado para colecciones de miles de tarjetas (sin medición independiente). El historial de repasos se limita a 5 000 registros.
 Los archivos no están minificados (se cachean al primer uso); si quieres, puedes pasarlos por `terser`/`lightningcss`.
 
+## Pruebas
+Solo hace falta para desarrollar (la app sigue sin instalación). Requiere Node.js:
+```
+npm install
+npx playwright install chromium
+npx playwright test
+```
+`tests/sm2.spec.js` prueba los intervalos de repaso (`nextSchedule()` / `schedule()`); `tests/copia-archivo.spec.js` prueba la copia automática a archivo con una API simulada. Usan `?demo`, así que nunca tocan datos reales.
+
 ## Estado y pendientes
 - Cada bloque de Lumi, de movimiento y de la auditoría, con su lista de pruebas, está en `CONTINUIDAD.md`. Se probaron con Chromium headless (`?demo`, 1280, 390 y 320 px).
-- **Siguiente (opcional):** Fase 6 · red de seguridad (suite Playwright empezando por `nextSchedule()`, que es una función pura). La Fase 5 del movimiento (parcheo del DOM de `renderAll()`) sigue por decidir.
+- **Fase 6 · red de seguridad (v68):** suite Playwright (`tests/`) y copia automática a un archivo (`js/19-copia-archivo.js`, solo en Chrome/Edge de escritorio). Ver `CONTINUIDAD.md`.
+- **Siguiente:** decidir las Fases 7–10 tras probar la app con 3–4 estudiantes. Regla de proporción: cada novedad ornamental exige antes una mejora del núcleo de estudio.
 - **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, movimiento reducido del sistema, varias pestañas, actualización del service worker en una instalación existente (hasta la v67), importar un JSON real desde el selector de archivos, nitidez de los personajes en pantallas de 1×, los seis temas a ojo y revisar cada sección en inglés buscando textos que sigan en español (se amplían en `EX`/`RULES` de `js/18-idioma.js`).
 - **Límites conocidos:** `BUILTIN_DECK_NAMES` en `js/12-copias-e-importacion.js` duplica los nombres de `DECKS` de `extras.js` (hay que mantenerlos iguales); `learny.corrupt` y `learny.newer` guardan el texto original en el navegador, con la clave de Gemini si la había («Borrar todo» sí los elimina); con datos de una versión más nueva, esta versión es de solo lectura hasta que se actualice la app.
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.

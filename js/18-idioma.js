@@ -192,6 +192,10 @@
     'Clave guardada (vacío = conservar)': 'Key saved (empty = keep)', 'Pega aquí tu clave': 'Paste your key here', 'Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.': 'Your key is stored only in this browser and should not be used on a shared computer. It goes in the x-goog-api-key header, not in the URL.',
     'Modelo de Gemini': 'Gemini model', 'URL de tu proxy (opcional, para no exponer la clave)': 'Your proxy URL (optional, to avoid exposing the key)', 'Datos y copias': 'Data and backups', 'Descargar copia': 'Download backup', 'Compartir mazo': 'Share deck',
     'Importar JSON': 'Import JSON', 'Importar CSV / Anki (.csv, .txt)': 'Import CSV / Anki (.csv, .txt)', 'Quitar clave guardada': 'Remove saved key', 'Restaurar copia automática': 'Restore automatic backup', 'Borrar todo': 'Delete everything',
+    'Elegir archivo para copia automática': 'Choose a file for automatic backup', 'Reactivar copia automática': 'Resume automatic backup', 'Desactivar copia automática': 'Turn off automatic backup',
+    'Copia automática a un archivo: desactivada': 'Automatic backup to a file: off', 'Copia automática en pausa: el navegador necesita tu permiso': 'Automatic backup paused: the browser needs your permission', 'Copia automática: no se pudo escribir (se reintentará)': 'Automatic backup: could not write (will retry)',
+    'Copia automática activada. Se actualizará sola mientras Learny esté abierta.': 'Automatic backup on. It updates itself while Learny is open.', 'No se pudo escribir en ese archivo.': 'Could not write to that file.', 'No se pudo activar la copia automática.': 'Could not turn on automatic backup.',
+    'Sin permiso, la copia automática sigue en pausa.': 'Without permission, automatic backup stays paused.', 'No se pudo reactivar la copia automática.': 'Could not resume automatic backup.', 'Copia automática desactivada. El archivo que ya existe no se borra.': 'Automatic backup turned off. The existing file is not deleted.',
     'Archivo JSON a importar': 'JSON file to import', 'Archivo CSV o Anki a importar': 'CSV or Anki file to import', 'Guardar preferencias': 'Save preferences', 'Comentarios:': 'Feedback:',
     'Lumi está oculto. Puedes reactivarlo en Ajustes ⚙️.': 'Lumi is hidden. You can turn it back on in Settings ⚙️.', 'Ocultar a Lumi': 'Hide Lumi',
     /* ---- Lumi ---- */
@@ -234,6 +238,7 @@
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp(`Copia automática activa(?: · última a las (\\d\\d:\\d\\d))?$`, 'u'), (m, t) => `Automatic backup on${t ? ` · last at ${t}` : ''}`],
     [new RegExp(`Meta: (\\d+) bloques? de (\\d+) minutos · hoy (\\d+)/(\\d+)\\. Racha: (\\d+) días?\\.`, 'u'), (m, a, b, c, d, e) => `Goal: ${a} ${pl(a, 'block', 'blocks')} of ${b} minutes · today ${c}/${d}. Streak: ${e} ${pl(e, 'day', 'days')}.`],
     [new RegExp(`Modo examen: (\\d+) tarjetas?\\.`, 'u'), (m, n) => `Exam mode: ${n} ${pl(n, 'card', 'cards')}.`],
     [new RegExp(`Sesión inteligente · paso (\\d) de 3: (\\d+) tarjetas?\\.`, 'u'), (m, s, n) => `Smart session · step ${s} of 3: ${n} ${pl(n, 'card', 'cards')}.`],
