@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v62` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v67` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -39,7 +39,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/15-inicio.js` | Inicio: bienvenida, portada, banner de la demo y arranque. |
 | `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (`lumiBeeSvg()`), el controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
-| `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas, cambio de vista y barras con la Web Animations API. Todo vale 0 con movimiento reducido. |
+| `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas, cambio de vista y barras con la Web Animations API. Con movimiento reducido solo quedan fundidos de opacidad de 80–100 ms (sin desplazamientos ni escalas). |
 | `js/18-idioma.js` | Idioma: inglés por defecto y español opcional (`settings.lang`). Diccionario es→en + reglas, traducción del DOM con `MutationObserver`, guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido. Botón EN/ES en la barra superior y selector en Ajustes → Apariencia. |
 
 Reglas para tocarlos:
@@ -65,6 +65,7 @@ Lumi es un compañero **opcional** (activado por defecto) que acompaña en momen
   - *Bienvenida*: tras 3 o más días sin actividad (sesiones o repasos, mismo criterio que el saludo).
   - *Vacío*: «Crea tu primera tarjeta para empezar.» al entrar en Práctica sin tarjetas.
 - **Reglas de frecuencia** (en `LUMI_CONFIG`): mensaje visible 5 s; un solo mensaje proactivo por visita; 90 s mínimo entre apoyos y entre progresos; prioridad reacción > contexto > genérico; sin cola (una reacción en espera caduca a los 20 s). Las reacciones salen en cualquier sección; los mensajes proactivos dependen de la página. Nada durante un examen, un bloque de enfoque, una ventana abierta, la portada o con la pestaña oculta.
+- **Reposo** (solo CSS): movimientos pequeños y espaciados mientras hay actividad; tras 30 s sin ella se detienen (`data-anim="rest"`) y se reanudan al interactuar.
 - **Gestos** (solo CSS, un ciclo de ≤ 400 ms, sin esperar a `animationend`): salto, aleteo, saludo y movimientos de las partes de cada personaje. Se anulan con movimiento reducido (del sistema o de Learny), con la pestaña oculta y en enfoque.
 - **Accesibilidad:** las reacciones no se anuncian aparte (ya las cubren los avisos existentes); sin `alert` y sin mover el foco. Temas: oscuro, negro, claro, sepia, alto contraste y Cromo.
 - **Datos:** `settings.mascot` (activación) y `settings.mascotAvatar` (dibujo), ambos validados en `sanitizeSettings`, también al importar copias.
@@ -77,7 +78,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v62`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v67`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -115,6 +116,22 @@ Los archivos no están minificados (se cachean al primer uso); si quieres, puede
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v67 · Visibilidad del repaso
+Cada botón de calificar muestra en cuántos días volverá la tarjeta («Dudé · 3 d», «Fácil · 12 d»; «sin cambio» en un repaso anticipado). Se calcula con la misma función que aplica SM-2 (`nextSchedule()` en `js/07-tarjetas.js`), así que lo mostrado coincide con lo que ocurre. En «Reforzar» hay una previsión de los repasos ya programados para los próximos 7 días. Solo representación: el algoritmo, los datos y las copias no cambian.
+
+### v66 · Pulido
+- Las listas escalonan ~30 ms la entrada de los elementos nuevos (máx. 6; sin escalonado con movimiento reducido).
+- Al calificar una tarjeta aparece un velo breve de opacidad (acento para «Fácil», neutro más leve para el resto). Solo representación.
+
+### v65 · Continuidad visual
+Al cambiar de sección, la página que sale se desvanece (~120 ms) mientras entra la nueva (sin cambios en el orden de tabulación, el foco ni los atajos: la capa saliente es inerte y oculta para lectores de pantalla). Al borrar un elemento de una lista, el fantasma colapsa su altura y el hueco entre filas, así que lo de abajo sube de forma continua en vez de saltar. Con movimiento reducido solo hay fundidos. Solo representación; `js/17-movimiento.js` y `motion.css`.
+
+### v64 · Menos trabajo en segundo plano
+Los movimientos de reposo de Lumi se detienen tras 30 s sin actividad (al final de un ciclo de respiración) y vuelven al tocar, pulsar una tecla o con cualquier evento de la app; se ajusta con `restAfterMs` en `LUMI_CONFIG` (0 = nunca). `js/17-movimiento.js` lee los tokens de `motion.css` una sola vez (se vuelven a leer solo al cambiar el movimiento reducido) y descarta antes las páginas inactivas. Solo representación: sin cambios de mensajes, frecuencias ni datos.
+
+### v63 · Movimiento reducido sin perder legibilidad
+Con «reducir movimiento» (sistema o Ajustes → Disposición → Reducir animaciones) ya no desaparece todo: se quitan desplazamientos, escalas, el pulso del temporizador y las barras animadas, y se conservan fundidos de opacidad de 80–100 ms en vistas, ventanas, tarjetas, avisos y listas. Se retiró la regla global de `style.css` que lo apagaba todo y las animaciones CSS antiguas que `motion.css` ya anulaba (`card-in`, `fb-good`, `fb-soft`, `done-pulse`, `sheet-up`, transiciones de botón y de aviso). Lumi no cambia.
 
 ### v62 · Fondo de las ventanas
 El velo oscuro detrás de las ventanas ahora se desvanece al abrir y al cerrar (antes aparecía y desaparecía de golpe). Solo CSS en `motion.css`.

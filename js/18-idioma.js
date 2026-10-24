@@ -158,6 +158,10 @@
     'Aún no hay repasos en este periodo. Repasa tus primeras tarjetas para ver qué materias reforzar.': 'There are no reviews in this period yet. Review your first cards to see which subjects to reinforce.',
     'Crea tarjetas para ver este panel.': 'Create cards to see this panel.', '¡Meta semanal cumplida!': 'Weekly goal reached!', '¡Meta cumplida!': 'Goal reached!', 'Ruta sugerida': 'Suggested route',
     'Sin huecos claros: sigue con tu plan y añade tarjetas nuevas.': 'No clear gaps: keep following your plan and add new cards.',
+    'Repasos de los próximos 7 días': 'Reviews over the next 7 days', 'Repasos programados por día': 'Reviews scheduled per day', 'Más adelante:': 'Later:',
+    'Solo cuenta lo que ya está programado; si fallas una tarjeta, volverá antes.': 'Only what is already scheduled is counted; if you fail a card, it will come back sooner.',
+    'Crea tarjetas para ver cuántos repasos te esperan.': 'Create cards to see how many reviews are waiting for you.',
+    'sin cambio': 'no change', 'la tarjeta mantiene su fecha': 'the card keeps its date', 'dentro de': 'in',
     /* ---- Guardado, avisos y confirmaciones ---- */
     'Guardado': 'Saved', 'No guardado': 'Not saved', 'Sincronizado': 'Synced', 'Cerrar': 'Close', 'Cancelar': 'Cancel', 'Confirmar': 'Confirm', '¿Seguro?': 'Are you sure?', 'Ventana de Learny': 'Learny window', 'Guardar': 'Save',
     'Consulta cancelada.': 'Query cancelled.', 'Cancelar consulta': 'Cancel query', 'Escribe una consulta.': 'Write a query.', 'Consultando tutor…': 'Consulting tutor…', 'Reintentar': 'Retry', 'No se pudo completar': 'Could not be completed',
@@ -324,7 +328,7 @@
     <li><b>Reinforce.</b> In <i>Reinforce</i>, see which subjects fail and start there tomorrow.</li></ol></article>
   <div class="grid planner-grid spaced">
     <article class="card"><h2>Pomodoro</h2><p class="lead">25 min of focus and a 5 min break (changeable in <i>Today → Block options → Adjust times</i> or Settings ⚙️). When a block ends, note whether you achieved your outcome and how focused you were. Your daily goal and streak are calculated automatically. After a block or exam, Learny shows a summary with only that session's data and lets you choose <i>Finish for today</i> or <i>Keep going a bit</i>. If the dimmed menu during a block bothers you, turn it off in <i>Settings ⚙️ → Layout</i>.</p></article>
-    <article class="card"><h2>Flashcards</h2><p class="lead">Press <i>+ Create</i>, write a question and answer, and try to recall before revealing. Rate honestly: the harder it was, the sooner the card comes back. Send the ones you master to the Library.</p></article>
+    <article class="card"><h2>Flashcards</h2><p class="lead">Press <i>+ Create</i>, write a question and answer, and try to recall before revealing. Rate honestly: the harder it was, the sooner the card comes back; each button shows in how many days it will return. Send the ones you master to the Library.</p></article>
     <article class="card"><h2>Tutor and search</h2><p class="lead">The top bar asks a tutor that questions before answering. Its <i>Context</i> (subject, level, mode, dictation) is in <i>Practice</i>. <i>Local guide</i> works offline; Gemini needs your free key (Settings ⚙️). Google, Wikipedia and Perplexity open a new tab.</p></article>
     <article class="card"><h2>Planner</h2><p class="lead">Each date is split into phases: understanding, practice, review, mock exam and final review. Tick off finished tasks. If you fall behind, Learny moves up to 2 tasks per exam to today, discards the rest and explains it in <i>Changes to your plan</i>. Each date says whether what is left still fits your daily pace, and <i>Replan from today</i> recalculates the plan.</p></article>
   </div>

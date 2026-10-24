@@ -1,7 +1,7 @@
-/* Learny · motion.css · Movimiento (Bloques 1 a 4: base, controles, flashcards, listas, vistas, modales, avisos, pulso del temporizador y barras) · base learny-v37 → learny-v38
+/* Learny · motion.css · Movimiento (Bloques 1 a 4: base, controles, flashcards, listas, vistas, modales, avisos, pulso del temporizador y barras) · v63: movimiento reducido = sin desplazamientos ni escalas, solo fundidos cortos · v66: escalonado de listas y velo al calificar
    Se carga DESPUÉS de style.css (mismo nivel de especificidad: gana el último) y no cambia paletas, fuentes, radios ni distribución.
    Solo añade tokens de movimiento y refina hover / active / disabled / loading de los botones. Sin transition: all.
-   Con movimiento reducido (sistema o Learny) todos los tokens valen 0: lo nuevo es instantáneo por diseño.
+   Con movimiento reducido (sistema o Learny) --move-y vale 0, --press y --modal-scale 1 y las duraciones se acortan a 80–100 ms: lo que queda son fundidos de opacidad, sin desplazamiento ni escala.
    Lumi (.lumi-hide y todo .lumi) queda fuera de este archivo. */
 
 /* ===== Tokens ===== */
@@ -11,19 +11,26 @@
   --dur-reveal: 180ms; /* revelar la respuesta de una tarjeta */
   --dur-view: 260ms;   /* cambio de vista (bloque 3) */
   --dur-out: 150ms;    /* salidas */
+  --dur-leave: 120ms;  /* página saliente en el fundido cruzado (fase 3) */
   --dur-done: 320ms;   /* fin de bloque (bloque 4) */
+  --dur-veil: 320ms;   /* velo de calificación de la tarjeta (fase 4) */
+  --stagger: 30ms;     /* retardo entre elementos nuevos de una lista (fase 4; js/17-movimiento.js lo limita a 6 elementos) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);  /* entradas y respuesta */
   --ease-move: ease-in-out;                    /* movimiento dentro de la pantalla */
   --ease-in: ease-in;                          /* salidas */
   --move-y: 6px;                               /* desplazamiento pequeño de entradas */
   --press: .98;                                /* escala al pulsar */
   --modal-scale: .98;                          /* escala inicial / final de un modal */
+  --pulse-scale: 1.03;                         /* escala del pulso de fin de bloque */
 }
-/* Movimiento reducido del sistema o de Learny (body.reduce-motion): sin duraciones, sin desplazamientos, sin escala */
+/* Movimiento reducido del sistema o de Learny (body.reduce-motion): se quita el MOVIMIENTO (desplazamientos, escalas, pulso) y se conservan fundidos de opacidad muy cortos,
+   para que los cambios (vista, ventana, tarjeta, aviso, lista) sigan siendo legibles sin marear. Las animaciones continuas (esqueleto de carga) se paran. Lumi tiene sus propias reglas en style.css. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-reveal: 0ms; --dur-view: 0ms; --dur-out: 0ms; --dur-done: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; }
+  :root { --dur-fast: 80ms; --dur-base: 100ms; --dur-reveal: 100ms; --dur-view: 100ms; --dur-out: 80ms; --dur-leave: 80ms; --dur-done: 0ms; --dur-veil: 100ms; --stagger: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; --pulse-scale: 1; }
+  .skeleton { animation: none; }
 }
-.reduce-motion { --dur-fast: 0ms; --dur-base: 0ms; --dur-reveal: 0ms; --dur-view: 0ms; --dur-out: 0ms; --dur-done: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; }
+.reduce-motion { --dur-fast: 80ms; --dur-base: 100ms; --dur-reveal: 100ms; --dur-view: 100ms; --dur-out: 80ms; --dur-leave: 80ms; --dur-done: 0ms; --dur-veil: 100ms; --stagger: 0ms; --move-y: 0px; --press: 1; --modal-scale: 1; --pulse-scale: 1; }
+.reduce-motion .skeleton { animation: none; }
 
 /* ===== Botones: propiedades concretas (sustituye la lista corta de style.css) ===== */
 button:not(.lumi-hide) {
@@ -60,10 +67,18 @@ button[aria-busy="true"]:hover, button[aria-busy="true"]:active { filter: none; 
 
 /* ===== Bloque 2: flashcards y listas ===== */
 /* Las entradas, la revelación y la salida las hace js/17-movimiento.js (Web Animations API, solo cuando algo realmente cambia).
-   Aquí se neutralizan las animaciones CSS antiguas, que se repetían en cada renderAll() porque la tarjeta se reescribe con innerHTML:
-   card-in (cada reescritura) y fb-good / fb-soft (aro de color con box-shadow distinto según la nota; ahora el feedback es común). */
-.flashcard > div { animation: none; }
-.flashcard.fb-good, .flashcard.fb-soft { animation: none; }
+   (v63: se borraron de style.css las animaciones antiguas card-in, fb-good y fb-soft, que se repetían en cada renderAll(); ya no hace falta neutralizarlas aquí.) */
+
+/* ===== Fase 4: velo de calificación ===== */
+/* flashFeedback() (js/07-tarjetas.js) pone fb-good al calificar «Fácil» y fb-soft con «No lo sabía» o «Dudé». El velo es un ::after de la tarjeta que solo anima OPACIDAD
+   (no box-shadow, no diseño): un destello corto, más intenso y con el acento para «Fácil», más leve y neutro (color del texto) para los demás. Así se distinguen también por intensidad, no solo por tono.
+   js/17-movimiento.js quita la clase al terminar (si no, volver a la página de Practicar reiniciaría la animación). Con movimiento reducido dura --dur-veil = 100 ms; sigue siendo solo opacidad. */
+.flashcard { position: relative; }
+.flashcard::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--veil-color, var(--accent)); opacity: 0; pointer-events: none; }
+.flashcard.fb-good { --veil-color: var(--accent); --veil: .2; }
+.flashcard.fb-soft { --veil-color: var(--text); --veil: .08; }
+.flashcard.fb-good::after, .flashcard.fb-soft::after { animation: fc-veil var(--dur-veil) var(--ease-out) 1; }
+@keyframes fc-veil { 0% { opacity: 0; } 25% { opacity: var(--veil); } 100% { opacity: 0; } }
 
 /* ===== Bloque 3: modales (<dialog>) ===== */
 /* open/close siguen siendo síncronos (showModal(), close(), Escape, foco, onClose, modalOpen()): la animación es solo visual y no retrasa nada.
@@ -86,11 +101,10 @@ dialog.modal[open] { transition: opacity var(--dur-base) var(--ease-out), transf
 }
 /* @starting-style va DESPUÉS de las reglas [open]: con la misma especificidad gana la última y, si fuera antes, el estado inicial sería ya opacity:1 */
 @starting-style { dialog.modal[open] { opacity: 0; transform: translateY(var(--move-y)) scale(var(--modal-scale)); } dialog.modal[open]::backdrop { opacity: 0; } }
-/* Móvil: el modal ya era una hoja inferior (sheet-up en style.css). Se refina con los mismos tokens; la animación CSS antigua se anula para no duplicarla. */
+/* Móvil: el modal es una hoja inferior; sube 4 × --move-y (24 px; 0 con movimiento reducido, donde solo hay fundido). (v63: sheet-up de style.css eliminada.) */
 @media (max-width: 820px) {
-  .modal { animation: none; }
-  @supports (overlay: auto) and (transition-behavior: allow-discrete) { dialog.modal { transform: translateY(24px); } dialog.modal[open] { transform: none; } }
-  @starting-style { dialog.modal[open] { transform: translateY(24px); } }
+  @supports (overlay: auto) and (transition-behavior: allow-discrete) { dialog.modal { transform: translateY(calc(var(--move-y) * 4)); } dialog.modal[open] { transform: none; } }
+  @starting-style { dialog.modal[open] { transform: translateY(calc(var(--move-y) * 4)); } }
 }
 
 /* ===== Bloque 4: avisos (toast), pulso del temporizador y barras ===== */
@@ -107,7 +121,16 @@ dialog.modal[open] { transition: opacity var(--dur-base) var(--ease-out), transf
 /* Pulso de fin de bloque: UN ciclo de --dur-done (320 ms) en vez de 2 × 0,8 s. #timer-clock es un <span> en línea, donde transform no se aplica
    (el «scale» original nunca se veía); con inline-block (mismo flujo y mismo tamaño de texto) sí. */
 #timer-clock.pulse, .timer.pulse #timer-clock { display: inline-block; animation: done-pulse var(--dur-done) var(--ease-out) 1; }
-@keyframes done-pulse { 40% { color: var(--accent); transform: scale(1.03); } }
+@keyframes done-pulse { 40% { color: var(--accent); transform: scale(var(--pulse-scale)); } }
 
 /* Barras del gráfico de foco: crecen/encogen desde la base (js/17-movimiento.js anima solo las que cambian de valor) */
 .bar { transform-origin: 50% 100%; }
+
+/* ===== Fase 3: fundido cruzado entre páginas ===== */
+/* La página que sale se queda ~120 ms como capa absoluta, inerte y sin clics encima de la que entra (js/17-movimiento.js la coloca con top/left/width) y se desvanece.
+   .main pasa a ser el bloque contenedor para poder colocarla. #study repite su rejilla de .active (las demás páginas son bloques). */
+.main { position: relative; }
+.page.page-leaving { display: block; position: absolute; pointer-events: none; max-height: 100vh; overflow: hidden; }
+#study.page-leaving { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--s2); align-items: start; }
+@media (max-width: 1000px) { #study.page-leaving { grid-template-columns: minmax(0, 1fr); } }
+body.new-user #study.page-leaving { grid-template-columns: minmax(0, 1fr); }

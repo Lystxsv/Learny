@@ -9,23 +9,47 @@
    ========================================================= */
 let activeCard = null, revealed = false, answered = false, lastRateAt = 0;
 
-function schedule(card, rating) {
+/* Fase 5 (v67): el siguiente estado SM-2 de una tarjeta, calculado SIN modificarla. schedule() lo aplica y los botones de calificar lo muestran,
+   así que lo que se ve («Dudé · 3 d») es exactamente lo que ocurre. Misma fórmula que antes; solo se separó el cálculo de la escritura. */
+function nextSchedule(card, rating) {
   const q = qualityOf(rating);
+  if (card.nextReview > today() && q >= 3) return { early: true, interval: card.interval, nextReview: card.nextReview, repetitions: card.repetitions, easeFactor: card.easeFactor }; // repaso anticipado: no adelanta el calendario ni infla el intervalo
+  let { interval, repetitions, easeFactor } = card;
+  if (q < 3) {
+    repetitions = 0; interval = 1; // SM-2: con calidad < 3 el factor de facilidad no cambia
+  } else {
+    const hardLate = q === 3 && repetitions >= 2; // «Dudé» en una tarjeta ya consolidada: crece poco y no suma repeticiones
+    if (repetitions === 0) interval = 1;
+    else if (repetitions === 1) interval = 6;
+    else interval = Math.round(Math.max(1, interval) * (hardLate ? 1.2 : easeFactor));
+    if (!hardLate) repetitions += 1;
+    easeFactor = Math.max(1.3, +(easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(2));
+  }
+  interval = Math.min(MAX_INTERVAL, Math.max(1, interval)); // tope real: nunca más de MAX_INTERVAL días
+  return { early: false, interval, nextReview: addDays(today(), interval), repetitions, easeFactor };
+}
+function schedule(card, rating) {
+  const q = qualityOf(rating), n = nextSchedule(card, rating);
   card.lastReviewed = today();
   card.history = [...(card.history || []), { date: today(), rating, quality: q }].slice(-40);
-  if (card.nextReview > today() && q >= 3) return; // repaso anticipado: no adelanta el calendario ni infla el intervalo
-  if (q < 3) {
-    card.repetitions = 0; card.interval = 1; // SM-2: con calidad < 3 el factor de facilidad no cambia
-  } else {
-    const hardLate = q === 3 && card.repetitions >= 2; // «Dudé» en una tarjeta ya consolidada: crece poco y no suma repeticiones
-    if (card.repetitions === 0) card.interval = 1;
-    else if (card.repetitions === 1) card.interval = 6;
-    else card.interval = Math.round(Math.max(1, card.interval) * (hardLate ? 1.2 : card.easeFactor));
-    if (!hardLate) card.repetitions += 1;
-    card.easeFactor = Math.max(1.3, +(card.easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02))).toFixed(2));
-  }
-  card.interval = Math.min(MAX_INTERVAL, Math.max(1, card.interval)); // tope real: nunca más de MAX_INTERVAL días
-  card.nextReview = addDays(today(), card.interval);
+  if (n.early) return;
+  card.interval = n.interval; card.nextReview = n.nextReview; card.repetitions = n.repetitions; card.easeFactor = n.easeFactor;
+}
+
+/* Fase 5 (v67): cada botón de calificar muestra en cuántos días volverá la tarjeta (solo lectura: no cambia datos ni algoritmo).
+   Se dibuja al mostrar los botones (revelar, examen) y solo se reescribe si el valor cambió. El texto accesible se lee aparte («, dentro de 3 días»); el visible va oculto para lectores de pantalla. */
+function rateHints() {
+  const row = $('#rating-row'), c = exam ? exam.cards[exam.i] : activeCard;
+  if (!row || row.hidden || !c || c.corrupt) return;
+  row.querySelectorAll('button[data-rating]').forEach((b) => {
+    const n = nextSchedule(c, b.dataset.rating), key = n.early ? 'e' : String(n.interval);
+    if (b.dataset.hint === key) return;
+    let vis = b.querySelector(':scope > .rate-int'), sr = b.querySelector(':scope > .rate-sr');
+    if (!vis) { vis = document.createElement('small'); vis.className = 'rate-int'; vis.setAttribute('aria-hidden', 'true'); sr = document.createElement('span'); sr.className = 'sr-only rate-sr'; b.append(vis, sr); }
+    vis.textContent = n.early ? 'sin cambio' : `${n.interval} d`;
+    sr.textContent = n.early ? ', la tarjeta mantiene su fecha' : n.interval === 1 ? ', mañana' : `, dentro de ${n.interval} días`;
+    b.dataset.hint = key;
+  });
 }
 
 const cardCtl = () => { const ae = document.activeElement; return !!ae && (ae.id === 'reveal-card' || ae.id === 'exam-exit' || $('#rating-row').contains(ae)); };
@@ -70,7 +94,7 @@ function revealCard() {
   const had = cardCtl();
   revealed = true;
   $('#flashcard').innerHTML = `<div><small>Pregunta</small><br>${esc(activeCard.question)}<hr><small>Respuesta</small><br>${esc(activeCard.answer)}</div>`;
-  $('#reveal-card').hidden = true; $('#rating-row').hidden = false;
+  $('#reveal-card').hidden = true; $('#rating-row').hidden = false; rateHints();
   settleCardFocus(had);
   document.dispatchEvent(new Event('learny:reveal'));
 }
@@ -123,7 +147,7 @@ function renderExamBody() {
     $('#reveal-card').hidden = false; $('#rating-row').hidden = true;
   } else {
     $('#flashcard').innerHTML = `<div><small>Respuesta</small><br>${esc(item.answer)}</div>`;
-    $('#reveal-card').hidden = true; $('#rating-row').hidden = false;
+    $('#reveal-card').hidden = true; $('#rating-row').hidden = false; rateHints();
   }
 }
 

@@ -48,6 +48,7 @@ function renderAnalysis() {
   $('#time-stat').textContent = `${mins} min`;
   $('#time-note').textContent = `de ${plural(state.sessions.filter((x) => !x.abandon && inPeriod(x.date)).length, 'bloque', 'bloques')} · tiempo en sesión, no aprendizaje`;
   $('#overdue-stat').textContent = overdueCards().length;
+  safe(renderForecast, 'previsión de repasos');
 
   const days = [], names = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   for (let i = 6; i >= 0; i--) {
@@ -74,6 +75,24 @@ function renderAnalysis() {
       : a.pct < 60 ? `${esc(a.name)}: ${a.pct}% sin fallar; priorízala mañana.` : `${esc(a.name)}: ${a.pct}% sin fallar.`;
     return `<div class="weak-topic"><span>${tip}<br>${extra}<button class="text-button" data-quiz-subject="${esc(a.name)}" type="button">Mini quiz de ${esc(a.name)}</button></span><b>${a.ok} de ${a.total}</b></div>`;
   }).join('');
+}
+
+/* Fase 5 (v67): repasos ya programados para los próximos 7 días. Solo lee las fechas de las tarjetas (no cambia nada). «Hoy» usa dueCards() (incluye lo vencido), igual que el contador de Practicar.
+   No es una predicción: lo que falles o repases antes volverá antes y no está contado. */
+const FORECAST_DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+function renderForecast() {
+  const chart = $('#forecast-chart'); if (!chart) return;
+  const live = state.cards.filter((c) => !c.archived && !c.corrupt), dates = Array.from({ length: 7 }, (_, i) => addDays(today(), i)), counts = dates.map(() => 0);
+  let later = 0;
+  live.forEach((c) => { const i = dates.indexOf(c.nextReview); if (i > 0) counts[i]++; else if (c.nextReview > dates[6]) later++; });
+  counts[0] = dueCards().length;
+  const total = counts.reduce((t, n) => t + n, 0);
+  $('#forecast-total').textContent = plural(total, 'repaso', 'repasos');
+  chart.hidden = !live.length;
+  if (!live.length) { chart.innerHTML = ''; $('#forecast-note').textContent = 'Crea tarjetas para ver cuántos repasos te esperan.'; return; }
+  const max = Math.max(5, ...counts);
+  chart.innerHTML = dates.map((d, i) => `<div class="bar-col" title="${d}: ${plural(counts[i], 'repaso', 'repasos')}"><div class="bar-area"><div class="bar" aria-hidden="true" style="height:${counts[i] ? Math.max(4, (counts[i] / max) * 100) : 0}%"></div></div><span>${i === 0 ? 'hoy' : FORECAST_DAYS[new Date(`${d}T12:00:00`).getDay()]}<br>${counts[i]}</span></div>`).join('');
+  $('#forecast-note').textContent = `${later ? `Más adelante: ${plural(later, 'tarjeta', 'tarjetas')}. ` : ''}Solo cuenta lo que ya está programado; si fallas una tarjeta, volverá antes.`;
 }
 
 function weekSlice() {

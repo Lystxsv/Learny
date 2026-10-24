@@ -21,7 +21,9 @@ const LUMI_CONFIG = Object.freeze({
   pendingTtlMs: 20 * 1000,      // una reacción bloqueada (ventana abierta, otra página) caduca a los 20 s: no hay cola
   progressCooldownMs: 90 * 1000, // mínimo entre dos mensajes de progreso
   welcomeAfterDays: 3,          // días sin actividad (sesiones y repasos, como el saludo) para dar la bienvenida
-  reactMs: 400                  // duración del gesto breve (solo CSS; la lógica no espera a animationend)
+  reactMs: 400,                 // duración del gesto breve (solo CSS; la lógica no espera a animationend)
+  restAfterMs: 30 * 1000,       // sin actividad durante tanto tiempo, los movimientos de reposo se detienen (0 = nunca); cualquier toque, tecla o evento de la app los reanuda
+  restWaitMs: 6 * 1000          // al detenerlos se espera al final del ciclo de respiración (4,5 s) para no cortar el movimiento; si no llega, se detienen igualmente a los 6 s
 });
 const LUMI_TEXT = Object.freeze({
   neutral: '¿Empezamos con algo corto?', celebrate: 'Bloque completado.', support: 'Esta vuelve pronto. Sin prisa.',
@@ -92,6 +94,7 @@ const LumiCompanion = (() => {
   let root = null, msgEl = null, liveEl = null, cardMsgEl = null;
   let enabled = false, wired = false, visitUsed = false, hiddenAt = 0;
   let msgTimer = 0, liveTimer = 0, enterTimer = 0, proactiveTimer = 0, pendingTimer = 0, reactTimer = 0;
+  let resting = false, restTimer = 0, restFallback = 0, restPending = false, lastWakeAt = 0; // reposo en calma (v64)
   let curPrio = 0, curSlot = '', pending = null, lastSupportAt = 0, lastSupportRv = null, lastProgressAt = 0, lastProgressRv = null;
   const celebrated = new Set(); // ids de sesión ya celebradas (en memoria: pomodone no se repite al recargar ni llega de otra pestaña)
   const PAGE_OF = { study: 'study', practice: 'practice' };
@@ -128,9 +131,27 @@ const LumiCompanion = (() => {
     if (!enabled || !root) return;
     const focus = focusActive();
     root.dataset.pose = focus ? 'focus' : 'neutral';
-    root.dataset.anim = focus || reduced() ? 'none' : 'idle';
+    applyAnim();
     if (focus) { clearMessage(); dropPending(); clearTimeout(reactTimer); root.removeAttribute('data-react'); } // durante el enfoque no hay mensajes ni reacciones en espera
   }
+  /* Reposo con vida con tope (v64): los movimientos infinitos de reposo (data-anim="idle") repintan el SVG en cada fotograma. Tras restAfterMs sin actividad pasan a data-anim="rest" (sin animaciones, pose de la referencia)
+     y vuelven con la primera actividad. Solo representación: no toca mensajes, reacciones, prioridades ni cooldowns. */
+  function applyAnim() { if (root) root.dataset.anim = focusActive() || reduced() ? 'none' : resting ? 'rest' : 'idle'; }
+  function goRest() { clearTimeout(restFallback); restPending = false; if (!enabled || !root || resting) return; resting = true; applyAnim(); }
+  function askRest() { // espera al final del ciclo de respiración para que el corte no se note
+    if (!enabled || !root || resting) return;
+    if (root.dataset.anim !== 'idle') { restTimer = setTimeout(askRest, C.restAfterMs); return; } // enfoque o movimiento reducido: no hay nada que detener; se reintenta más tarde
+    restPending = true; clearTimeout(restFallback); restFallback = setTimeout(goRest, C.restWaitMs);
+  }
+  function wake() {
+    clearTimeout(restTimer); clearTimeout(restFallback); restPending = false;
+    if (!enabled) return;
+    if (resting) { resting = false; applyAnim(); }
+    if (C.restAfterMs > 0) restTimer = setTimeout(askRest, C.restAfterMs);
+  }
+  function onActivity() { const t = Date.now(); if (!resting && t - lastWakeAt < 1000) return; lastWakeAt = t; wake(); } // limitado a 1 por segundo mientras no esté en reposo
+  const onBreathe = (e) => { if (restPending && e.animationName === 'lumi-breathe') goRest(); };
+  const ACTIVITY = ['pointerdown', 'keydown', 'wheel', 'touchstart'], WAKE_EVENTS = ['learny:page', 'learny:rated', 'learny:pomodone', 'learny:timer', 'learny:examend', 'learny:reset'];
   function playEnter() {
     clearTimeout(enterTimer); root.classList.remove('is-entering');
     if (reduced() || document.hidden) return;
@@ -218,17 +239,19 @@ const LumiCompanion = (() => {
     root.dataset.paused = document.hidden ? 'true' : 'false'; // CSS pausa las animaciones con la pestaña oculta
     if (document.hidden) { hiddenAt = Date.now(); clearMessage(); return; }
     if (hiddenAt && Date.now() - hiddenAt >= C.visitGapMs) { visitUsed = false; scheduleProactive(); }
-    hiddenAt = 0; syncPose(); flushPending();
+    hiddenAt = 0; wake(); syncPose(); flushPending();
   }
   const LISTENERS = { 'learny:timer': syncPose, 'learny:render': syncPose, 'learny:page': onPage, 'learny:reset': onReset, 'learny:pomodone': onPomodone, 'learny:rated': onRated, 'learny:examstart': onExamStart, 'learny:examend': onExamStart, visibilitychange: onVisibility };
   function wire() {
     if (wired) return; wired = true;
     Object.entries(LISTENERS).forEach(([k, f]) => document.addEventListener(k, f));
+    ACTIVITY.forEach((k) => document.addEventListener(k, onActivity, { passive: true, capture: true })); WAKE_EVENTS.forEach((k) => document.addEventListener(k, wake));
     byId('app-modal')?.addEventListener('close', onDialogClose); byId('confirm-modal')?.addEventListener('close', onDialogClose);
   }
   function unwire() {
     if (!wired) return; wired = false;
     Object.entries(LISTENERS).forEach(([k, f]) => document.removeEventListener(k, f));
+    ACTIVITY.forEach((k) => document.removeEventListener(k, onActivity, { capture: true })); WAKE_EVENTS.forEach((k) => document.removeEventListener(k, wake));
     byId('app-modal')?.removeEventListener('close', onDialogClose); byId('confirm-modal')?.removeEventListener('close', onDialogClose);
   }
 
@@ -241,9 +264,9 @@ const LumiCompanion = (() => {
     root.hidden = !on; msgEl.hidden = !on; if (cardMsgEl) cardMsgEl.hidden = !on;
     if (on) {
       wire(); root.dataset.paused = document.hidden ? 'true' : 'false';
-      syncPose(); playEnter(); scheduleProactive();
+      resting = false; syncPose(); playEnter(); scheduleProactive(); wake();
     } else { // apagar: sin animaciones, sin temporizadores, sin mensajes pendientes y sin escuchar nada
-      unwire(); clearTimeout(enterTimer); clearTimeout(proactiveTimer); clearTimeout(reactTimer); root.removeAttribute('data-react'); root.classList.remove('is-entering'); clearMessage(); dropPending();
+      unwire(); clearTimeout(enterTimer); clearTimeout(proactiveTimer); clearTimeout(reactTimer); clearTimeout(restTimer); clearTimeout(restFallback); restPending = false; resting = false; root.removeAttribute('data-react'); root.classList.remove('is-entering'); clearMessage(); dropPending();
       root.dataset.pose = 'neutral'; root.dataset.anim = 'none';
     }
   }
@@ -271,6 +294,7 @@ const LumiCompanion = (() => {
     if (!root || !msgEl) return;
     setAvatar(state.settings.mascotAvatar); // inserta el dibujo elegido (sin archivos externos)
     root.querySelector('.lumi-hide')?.addEventListener('click', hide);
+    root.addEventListener('animationiteration', onBreathe); // la respiración marca el final de ciclo en el que se detiene el reposo
     sync(state.settings);
   }
   return Object.freeze({ init, sync, avatars, thumb });
