@@ -28,8 +28,8 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/04-planificador.js` | Planificador: plan inverso, tareas diarias y reajuste si te atrasas. |
 | `js/05-temporizador.js` | Temporizador: Pomodoro, sincronización entre pestañas, racha y pantalla «Hoy». Emite `learny:timer`. |
 | `js/06-hoy.js` | Hoy: recomendación con motivo, saludo (`daysSinceActivity()`), cierre de sesión, «me cuesta arrancar» y cola del día. |
-| `js/07-tarjetas.js` | Tarjetas: repaso espaciado (SM-2), simulacro, formulario y biblioteca. |
-| `js/08-analisis.js` | Análisis: estadísticas por materia e informe. |
+| `js/07-tarjetas.js` | Tarjetas: repaso espaciado (SM-2; `nextSchedule()` calcula sin modificar y `schedule()` aplica), intervalo en los botones de calificar, simulacro, formulario y biblioteca. |
+| `js/08-analisis.js` | Análisis: estadísticas por materia, previsión de repasos de 7 días e informe. |
 | `js/09-tutor-ia.js` | Tutor e IA: guía local, prompts, Gemini (clave o proxy) y chats. |
 | `js/10-revision-ia-y-temas.js` | Revisión de IA y temas: bandeja de revisión, Feynman, temas y ruleta. |
 | `js/11-apariencia.js` | Apariencia: temas (incluido Cromo), acentos con contraste y preferencias; avisa a Lumi y al idioma con `sync`. |
@@ -39,7 +39,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/15-inicio.js` | Inicio: bienvenida, portada, banner de la demo y arranque. |
 | `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (`lumiBeeSvg()`), el controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
-| `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas, cambio de vista y barras con la Web Animations API. Con movimiento reducido solo quedan fundidos de opacidad de 80–100 ms (sin desplazamientos ni escalas). |
+| `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas (escalonado y borrado continuo), fundido cruzado entre páginas, velo al calificar y barras con la Web Animations API. Con movimiento reducido solo quedan fundidos de opacidad de 80–100 ms (sin desplazamientos ni escalas). |
 | `js/18-idioma.js` | Idioma: inglés por defecto y español opcional (`settings.lang`). Diccionario es→en + reglas, traducción del DOM con `MutationObserver`, guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido. Botón EN/ES en la barra superior y selector en Ajustes → Apariencia. |
 
 Reglas para tocarlos:
@@ -93,10 +93,10 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 
 ## Funciones principales
 - **Hoy:** una acción recomendada con su motivo y como máximo dos alternativas; Pomodoro con intención, notas de distracción y ambientes (Biblioteca, Noche, Minimalista); misiones, meta diaria y racha con día de gracia.
-- **Practicar:** repaso SM-2 con tres calificaciones (No lo sabía = 1, Dudé = 3, Fácil = 5), modo examen, *Intercalar*, *5 minutos*, *Examen real*, *Crear con IA* con bandeja de revisión, tutor socrático o directo, Feynman, ruleta de temas, notas, lectura y dictado.
+- **Practicar:** repaso SM-2 con tres calificaciones (No lo sabía = 1, Dudé = 3, Fácil = 5; cada botón muestra en cuántos días volverá la tarjeta), modo examen, *Intercalar*, *5 minutos*, *Examen real*, *Crear con IA* con bandeja de revisión, tutor socrático o directo, Feynman, ruleta de temas, notas, lectura y dictado.
 - **Biblioteca:** tarjetas archivadas, mazos iniciales y propios, importación de CSV/Anki y de mazos JSON con vista previa.
 - **Planificar:** plan inverso por fases (comprensión → práctica → repaso → simulacro → revisión), reajuste si te atrasas con explicación, comprobación de carga y *Replanificar desde hoy*.
-- **Reforzar:** seis indicadores honestos con su muestra y periodo (7 días, 30 días o todo), materias débiles y mini quiz; informe semanal en JSON o CSV.
+- **Reforzar:** seis indicadores honestos con su muestra y periodo (7 días, 30 días o todo), previsión de los repasos ya programados para los próximos 7 días, materias débiles y mini quiz; informe semanal en JSON o CSV.
 - **Ajustes ⚙️:** idioma, apariencia, tipografía, disposición, estudio y avisos, IA y datos/copias; casilla y selector de Lumi.
 - **Apariencia:** temas Automático, Oscuro, Negro (OLED), Claro, Sepia, Alto contraste y **Cromo**; acento Cielo/Menta/Violeta/Ámbar/Rosa o personalizado con contraste 4,5:1; cinco **estilos rápidos** (Cuaderno, Lectura nocturna, Papel, Biblioteca, Enfoque).
 - **Idioma:** inglés (predeterminado) o español, con botón EN/ES en la barra superior (en móvil, en Ajustes).
@@ -111,7 +111,8 @@ Los archivos no están minificados (se cachean al primer uso); si quieres, puede
 
 ## Estado y pendientes
 - Cada bloque de Lumi, de movimiento y de la auditoría, con su lista de pruebas, está en `CONTINUIDAD.md`. Se probaron con Chromium headless (`?demo`, 1280, 390 y 320 px).
-- **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, movimiento reducido del sistema, varias pestañas, actualización del service worker en una instalación existente (hasta la v62), importar un JSON real desde el selector de archivos, nitidez de los personajes en pantallas de 1×, los seis temas a ojo y revisar cada sección en inglés buscando textos que sigan en español (se amplían en `EX`/`RULES` de `js/18-idioma.js`).
+- **Siguiente (opcional):** Fase 6 · red de seguridad (suite Playwright empezando por `nextSchedule()`, que es una función pura). La Fase 5 del movimiento (parcheo del DOM de `renderAll()`) sigue por decidir.
+- **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, movimiento reducido del sistema, varias pestañas, actualización del service worker en una instalación existente (hasta la v67), importar un JSON real desde el selector de archivos, nitidez de los personajes en pantallas de 1×, los seis temas a ojo y revisar cada sección en inglés buscando textos que sigan en español (se amplían en `EX`/`RULES` de `js/18-idioma.js`).
 - **Límites conocidos:** `BUILTIN_DECK_NAMES` en `js/12-copias-e-importacion.js` duplica los nombres de `DECKS` de `extras.js` (hay que mantenerlos iguales); `learny.corrupt` y `learny.newer` guardan el texto original en el navegador, con la clave de Gemini si la había («Borrar todo» sí los elimina); con datos de una versión más nueva, esta versión es de solo lectura hasta que se actualice la app.
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
