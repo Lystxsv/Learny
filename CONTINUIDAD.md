@@ -646,3 +646,47 @@ Solo **representación**: `16-lumi.js` y el resto de la lógica no cambian (esta
 - **Pruebas (Chromium + Playwright, app completa con `?demo`, 1000, 390 y 320 px; sin errores de página):** el dibujo estático sigue idéntico a la referencia (diferencia nula) tras partirlo en grupos; cada estado usa exactamente las animaciones previstas en las partes previstas, con un ciclo de 400 ms (entrada, 300 ms); NEUTRAL sin ninguna animación activa tras 2,5 s; FOCUS con gesto y entrada marcados: 0 animaciones; `data-paused` deja las animaciones en pausa; movimiento reducido de Learny: 0; con el controlador real, `learny:pomodone` produce `celebrate` con cola, oreja y ojos animados y se limpia solo; regresión de abeja, Eevee, WALL·E, Daniel y Yor con sus animaciones y un solo SVG visible; sin desborde horizontal a 390 y 320 px; `sw.js` coincide con los `<script>`; el `style.css` anterior es un prefijo exacto del nuevo. Fotogramas congelados (cola y oreja a +7° y −5°, ojos cerrados) revisados a ojo.
 - **Pendiente:** movimiento reducido del *sistema* operativo (solo se probó el de Learny), seis temas a ojo con las poses, lector de pantalla, actualización PWA v56 → v57 sobre instalación existente y móvil físico.
 - **Límite conocido:** al girar la cola o la oreja aparecen costuras mínimas donde se separan del cuerpo (el dibujo está partido en grupos sin solapes); con ≤ 7° y 400 ms apenas se notan a 96 px. Los gestos de apoyo, progreso y vacío solo se ven si Lumi está visible (lo está en todas las secciones desde la v42).
+
+
+---
+## Auditoría 2 · correcciones (`learny-v57` → `learny-v58`)
+**Fase 1 (P2):** JS-101 (`16-lumi.js`, `hide()` enfoca `.page.active h1`); JS-102 (`10-revision-ia-y-temas.js` y `extras.js`: en la rama `stale` se restaura el contenido local sin aviso).
+**Fase 2 (P3 con efecto):** JS-104 (`resetTimer`/`restoreTimer` vacían `timer.intention`); JS-105 (`completePhase` fecha la sesión con `endAt`); JS-106 (`adoptRemoteState` llama a `applyPreferences`, salvo que el foco esté en el contexto del tutor); JS-107 (`hydrate` valida `phase` contra `PHASES`; `extras.js` usa `hasOwnProperty`); JS-108 (`confirmDialog` en cola y con `try/catch` en `showModal`); JS-103 (`redistributeIfBehind` sin parámetro y llamada movida tras los `queueToast` de arranque, antes de `bootHold = false`, con `renderAll()`).
+**Fase 3 (P3 menores):** JS-111 (`validKey` ASCII al guardar la clave); JS-110 (`scrubKey` en `02-datos.js`, usado por «Quitar clave guardada» y «Descargar original»); JS-112 (`translate="no"` en título/materia de `#deadline-list`, `#calendar-summary` y `#today-tasks`).
+**No cambiado:** JS-109 (requiere comprobar en navegador) y las dos mejoras opcionales (rendimiento de `save()`, tope de chats).
+**Efectos a tener en cuenta:** una sesión registrada tarde («Sí, registrarlo» al día siguiente) queda fechada el día en que terminó, por lo que Lumi no la celebra (solo celebra sesiones de hoy); «Quitar clave guardada» modifica `learny.newer` (solo el campo `apiKey`).
+**Pruebas:** `node --check` en los archivos tocados. NO probado en navegador.
+
+
+---
+## Auditoría 2 · fase final (`learny-v58` → `learny-v59`)
+- **Rendimiento de `save()`:** `newerStored()` devuelve la bandera `remoteNewer` (`03-interfaz.js`), que se activa al arrancar con `newerFrom > 0` y en `adoptRemoteState` cuando otra pestaña escribe `version > SCHEMA`, y se apaga al adoptar datos válidos o al borrar todo. **Riesgo:** si el navegador no entrega el evento `storage`, la protección se reanuda al volver a la pestaña (`pullFromStorage`), no al instante.
+- **Chats:** máximo 12 mensajes × 1 500 caracteres por tema, también al cargar (`hydrate`, que recorta los antiguos). Los chats solo se guardan; la interfaz no los muestra.
+- **JS-109 sin cambios:** `dialog.modal` solo tiene `transform` durante su entrada (220 ms) y termina en `none`; un `position: fixed` dentro se recoloca solo al acabar. Efecto máximo: un desplazamiento breve del aviso mientras entra el modal. Pendiente de comprobar a ojo.
+- Pruebas: `node --check`. NO probado en navegador.
+
+
+---
+## Lumi · reposo con vida (`learny-v59` → `learny-v60`)
+- **Diagnóstico:** los gestos de las seis apariencias SÍ se disparan (probado en Chromium con `data-react` y con el controlador real: celebrate, welcome, support, progress, empty y la entrada). El problema era de percepción: en reposo no había ningún movimiento (decisión antigua «NEUTRAL sin movimiento continuo»), los gestos duran 0,4 s y solo salen en eventos poco frecuentes, y con «reducir animaciones» del sistema operativo se anula todo (verificado: 0 animaciones).
+- **Cambio (solo `style.css`, bloque «Lumi · reposo con vida» al final):** el controlador ya ponía `data-anim="idle"`; ahora el CSS lo usa. Respiración común (`lumi-breathe`, 2 px, 4,5 s) y por apariencia: abeja (alas, antenas), Eevee (cola, orejas), WALL·E (cabeza), Daniel (parpadeo, cabeza), Yor (parpadeo, adornos), Cat Black (parpadeo, cola, oreja). Periodos distintos (3,4–9 s) para que no se muevan a la vez.
+- **Apagado:** enfoque (`data-anim="none"` y reglas con `!important`), movimiento reducido, pestaña oculta (`data-paused`), `body.session-practice` (examen). No pisa gestos ni la entrada (`:not([data-react]):not(.is-entering)`).
+- **Esto sustituye** la regla anterior «NEUTRAL sin ninguna animación activa tras 2,5 s»; las pruebas de ese tipo ya no aplican al reposo.
+- **Pruebas (Chromium, `?demo`, 1000 px, sin errores):** reposo con animaciones en las 6 apariencias; 0 con movimiento reducido del sistema; 0 en enfoque; un gesto sustituye al reposo; la cola de Eevee cambia de transformación 5 veces en 4 s; 0 en examen. Pendiente: verlo a ojo (intensidad), batería en móvil, 320/390 px.
+
+
+---
+## JS-109 · aviso durante la entrada de un modal (`learny-v60` → `learny-v61`)
+- **Confirmado en Chromium (antes «pendiente de verificar»):** con el aviso reparentado dentro del `<dialog>` (`placeToast`), mientras el modal anima su entrada (`transform`, 220 ms) un `position: fixed` se posiciona respecto al diálogo, no al viewport. Medido: el aviso estaba en y=676 y, al terminar la transición, saltaba a y=725 (≈49 px en escritorio 1000×800; ≈9 px en móvil 390). El hallazgo era real.
+- **Corrección (`js/03-interfaz.js`):** `dialogAnimating()` (`getAnimations()` en curso en `#app-modal` o `#confirm-modal`); `toast()` espera 260 ms (un único reintento, sin bucle gracias a `toast.deferred`) y un aviso nuevo cancela el pendiente. Sin cambios en `motion.css`: la animación del modal es la misma.
+- **Medido después:** el aviso aparece a los ~280 ms y su recorrido es monótono (767→743→728→726→725 px; móvil 704→644→640→638), sin saltos. Con el modal ya estable no hay retraso. `offerUndo` + clic en «Deshacer» sigue funcionando.
+- **Límite:** un aviso emitido en el mismo instante en que se abre un `confirmDialog` (ahora en cola, abre un microtask después) se coloca en el `<body>` y queda tapado por el diálogo; ya ocurría con avisos emitidos antes de abrirlo y no se tocó.
+
+
+---
+## Movimiento · Etapa 1 «Fondo de las ventanas» (`learny-v61` → `learny-v62`)
+- **Medido antes:** la opacidad del `::backdrop` valía 1,00 desde el primer fotograma al abrir y 0,00 desde el primero al cerrar (`getAnimations()` no listaba ninguna transición del fondo), mientras el diálogo sí se desvanecía (0,99 → 0,17 en 140 ms): el velo aparecía y desaparecía de golpe.
+- **Cambio (solo `motion.css`, dentro del `@supports (overlay…)` del bloque de modales):** `dialog.modal::backdrop` pasa a tener `transition` de opacidad (salida `--dur-out`, con `overlay` y `display` `allow-discrete`) y `dialog.modal[open]::backdrop` la suya de entrada (`--dur-base`, `--ease-out`); `@starting-style` pone el fondo a 0 al abrir. Solo se anima la opacidad; el desenfoque (3 px, `style.css`) se mantiene fijo (interpolarlo es más caro).
+- **Medido después (Chromium, `#app-modal` y `#confirm-modal`, escritorio y 390 px):** abrir velo/diálogo 0,00 → 0,80 → 0,96 → 0,99 → 1,00; cerrar 1,00 → 0,84 → 0,62 → 0,34 → 0,00, en sincronía; velo cerrado `pointer-events: none` y `display: none`; un clic atraviesa la página tras cerrar. Movimiento reducido (sistema y Learny): instantáneo, igual que antes. Regresión de las baterías de movimiento y de avisos sin cambios.
+- **Pendiente:** verlo a ojo (la medición es numérica) y Safari/iOS (sin soporte de `allow-discrete` el cierre sigue siendo instantáneo, como antes).
+- **Sin cambios por decisión del usuario:** el movimiento de Lumi sigue continuo (no se usa `steps()`).
