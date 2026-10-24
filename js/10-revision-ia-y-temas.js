@@ -80,7 +80,7 @@ async function feynman() {
     saveChat('user', text); saveChat('tutor', answer);
     lastFey = { topic, text }; guide.insertAdjacentHTML('beforeend', FEY_BTN);
   } catch (error) {
-    if (error.stale) return; // otra consulta tomó el relevo
+    if (error.stale) { guide.innerHTML = parseBlocks(local); lastFey = { topic, text }; guide.insertAdjacentHTML('beforeend', FEY_BTN); return; } // JS-102: otra consulta tomó el relevo; esta zona no se queda en «Consultando…»
     guide.innerHTML = parseBlocks(local) + (error.cancelled ? '<p><i>Consulta cancelada. Tu explicación sigue aquí.</i></p>' : `<p><i>${esc(error.message)} Tu explicación se conserva.</i></p>`);
     guide.insertAdjacentHTML('beforeend', `<p><button class="outline-button" type="button" data-feynman-retry>Reintentar</button></p>`);
     toast(error.cancelled ? 'Consulta cancelada.' : error.message, error.cancelled ? 'ok' : 'error');

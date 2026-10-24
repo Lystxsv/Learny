@@ -97,7 +97,6 @@ if (DEMO) {
 
 const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
 applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer);
-safe(() => redistributeIfBehind((migratedFrom || droppedCards || loadProblem) ? 5000 : 600), 'plan'); // el aviso con «Deshacer» espera si hay otros avisos de arranque
 renderAll(); maybeRemind(); backupNag();
 { const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
 // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
@@ -106,7 +105,7 @@ if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.ha
 if (loadProblem) {
   if (corruptKept) queueToast('Tus datos guardados estaban dañados. Guardé una copia del archivo original en el navegador (learny.corrupt) y empecé de cero.', 'error');
   else queueToast('Tus datos guardados estaban dañados y NO pude guardar una copia (sin espacio o almacenamiento bloqueado). No los he tocado hasta que hagas un cambio: descarga el archivo original ahora.', 'error', { label: 'Descargar original', run: () => {
-    const safeRaw = String(corruptRaw || '').replace(/"apiKey"\s*:\s*"(?:[^"\\]|\\.)*"?/g, '"apiKey":""'); // JS-009: el archivo se suele compartir para pedir ayuda: nunca lleva tu clave de Gemini
+    const safeRaw = scrubKey(corruptRaw); // JS-009: el archivo se suele compartir para pedir ayuda: nunca lleva tu clave de Gemini
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([safeRaw], { type: 'text/plain' })); a.download = 'learny-datos-danados.txt'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
     toast('Archivo descargado. Se quitó tu clave de Gemini del contenido; el resto de tus datos sigue ahí.');
   } });
@@ -117,6 +116,7 @@ if (newerFrom) queueToast(newerKept
 if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
 if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
   else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes ⚙️.`, 'error'); }
+safe(redistributeIfBehind, 'plan'); renderAll(); // JS-103: el aviso con «Deshacer» se encola DESPUÉS de los avisos graves de arranque (y antes de soltar bootHold, así no pisa datos protegidos)
 bootHold = false;
 if ((corruptKept || !loadProblem) && !newerFrom) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, o de una versión más nueva (JS-004), no se pisa la clave principal en el arranque: lo guardado queda intacto y el resto de guardados los frena newerStored()
 if (!state.settings.welcomed && !landingOn) setTimeout(welcomeFlow, 350); // Etapa 5 (con portada, la bienvenida abre al pulsar «Probar Learny»)

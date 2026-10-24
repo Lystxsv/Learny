@@ -105,6 +105,7 @@ function openSettings() {
       <p class="modal-tip">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></p>
       <button class="primary-button">Guardar preferencias</button>`, (data) => {
     if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
+    { const k0 = clean(data.get('apikey'), 200); if (k0 && !validKey(k0)) return toast('La clave de Gemini solo puede tener caracteres ASCII (letras, números y símbolos), sin espacios. Cópiala de nuevo desde Google AI Studio.', 'error'); } // JS-111
     Object.assign(state.settings, {
       name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
       sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar') || state.settings.mascotAvatar, lang: data.get('lang'),
@@ -125,7 +126,7 @@ function openSettings() {
   $$('#modal-body [data-qs]').forEach((b) => { b.onclick = () => { put(QS[b.dataset.qs]); preview(); }; });
   $('#reset-look').onclick = () => { const o = {}; APP_KEYS.filter((k) => k !== 'reduceMotion').forEach((k) => { o[k] = base[k]; }); put(o); preview(); toast('Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.'); };
   $('#export-data').onclick = () => exportData();
-  if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); closeModal(); toast('Clave eliminada de este navegador.'); };
+  if ($('#clear-key')) $('#clear-key').onclick = () => { state.apiKey = ''; save(); ['learny.corrupt', 'learny.newer'].forEach((k) => { const v = store.get(k); if (v) store.set(k, scrubKey(v)); }); /* JS-110 */ closeModal(); toast('Clave eliminada de este navegador.'); };
   if ($('#restore-backup')) $('#restore-backup').onclick = restoreBackup;
   $('#export-deck').onclick = exportDeck;
   $('#import-json-btn').onclick = () => $('#import-file').click();

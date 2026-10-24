@@ -118,7 +118,7 @@
     const localHtml = out.innerHTML;
     if (L.hasAi()) {
       out.innerHTML = '<div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor… <button class="text-button" type="button" data-cancel-ai>Cancelar</button></p>';
-      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { if (e.stale) return; out.innerHTML = localHtml; toast(e.message, e.cancelled ? 'ok' : 'error'); }
+      try { out.innerHTML = fmt(await L.askGemini(`Resume en español en 4 frases y propón 5 preguntas de estudio:\n${t.slice(0, 3000)}`)); } catch (e) { out.innerHTML = localHtml; if (!e.stale) toast(e.message, e.cancelled ? 'ok' : 'error'); } // JS-102: con relevo (stale) se restaura el resultado local sin aviso
     }
     out.insertAdjacentHTML('beforeend', '<p><button class="outline-button" type="button" id="source-cards">Crear tarjetas con estas ideas</button></p>');
     $('#source-cards').onclick = () => L.suggestCards(clean($('#tutor-subject').value, 60) || 'Lectura', top.join('. '));
@@ -172,7 +172,7 @@
       const d = addDays(today(), i), dt = new Date(`${d}T12:00:00`);
       const tasks = state.tasks.filter((t) => t.date === d), dl = state.deadlines.filter((x) => x.date === d);
       const due = i === 0 ? L.dueCards().length : live().filter((c) => c.nextReview === d).length;
-      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? '✔ ' : ''}${esc(PH[t.phase] || t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
+      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? '✔ ' : ''}${esc(Object.prototype.hasOwnProperty.call(PH, t.phase) ? PH[t.phase] : t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
     }
     $('#week-calendar').innerHTML = h;
     const t = state.tasks.find((x) => x.date === today() && !x.done), dl = t && state.deadlines.find((x) => x.id === t.deadlineId);

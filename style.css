@@ -1095,3 +1095,42 @@ body .lumi.lumi-thumb[data-avatar="gato"] { --lumi-size: 64px; }
 .lumi[data-avatar="gato"][data-react="progress"] .lumi-svg--gato { animation: lumi-nod .4s ease-in-out 1; }
 .lumi[data-avatar="gato"][data-react="progress"] .gato-eyes { animation: gato-blink .4s ease-in-out 1; }
 .lumi[data-avatar="gato"][data-react="empty"] .gato-tail { animation: gato-sway .4s ease-in-out 1; }
+
+/* ===== Lumi · reposo con vida (v60) =====
+   El controlador ya marca data-anim="idle" cuando Lumi está activa, sin enfoque y sin movimiento reducido; hasta ahora ningún CSS lo usaba y en reposo no se movía nada.
+   Aquí cada apariencia hace movimientos pequeños y espaciados (respiración, parpadeo, cola, orejas, alas, cabeza), con periodos distintos para que no se muevan a la vez.
+   Solo transform sobre los mismos grupos de las poses. Se apagan solos: en enfoque (data-anim="none"), con movimiento reducido (sistema o Learny), con la pestaña oculta (data-paused) y durante un examen.
+   Nunca pisan una pose: no se aplican mientras haya un gesto (data-react) o la entrada (.is-entering). */
+@keyframes lumi-breathe { 0%, 100% { transform: none; } 50% { transform: translateY(-2px); } }
+@keyframes idle-blink { 0%, 90%, 100% { transform: none; } 94% { transform: scaleY(.15); } }
+@keyframes idle-wag { 0%, 55%, 100% { transform: none; } 65% { transform: rotate(7deg); } 78% { transform: rotate(-5deg); } 90% { transform: none; } }
+@keyframes idle-ear-l { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(-6deg); } 92% { transform: rotate(2deg); } }
+@keyframes idle-ear-r { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(6deg); } 92% { transform: rotate(-2deg); } }
+@keyframes idle-tilt { 0%, 58%, 100% { transform: none; } 66%, 80% { transform: rotate(-5deg); } 90% { transform: none; } }
+@keyframes idle-wing-l { 0%, 55%, 100% { transform: none; } 61% { transform: translateY(-1px) rotate(8deg); } 67% { transform: rotate(-2deg); } 73% { transform: translateY(-1px) rotate(7deg); } 79% { transform: none; } }
+@keyframes idle-wing-r { 0%, 55%, 100% { transform: none; } 61% { transform: translateY(-1px) rotate(-8deg); } 67% { transform: rotate(2deg); } 73% { transform: translateY(-1px) rotate(-7deg); } 79% { transform: none; } }
+@keyframes idle-feel { 0%, 78%, 100% { transform: none; } 86% { transform: rotate(-10deg); } 93% { transform: rotate(6deg); } }
+
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .lumi-svg { animation: lumi-breathe 4.5s ease-in-out infinite; }
+/* Abeja */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-wing-l { animation: idle-wing-l 3.4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-wing-r { animation: idle-wing-r 3.4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-antennae { animation: idle-feel 6s ease-in-out infinite; }
+/* Eevee */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-tail { animation: idle-wag 4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-ear-l { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-ear-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* WALL·E */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .walle-head { animation: idle-tilt 6s ease-in-out infinite; }
+/* Daniel Carreon */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .daniel-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .daniel-head { animation: idle-tilt 9s ease-in-out infinite; }
+/* Yor Forger */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-gem-l { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-gem-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* Cat Black */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-eyes { animation: idle-blink 5.5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-tail { animation: idle-wag 4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-ear-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* En enfoque (data-pose="focus") las reglas por apariencia ya anulan toda animación con !important. */

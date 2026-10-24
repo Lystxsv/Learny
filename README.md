@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v57` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v62` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -77,7 +77,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v57`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v62`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -110,11 +110,26 @@ Los archivos no están minificados (se cachean al primer uso); si quieres, puede
 
 ## Estado y pendientes
 - Cada bloque de Lumi, de movimiento y de la auditoría, con su lista de pruebas, está en `CONTINUIDAD.md`. Se probaron con Chromium headless (`?demo`, 1280, 390 y 320 px).
-- **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, movimiento reducido del sistema, varias pestañas, actualización del service worker en una instalación existente (hasta la v57), importar un JSON real desde el selector de archivos, nitidez de los personajes en pantallas de 1×, los seis temas a ojo y revisar cada sección en inglés buscando textos que sigan en español (se amplían en `EX`/`RULES` de `js/18-idioma.js`).
+- **Pendiente en navegador o dispositivo real:** lector de pantalla, alto contraste real del sistema operativo, movimiento reducido del sistema, varias pestañas, actualización del service worker en una instalación existente (hasta la v62), importar un JSON real desde el selector de archivos, nitidez de los personajes en pantallas de 1×, los seis temas a ojo y revisar cada sección en inglés buscando textos que sigan en español (se amplían en `EX`/`RULES` de `js/18-idioma.js`).
 - **Límites conocidos:** `BUILTIN_DECK_NAMES` en `js/12-copias-e-importacion.js` duplica los nombres de `DECKS` de `extras.js` (hay que mantenerlos iguales); `learny.corrupt` y `learny.newer` guardan el texto original en el navegador, con la clave de Gemini si la había («Borrar todo» sí los elimina); con datos de una versión más nueva, esta versión es de solo lectura hasta que se actualice la app.
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v62 · Fondo de las ventanas
+El velo oscuro detrás de las ventanas ahora se desvanece al abrir y al cerrar (antes aparecía y desaparecía de golpe). Solo CSS en `motion.css`.
+
+### v61 · Avisos al abrir una ventana
+Un aviso lanzado justo al abrir una ventana ya no salta de sitio (≈49 px en escritorio): si el diálogo está animando su entrada, el aviso espera unos 260 ms.
+
+### v60 · Lumi se mueve en reposo
+Las seis apariencias de Lumi hacen ahora movimientos pequeños y espaciados cuando está en reposo (respiración, parpadeo, cola, orejas, alas o cabeza, según el personaje). Se apagan en enfoque, durante un examen, con la pestaña oculta y con movimiento reducido (del sistema o de Learny: **Ajustes → Disposición → Reducir animaciones**). Los gestos de las reacciones no cambian. Solo CSS.
+
+### v59 · Guardado más ligero
+`save()` ya no relee todo `learny.v3` en cada guardado: la protección contra datos de una versión más nueva se activa al arrancar y por el evento `storage` / al volver a la pestaña. Los chats del tutor guardan como máximo 12 mensajes de 1 500 caracteres por tema (antes 20 de 3 000).
+
+### v58 · Correcciones de la segunda auditoría
+El botón «×» de Lumi deja el foco en el título visible; «Generar estudio» y Feynman ya no se quedan en «Consultando…» si otra consulta toma el relevo; un bloque nuevo no hereda el resultado anterior; las sesiones se fechan cuando terminó el bloque; el contexto del tutor se refresca al sincronizar pestañas; fases de tarea validadas; confirmaciones en cola; el aviso de «Plan reajustado» ya no adelanta a los avisos graves de arranque; la clave de Gemini se valida (ASCII) y «Quitar clave» también la purga de `learny.corrupt`/`learny.newer`; el texto del usuario en Planificar no se traduce.
 
 ### v57 · Cat Black se mueve
 Poses propias de Cat Black, solo CSS: parpadeo y meneo de cola al aparecer; al celebrar, salto + cola + oreja + parpadeo; al dar la bienvenida, saludo + cola + oreja; apoyo, progreso y estado vacío con gestos mínimos; estático en enfoque. Sin cambios de lógica, textos, frecuencias, datos ni esquema.

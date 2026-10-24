@@ -168,6 +168,7 @@
     'Pregunta guía': 'Guiding question', 'Pista': 'Hint', 'Explicación': 'Explanation', 'Ejemplo': 'Example', 'Siguiente reto': 'Next challenge', 'Lo que explicaste bien': 'What you explained well',
     'Revisa esta afirmación': 'Check this statement', 'Falta este concepto': 'Missing concept', 'Pregunta para comprobar': 'Check question', 'Conecta Gemini': 'Connect Gemini', 'Guardar clave': 'Save key', 'Continuar sin IA': 'Continue without AI',
     'Añade tu clave de Gemini en Ajustes ⚙️ o elige Guía local.': 'Add your Gemini key in Settings ⚙️ or choose Local guide.',
+    'La clave de Gemini solo puede tener caracteres ASCII (letras, números y símbolos), sin espacios. Cópiala de nuevo desde Google AI Studio.': 'The Gemini key can only contain ASCII characters (letters, numbers and symbols), no spaces. Copy it again from Google AI Studio.',
     /* ---- Ajustes ---- */
     'Idioma': 'Language', 'Apariencia': 'Appearance', 'Los cambios se ven al instante y solo se guardan con «Guardar preferencias».': 'Changes are visible instantly and are only saved with “Save preferences”.',
     'Estilos rápidos': 'Quick styles', 'Cuaderno': 'Notebook', 'Lectura nocturna': 'Night reading', 'Papel': 'Paper', 'Enfoque': 'Focus', 'Restablecer apariencia': 'Reset appearance', 'Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.': 'Appearance reset. Press “Save preferences” to keep it.',

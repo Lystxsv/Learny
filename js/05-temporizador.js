@@ -11,7 +11,7 @@ const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0,
 const phaseSeconds = (mode) => (mode === 'focus' ? state.settings.focus : state.settings.rest) * 60;
 
 function resetTimer(mode = 'focus', persist = true) {
-  clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false; timer.runId = ''; timer.distractions = [];
+  clearInterval(timer.id); timer.id = null; timer.running = false; timer.mode = mode; timer.started = false; timer.runId = ''; timer.distractions = []; timer.intention = ''; // JS-104: el resultado del bloque anterior no se hereda
   timer.total = timer.remaining = phaseSeconds(mode); renderTimer(); if (persist) persistTimer();
 }
 
@@ -30,7 +30,7 @@ function restoreTimer(raw) {
   if (!t || !['focus', 'rest'].includes(t.mode)) return;
   clearInterval(timer.id); timer.id = null; timer.running = false;
   if (t.started === false) { // otra pestaña (o una recarga) dejó el temporizador en reposo
-    Object.assign(timer, { mode: t.mode, started: false, runId: '', distractions: [], total: phaseSeconds(t.mode), remaining: phaseSeconds(t.mode) }); renderTimer(); return;
+    Object.assign(timer, { mode: t.mode, started: false, runId: '', intention: '', distractions: [], total: phaseSeconds(t.mode), remaining: phaseSeconds(t.mode) }); renderTimer(); return;
   }
   const total = num(t.total, 1, 10800, 0); if (!total) return;
   Object.assign(timer, { mode: t.mode, total, intention: String(t.intention || ''), label: String(t.label || ''), distractions: cleanNotes(t.distractions), started: true, runId: String(t.runId || `${t.mode}:${Number(t.endAt) || 0}:${total}`) });
@@ -194,8 +194,9 @@ function completePhase() {
   beep();
   notify('Learny', timer.mode === 'focus' ? 'Bloque de foco terminado.' : 'Descanso terminado.');
   if (timer.mode === 'rest') { toast('Descanso terminado. ¡Listo para otro bloque!'); resetTimer('focus'); return; }
+  const endDay = (() => { const d = timer.endAt > 0 ? dateStr(new Date(timer.endAt)) : today(); return isDay(d) && d <= today() ? d : today(); })(); // JS-105: la sesión se fecha cuando terminó el bloque, no cuando se registró
   const session = {
-    id: uid(), date: today(), minutes: Math.max(1, Math.round(timer.total / 60)),
+    id: uid(), date: endDay, minutes: Math.max(1, Math.round(timer.total / 60)),
     intention: timer.intention, label: timer.label, energy: null, abandon: null, achieved: null, distractions: timer.distractions.slice()
   };
   state.sessions.push(session); save();
@@ -245,12 +246,14 @@ function configurePomodoro() {
 /* ---- Varias pestañas: el temporizador y los datos se sincronizan; los datos nunca se pisan con una copia vieja ---- */
 function adoptRemoteState(raw) {
   const data = parseJSON(raw);
-  if (!data || typeof data !== 'object' || Array.isArray(data) || Number(data.version) > SCHEMA) return;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return;
+  if (Number(data.version) > SCHEMA) { remoteNewer = true; return; } // datos de una versión más nueva: no se adoptan y se frena el guardado (newerStored)
+  remoteNewer = false;
   lastSavedRaw = raw;
   hydrate(data);
   if (exam) { exam.cards = exam.cards.map((c) => state.cards.find((x) => x.id === c.id)).filter(Boolean); if (exam.i >= exam.cards.length) exam = null; }
   clearUndo(); // las acciones de deshacer apuntan a objetos que ya no son los actuales
-  applyAppearance(); renderAll();
+  { const ae = document.activeElement; applyPreferences({ keepTutor: !!(ae && ae.closest && ae.closest('.tutor-context')) }); } renderAll(); // JS-106: también se refrescan los campos del tutor (salvo que se estén editando)
   const el = $('#save-status'); if (el) { el.textContent = `Sincronizado ${pad(new Date().getHours())}:${pad(new Date().getMinutes())}`; el.classList.remove('bad'); }
 }
 function pullFromStorage() {
@@ -264,7 +267,7 @@ window.addEventListener('storage', (e) => {
   if (e.key === TIMER_KEY) { lastTimerRaw = e.newValue; restoreTimer(e.newValue || JSON.stringify({ started: false, mode: 'focus' })); }
   else if (e.key === KEY && e.newValue) adoptRemoteState(e.newValue);
   else if ((e.key === KEY && !e.newValue) || e.key === null) { // otra pestaña borró todo (o limpió el almacenamiento): no resucitar los datos
-    exam = null; clearUndo(); lastSavedRaw = null; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
+    exam = null; clearUndo(); lastSavedRaw = null; remoteNewer = false; hydrate({}); applyPreferences(); resetTimer('focus', false); renderAll();
   }
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { pullFromStorage(); if (timer.running) tick(); } });

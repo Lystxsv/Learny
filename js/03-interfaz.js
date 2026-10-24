@@ -4,15 +4,22 @@
    (los const/let/function de nivel superior son visibles entre archivos; no hay import/export). */
 'use strict';
 
-function confirmDialog({ title = '¿Seguro?', message = '', ok = 'Confirmar', cancel = 'Cancelar', danger = false } = {}) {
-  return new Promise((resolve) => {
+let confirmQueue = Promise.resolve(); // JS-108: una sola confirmación a la vez; las demás esperan su turno
+function confirmDialog(opts = {}) {
+  const run = () => new Promise((resolve) => {
+    const { title = '¿Seguro?', message = '', ok = 'Confirmar', cancel = 'Cancelar', danger = false } = opts;
     const d = $('#confirm-modal'), okBtn = $('#confirm-ok');
     $('#confirm-title').textContent = title; $('#confirm-message').textContent = message;
     okBtn.textContent = ok; $('#confirm-cancel').textContent = cancel; okBtn.className = danger ? 'danger-button' : 'primary-button';
     d.returnValue = 'cancel';
-    d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true });
-    d.showModal(); (danger ? $('#confirm-cancel') : okBtn).focus();
+    const onClose = () => resolve(d.returnValue === 'ok');
+    d.addEventListener('close', onClose, { once: true });
+    try { d.showModal(); } catch { d.removeEventListener('close', onClose); resolve(false); return; } // sin showModal (navegador antiguo) no se queda nada colgado: cuenta como «cancelar»
+    (danger ? $('#confirm-cancel') : okBtn).focus();
   });
+  const p = confirmQueue.then(run);
+  confirmQueue = p.catch(() => {});
+  return p;
 }
 
 function setSaved(ok) {
@@ -23,12 +30,8 @@ function setSaved(ok) {
 }
 /* ¿Otra pestaña (con una versión MÁS NUEVA de Learny) escribió datos que esta versión no entiende? Guardar encima los degradaría y perdería campos nuevos.
    Solo se mira cuando lo guardado no es lo último que escribió esta pestaña; la versión se lee del arranque del JSON (empieza por "version") y, si no, se parsea. */
-function newerStored() {
-  const cur = store.get(KEY);
-  if (!cur || cur === lastSavedRaw) return false;
-  const m = /^\s*\{\s*"version"\s*:\s*(\d+)/.exec(cur.slice(0, 80));
-  return (m ? Number(m[1]) : Number(parseJSON(cur)?.version)) > SCHEMA;
-}
+let remoteNewer = typeof newerFrom !== 'undefined' && newerFrom > 0; // se activa al arrancar con datos más nuevos o cuando otra pestaña escribe datos de una versión más nueva (evento storage / al volver a la pestaña); ya no se relee learny.v3 en cada guardado
+function newerStored() { return remoteNewer; }
 const save = () => {
   if (bootHold) return true;
   rev++;
@@ -86,7 +89,15 @@ function placeToast() {
   host.append(el); void el.offsetWidth; // reflujo: la entrada del aviso sigue siendo una transición, no un salto
 }
 ['app-modal', 'confirm-modal'].forEach((id) => $(`#${id}`)?.addEventListener('close', placeToast));
+/* JS-109: mientras un <dialog> está animando su entrada (transform), un elemento position:fixed dentro de él se posiciona respecto al diálogo y, al terminar, salta al viewport (≈49 px en escritorio).
+   Si hay un diálogo animando, el aviso espera a que acabe (≈260 ms, un solo reintento). Sin getAnimations() se comporta como antes. */
+const dialogAnimating = () => ['#app-modal', '#confirm-modal'].some((s) => { const d = $(s); return !!d?.open && typeof d.getAnimations === 'function' && d.getAnimations().some((a) => a.playState === 'running'); });
 function toast(message, type = 'ok', action = null) {
+  if (!toast.deferred) clearTimeout(toast.deferId);
+  if (!toast.deferred && dialogAnimating()) {
+    toast.deferId = setTimeout(() => { toast.deferred = true; try { toast(message, type, action); } finally { toast.deferred = false; } }, 260);
+    return;
+  }
   placeToast();
   const el = $('#toast'), isErr = type === 'error', now = Date.now();
   el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato

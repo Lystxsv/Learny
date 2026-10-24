@@ -139,13 +139,13 @@ function hydrate(raw) {
   state.exams = state.exams.filter(okExam).map((e) => ({ date: e.date, score: Math.round(Number(e.score)), total: Math.round(Number(e.total)) })).slice(-500);
   state.feynman = [...new Set(state.feynman.filter(isDay))].slice(-1000);
   state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
-    id: idOf(t.id), deadlineId: String(t.deadlineId), date: t.date, phase: t.phase || 'comprension',
+    id: idOf(t.id), deadlineId: String(t.deadlineId), date: t.date, phase: PHASES.some((p) => p.id === t.phase) ? t.phase : 'comprension', // JS-107: fase de la lista permitida
     title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
   }));
   const liveDl = new Set(state.deadlines.map((d) => d.id)); state.tasks = state.tasks.filter((t) => liveDl.has(t.deadlineId)); // sin fecha no hay tarea
   ['cards', 'sessions', 'deadlines', 'topics', 'tasks', 'notes', 'planLog'].forEach((k) => uniqueIds(state[k])); // JS-012: ids repetidos en una copia editada a mano
   state.chats = state.chats.filter((c) => c && c.topic).slice(-MAX_CHATS).map((c) => ({
-    topic: String(c.topic).slice(0, 60), messages: Array.isArray(c.messages) ? c.messages.slice(-20) : []
+    topic: String(c.topic).slice(0, 60), messages: Array.isArray(c.messages) ? c.messages.filter(isObj).slice(-12).map((m) => ({ role: String(m.role || '').slice(0, 10), text: String(m.text || '').slice(0, 1500), at: String(m.at || '').slice(0, 40) })) : []
   }));
 }
 
@@ -155,6 +155,8 @@ const store = {
   set(k, v) { try { if (!localStorage) return false; localStorage.setItem(k, v); return true; } catch { return false; } },
   del(k) { try { if (localStorage) localStorage.removeItem(k); } catch { /* ignorar */ } }
 };
+/* JS-110: quita la clave de Gemini de un texto JSON guardado tal cual (learny.corrupt, learny.newer, archivo descargable). */
+const scrubKey = (raw) => String(raw || '').replace(/"apiKey"\s*:\s*"(?:[^"\\]|\\.)*"?/g, '"apiKey":""');
 function readBackups() {
   const p = parseJSON(store.get(BACKUP_KEY));
   const list = Array.isArray(p) ? p : (p && typeof p === 'object' ? [p] : []); // acepta el formato antiguo (una sola copia)

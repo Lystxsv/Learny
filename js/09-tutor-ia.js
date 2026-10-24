@@ -73,6 +73,7 @@ ${text}`;
 }
 
 let aiController = null;
+const validKey = (k) => /^[\x21-\x7E]+$/.test(k); // JS-111: las claves de Google son ASCII; otros caracteres harían fallar el encabezado y se mostraría «sin conexión»
 const hasAi = () => !DEMO && !!(state.apiKey || state.settings.proxyUrl); // Etapa 7: la demo nunca usa IA
 const cancelAi = () => { if (aiController) aiController.abort(); };
 
@@ -122,7 +123,7 @@ function saveChat(role, text) {
   const topic = chatTopic();
   let chat = state.chats.find((c) => c.topic.toLowerCase() === topic.toLowerCase());
   if (!chat) { chat = { topic, messages: [] }; state.chats.push(chat); if (state.chats.length > MAX_CHATS) state.chats.splice(0, state.chats.length - MAX_CHATS); }
-  chat.messages = [...chat.messages, { role, text: String(text).slice(0, 3000), at: new Date().toISOString() }].slice(-20);
+  chat.messages = [...chat.messages, { role, text: String(text).slice(0, 1500), at: new Date().toISOString() }].slice(-12);
   save();
 }
 
@@ -136,7 +137,9 @@ function requestKey(onKey, onLocal, onCancel) { // onCancel: se cerró la ventan
       <p class="lead">La clave viaja en el encabezado x-goog-api-key, no en la URL.</p>
       <button class="primary-button">Guardar clave</button>
       <button id="use-local" class="outline-button" type="button">Continuar sin IA</button>`, (data) => {
-    chosen = true; state.apiKey = clean(data.get('key'), 200); save(); closeModal(); onKey();
+    const k = clean(data.get('key'), 200);
+    if (!validKey(k)) return toast('La clave de Gemini solo puede tener caracteres ASCII (letras, números y símbolos), sin espacios. Cópiala de nuevo desde Google AI Studio.', 'error');
+    chosen = true; state.apiKey = k; save(); closeModal(); onKey();
   }, () => { if (!chosen) onCancel?.(); });
   $('#use-local').onclick = () => { chosen = true; state.settings.skipAi = true; save(); closeModal(); onLocal(); };
 }

@@ -48,7 +48,7 @@ const hrs = (min) => (min / 60).toFixed(1);
 
 /* Si te atrasas: se mueven a hoy las 2 tareas atrasadas más recientes de cada examen y se descartan las anteriores.
    Cada cambio queda registrado (state.planLog) y se explica en Planificar; lo descartado se cuenta en deadline.skipped. */
-function redistributeIfBehind(delay = 0) {
+function redistributeIfBehind() {
   if (state.settings.lastRollover === today()) return; // una sola vez por día (y nunca dentro de un render): sin duplicados en el historial
   const before = JSON.stringify({ tasks: state.tasks, planLog: state.planLog, deadlines: state.deadlines });
   let moved = 0, dropped = 0;
@@ -152,20 +152,20 @@ function renderDeadlines() {
     const tag = d < 0 ? '<span class="tag">Pasada</span>' : `<span class="tag ${d <= 3 ? 'urgent' : ''}">${d === 0 ? 'Hoy' : `en ${plural(d, 'día', 'días')}`}</span>`;
     const done = state.tasks.filter((t) => t.deadlineId === x.id && t.done).length;
     const total = state.tasks.filter((t) => t.deadlineId === x.id).length;
-    return `<div class="session-item"><b>${esc(x.title)}</b> ${tag}<br><span>${esc(x.subject)} · ${esc(x.date)} · dificultad ${x.difficulty}/5 · ${x.dailyMinutes} min/día<br>${done}/${total} tareas · fases: comprensión → práctica → repaso → simulacro → revisión</span>${d >= 0 ? `<br><span class="plan-load ${loadReport(x).fits ? 'ok' : 'warn'}">${esc(loadMessage(loadReport(x)))}</span>` : ''}<br>${d >= 0 ? `<button class="text-button" data-replan="${esc(x.id)}" type="button">Replanificar desde hoy</button> ` : ''}<button class="text-button danger" data-delete-deadline="${esc(x.id)}" type="button">Eliminar</button></div>`;
+    return `<div class="session-item"><b translate="no">${esc(x.title)}</b> ${tag}<br><span><span translate="no">${esc(x.subject)}</span> · ${esc(x.date)} · dificultad ${x.difficulty}/5 · ${x.dailyMinutes} min/día<br>${done}/${total} tareas · fases: comprensión → práctica → repaso → simulacro → revisión</span>${d >= 0 ? `<br><span class="plan-load ${loadReport(x).fits ? 'ok' : 'warn'}">${esc(loadMessage(loadReport(x)))}</span>` : ''}<br>${d >= 0 ? `<button class="text-button" data-replan="${esc(x.id)}" type="button">Replanificar desde hoy</button> ` : ''}<button class="text-button danger" data-delete-deadline="${esc(x.id)}" type="button">Eliminar</button></div>`;
   }).join('') : '<p class="empty">Añade una fecha de examen para generar tareas diarias conectadas a temas y tarjetas.</p>';
 
   const next = entries.find((x) => daysUntil(x.date) >= 0) || entries[0];
   const todayPhase = PHASES.find((p) => p.id === (state.tasks.find((t) => t.deadlineId === next?.id && t.date === today())?.phase || 'comprension'));
   $('#calendar-summary').innerHTML = next
-    ? `<b>${esc(next.title)}</b><p class="lead">Hoy toca la fase de ${esc(todayPhase?.label || 'comprensión')}.</p>`
+    ? `<b translate="no">${esc(next.title)}</b><p class="lead">Hoy toca la fase de ${esc(todayPhase?.label || 'comprensión')}.</p>`
     : 'Añade una fecha importante para ver el plan inverso del día.';
 
   const tasks = state.tasks.filter((t) => t.date === today()).sort((a, b) => a.title.localeCompare(b.title));
   $('#today-tasks').innerHTML = tasks.length ? tasks.map((t) => {
     const d = state.deadlines.find((x) => x.id === t.deadlineId);
     const phase = PHASES.find((p) => p.id === t.phase)?.label || t.phase;
-    return `<label class="task-row"><input type="checkbox" data-task="${esc(t.id)}" ${t.done ? 'checked' : ''}><span><b>${esc(phase)}</b> · ${esc(d?.title || '')}<br>${esc(t.title)}</span></label>`;
+    return `<label class="task-row"><input type="checkbox" data-task="${esc(t.id)}" ${t.done ? 'checked' : ''}><span><b>${esc(phase)}</b> · <span translate="no">${esc(d?.title || '')}</span><br>${esc(t.title)}</span></label>`;
   }).join('') : '<p class="empty">Cuando tengas un examen, aquí aparecerán las tareas de hoy.</p>';
 }
 

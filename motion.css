@@ -78,10 +78,14 @@ dialog.modal[open] { transition: opacity var(--dur-base) var(--ease-out), transf
       overlay var(--dur-out) var(--ease-in) allow-discrete, display var(--dur-out) var(--ease-in) allow-discrete;
   }
   dialog.modal[open] { opacity: 1; transform: none; pointer-events: auto; transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out); }
-  dialog.modal:not([open])::backdrop { opacity: 0; pointer-events: none; } /* el velo desaparece al cerrar y no bloquea la página mientras el modal se desvanece */
+  /* Fondo (::backdrop): antes valía opacidad 1 desde el primer fotograma al abrir y 0 desde el primero al cerrar, así que aparecía y desaparecía de golpe mientras el diálogo sí se desvanecía.
+     Ahora se desvanece con las mismas duraciones que el diálogo (entrada --dur-base, salida --dur-out). Solo se anima la opacidad: el desenfoque (3px, de style.css) se mantiene fijo, que es más barato que interpolarlo.
+     Cerrado: sin clics. Con movimiento reducido las duraciones valen 0 (instantáneo, como antes). */
+  dialog.modal::backdrop { opacity: 0; pointer-events: none; transition: opacity var(--dur-out) var(--ease-in), overlay var(--dur-out) var(--ease-in) allow-discrete, display var(--dur-out) var(--ease-in) allow-discrete; }
+  dialog.modal[open]::backdrop { opacity: 1; pointer-events: auto; transition: opacity var(--dur-base) var(--ease-out); }
 }
 /* @starting-style va DESPUÉS de las reglas [open]: con la misma especificidad gana la última y, si fuera antes, el estado inicial sería ya opacity:1 */
-@starting-style { dialog.modal[open] { opacity: 0; transform: translateY(var(--move-y)) scale(var(--modal-scale)); } }
+@starting-style { dialog.modal[open] { opacity: 0; transform: translateY(var(--move-y)) scale(var(--modal-scale)); } dialog.modal[open]::backdrop { opacity: 0; } }
 /* Móvil: el modal ya era una hoja inferior (sheet-up en style.css). Se refina con los mismos tokens; la animación CSS antigua se anula para no duplicarla. */
 @media (max-width: 820px) {
   .modal { animation: none; }
