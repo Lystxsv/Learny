@@ -271,6 +271,7 @@
             <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
             <div class="actions tight">
               <button id="add-card" class="outline-button">+ Crear</button>
+              <button id="gen-cards-top" class="outline-button" type="button">✨ Crear con IA</button>
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
             </div>
           </div>
@@ -426,10 +427,20 @@
           <li><b>Repasos sin fallar:</b> repasos en que no marcaste «No lo sabía», entre todos los del periodo.</li>
           <li><b>Exámenes (Fácil):</b> respuestas «Fácil» entre las respondidas en modo examen. También son autoevaluadas.</li>
           <li><b>Constancia:</b> días distintos con un bloque de enfoque completado o un repaso, entre los días del periodo.</li>
+          <li><b>Retención real:</b> de los repasos de tarjetas ya vistas, cuántos no marcaste «No lo sabía». El intervalo de cada repaso sale del historial de la tarjeta (días desde el repaso anterior). El 90 % es solo una referencia: no cambia cuándo vuelven las tarjetas.</li>
           <li><b>Tiempo registrado:</b> minutos de bloques de enfoque completados (los abandonados no cuentan). Mide dedicación, no aprendizaje.</li>
           <li>Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.</li>
         </ul>
       </details>
+      <article class="card spaced" id="retention-card">
+        <div class="card-head"><div><h2>Retención real frente al objetivo</h2><p class="lead">De las tarjetas que ya habías visto, cuántas recordaste al volver. Distinto de «Recuerdo declarado».</p></div><span id="retention-real-tag" class="tag"></span></div>
+        <div id="retention-real"></div>
+        <p id="retention-real-note" class="lead"></p>
+      </article>
+      <article class="card spaced" id="leech-card">
+        <div class="card-head"><div><h2>Tarjetas que se te resisten</h2><p class="lead">Las que has fallado 4 veces o más. Repetirlas igual casi nunca funciona: mejor reescribirlas o dividirlas.</p></div><span id="leech-count" class="tag"></span></div>
+        <div id="leech-list"></div>
+      </article>
       <article class="card" id="insight-actions"></article>
       <article class="card spaced" id="forecast-card">
         <div class="card-head"><h2>Repasos de los próximos 7 días</h2><span id="forecast-total" class="tag"></span></div>
@@ -481,9 +492,9 @@
         <li><b>Reforzar.</b> En <i>Reforzar</i> mira qué materias fallan y empieza ahí mañana.</li></ol></article>
       <div class="grid planner-grid spaced">
         <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas. Al terminar un bloque o un examen, Learny muestra un cierre con solo los datos de esa sesión y te deja elegir entre <i>Terminar por hoy</i> y <i>Seguir un poco más</i>. Si el menú atenuado durante el bloque te molesta, apágalo en <i>Ajustes ⚙️ → Disposición</i>.</p></article>
-        <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta; cada botón indica en cuántos días volverá. Las que dominas, envíalas a la Biblioteca.</p></article>
+        <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Para crear varias seguidas usa <i>Guardar y añadir otra</i> (o Ctrl+Intro); la casilla de <i>tarjeta inversa</i> crea también la pregunta al revés, que llega al día siguiente. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta; cada botón indica en cuántos días volverá. Las que dominas, envíalas a la Biblioteca. Para no abrumarte, cada día solo entran las tarjetas nuevas que fijes en <i>Ajustes ⚙️ → Estudio y avisos</i> (20 por defecto; 0 = sin límite): las demás esperan, y puedes adelantarlas desde Practicar. En <i>Reforzar</i>, <i>Tarjetas que se te resisten</i> reúne las que fallaste 4 veces o más para reescribirlas o dividirlas.</p></article>
         <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
-        <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
+        <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Cada tarea de hoy dice cuántas tarjetas de esa materia toca trabajar y tiene un botón <i>Empezar</i>. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
       </div>
       <div class="grid planner-grid spaced">
         <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i>Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
@@ -569,6 +580,7 @@
 <script src="js/16-lumi-daniel.js" defer></script>
 <script src="js/16-lumi-yor.js" defer></script>
 <script src="js/16-lumi-gato.js" defer></script>
+<script src="js/16-lumi-cc.js" defer></script>
 <script src="js/16-lumi.js" defer></script>
 <script src="js/17-movimiento.js" defer></script>
 <script src="js/18-idioma.js" defer></script>

@@ -74,8 +74,10 @@ function renderCardBody() {
   $('#card-count').textContent = `${due.length} para hoy`;
   $('#exam-exit').hidden = true;
   if (!activeCard) {
-    const has = state.cards.some((c) => !c.archived);
-    $('#flashcard').innerHTML = has
+    const has = state.cards.some((c) => !c.archived), held = heldNewCards().length;
+    $('#flashcard').innerHTML = held
+      ? `<div><b>Terminaste tus repasos de hoy.</b><br><span>Hay tarjetas nuevas que esperan a mañana por tu límite diario de tarjetas nuevas. Puedes cambiarlo en Ajustes ⚙️.</span><div class="actions center"><button class="outline-button" data-empty="more-new" type="button">Aprender algunas nuevas ahora</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>`
+      : has
       ? '<div><b>No tienes repasos hoy.</b><br><span>Puedes adelantar 5 tarjetas o crear nuevas.</span><div class="actions center"><button class="outline-button" data-empty="advance" type="button">Adelantar 5 tarjetas</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>'
       : '<div><b>Aún no tienes tarjetas.</b><br><span>Crea una desde tus apuntes, pide 5 al tutor o añade un mazo de ejemplo.</span><div class="actions center"><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button><button class="outline-button" data-empty="ai" type="button">Pedir 5 al tutor</button><button class="outline-button" data-empty="deck" type="button">Mazo de ejemplo</button></div></div>';
     return;
@@ -185,26 +187,54 @@ function examRate(rating) {
 function cardForm(card = null, preset = null) {
   const q0 = preset?.question || card?.question || '';
   const a0 = preset?.answer || card?.answer || '';
+  const batch = card ? 0 : Number(preset?.batch) || 0; // Fase 7: tarjetas ya añadidas en esta tanda («Guardar y añadir otra»)
+  let again = false; // Fase 7: la pulsación de «Guardar y añadir otra» lo activa; la de «Crear tarjeta» y la tecla Intro lo apagan
   modal(`<h2>${card ? 'Editar' : 'Nueva'} flashcard</h2>
       <label>Plantilla<select id="card-template"><option value="">Ninguna</option>
         <option value="definicion">Definición</option>
         <option value="ejemplo">Concepto → ejemplo</option>
         <option value="problema">Problema → solución</option></select></label>
-      <label>Materia<input name="subject" required maxlength="60" value="${esc(card?.subject || $('#tutor-subject').value || '')}"></label>
+      <label>Materia<input name="subject" required maxlength="60" value="${esc(card?.subject || preset?.subject || $('#tutor-subject').value || '')}"></label>
       <label>Pregunta<textarea name="question" required maxlength="500">${esc(q0)}</textarea></label>
       <label>Respuesta<textarea id="card-answer" name="answer" required maxlength="1200">${esc(a0)}</textarea></label>
       <button id="generate-answer" class="outline-button" type="button">✨ Generar respuesta con IA</button>
-      <button class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>`, (data) => {
+      ${card ? '' : `<label class="check"><input name="reverse" type="checkbox"${preset?.reverse ? ' checked' : ''}> Crear también la tarjeta inversa (respuesta → pregunta)</label>`}
+      ${batch ? `<p class="modal-tip">Añadidas en esta tanda: ${batch}</p>` : ''}
+      <button id="save-card" class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>
+      ${card ? '' : '<button id="save-add-another" class="outline-button">Guardar y añadir otra</button><p class="hint">Ctrl+Intro (⌘+Intro en Mac) guarda y añade otra.</p>'}`, (data) => {
     const values = { subject: clean(data.get('subject'), 60), question: cleanMl(data.get('question'), 500), answer: cleanMl(data.get('answer'), 1200) };
+    let reverseNote = '', reversed = false;
     if (!values.subject) return toast('La materia no puede quedar en blanco.', 'error');
     if (!values.question || !values.answer) return toast('Pregunta y respuesta no pueden estar vacías.', 'error');
     if (card) { // se busca por id al guardar: el estado pudo reemplazarse (otra pestaña) mientras el formulario estaba abierto
       const target = state.cards.find((c) => c.id === card.id);
       if (!target) { closeModal(); return toast('Esa tarjeta ya no existe (otra pestaña la cambió). No se guardaron los cambios.', 'error'); }
+      const wasLeech = isLeech(target);
       Object.assign(target, values, { corrupt: false });
-    } else state.cards.push(normalizeCard({ ...values, nextReview: today() }));
-    save(); closeModal(); renderAll(); toast(card ? 'Tarjeta actualizada.' : 'Tarjeta creada.');
+      if (wasLeech) target.leechSince = today(); // v71: reescribirla cuenta como atenderla; solo los fallos nuevos vuelven a marcarla
+    } else {
+      state.cards.push(normalizeCard({ ...values, nextReview: today() }));
+      if (data.get('reverse') === 'on') { // Fase 7: la inversa es una tarjeta más (mismo modelo de datos); llega mañana para que no salga justo detrás de su pareja
+        if (values.answer.length > 500) reverseNote = ' La inversa no se creó: la respuesta es demasiado larga para ser una pregunta (máx. 500 caracteres).';
+        else { state.cards.push(normalizeCard({ subject: values.subject, question: values.answer, answer: values.question, nextReview: addDays(today(), 1) })); reversed = true; }
+      }
+    }
+    save();
+    const done = card ? 'Tarjeta actualizada.' : reversed ? 'Tarjeta e inversa creadas.' : 'Tarjeta creada.';
+    if (!card && again) { // sigue en la misma ventana: misma materia, campos vacíos y el foco en la pregunta
+      renderAll(); toast(`${done}${reverseNote} Escribe la siguiente.`);
+      cardForm(null, { subject: values.subject, reverse: data.get('reverse') === 'on', batch: batch + 1 });
+      return;
+    }
+    closeModal(); renderAll(); toast(`${done}${reverseNote}`);
   });
+  $('#save-card').onclick = () => { again = false; };
+  if (!card) {
+    $('#save-add-another').onclick = () => { again = true; };
+    $('#modal-body').onkeydown = (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !composing(e)) { e.preventDefault(); $('#save-add-another')?.click(); } };
+    modalTeardown = () => { $('#modal-body').onkeydown = null; };
+    if (batch) $('[name="question"]')?.focus({ preventScroll: true });
+  }
   $('#card-template').onchange = (e) => {
     const t = TEMPLATES[e.target.value]; if (!t) return;
     $('[name="question"]').value = t.question; $('#card-answer').value = t.answer;
@@ -246,4 +276,29 @@ function deleteCard(card) {
   snapshot('delete-card');
   state.cards.splice(idx, 1); save(); renderAll();
   offerUndo('Tarjeta eliminada.', () => { state.cards.splice(Math.min(idx, state.cards.length), 0, card); save(); renderAll(); });
+}
+
+/* =========================================================
+   Fase 8 (v71) · Tarjetas que se te resisten
+   Una tarjeta se marca cuando acumula LEECH_AT fallos («No lo sabía») desde que se atendió por última vez (leechSince; vacío = nunca). Solo lee el historial: no cambia SM-2 ni reprograma nada.
+   ========================================================= */
+const LEECH_AT = 4;
+const leechCount = (c) => (c.history || []).filter((h) => h.rating === 'again' && (!c.leechSince || h.date > c.leechSince)).length;
+const isLeech = (c) => !c.archived && !c.corrupt && leechCount(c) >= LEECH_AT;
+const leechCards = () => cached('leech', () => state.cards.filter(isLeech).sort((a, b) => leechCount(b) - leechCount(a)));
+function leechHelp(id) {
+  const c = state.cards.find((x) => x.id === id); if (!c) return toast('Esa tarjeta ya no existe.', 'error');
+  modal(`<h2>Una tarjeta que se te resiste</h2>
+      <p>Marcaste «No lo sabía» ${plural(leechCount(c), 'vez', 'veces')} en esta tarjeta. Repetirla igual rara vez ayuda: casi siempre funciona mejor cambiarla.</p>
+      <div class="guided-feedback"><b>${esc(c.question)}</b><br>${esc(c.answer)}<br><small>${esc(c.subject)}</small></div>
+      <p class="modal-tip"><b>Reescribir:</b> usa tus palabras y una pista más clara. <b>Dividir:</b> si junta varias ideas, deja una por tarjeta (la original sigue ahí para que la recortes). Reescribirla la da por atendida.</p>
+      <div class="actions"><button class="primary-button" type="button" data-leech="rewrite">Reescribir</button><button class="outline-button" type="button" data-leech="split">Dividir en otra tarjeta</button><button class="outline-button" type="button" data-leech="ignore">Dejarla como está</button></div>`);
+  $('#modal-body').onclick = (e) => {
+    const k = e.target.closest('[data-leech]')?.dataset.leech; if (!k) return;
+    $('#modal-body').onclick = null; const card = state.cards.find((x) => x.id === id); if (!card) return closeModal();
+    if (k === 'rewrite') { cardForm(card); return; }
+    if (k === 'split') { cardForm(null, { subject: card.subject, question: '', answer: card.answer }); return; }
+    const before = card.leechSince; card.leechSince = today(); save(); closeModal(); renderAll();
+    offerUndo('Listo: no te la volveré a marcar hasta que falles otras 4 veces.', () => { card.leechSince = before; save(); renderAll(); });
+  };
 }

@@ -131,6 +131,25 @@ function replanDeadline(id) {
   });
 }
 
+/* v71 (Fase 8): lo que dice una tarea de hoy en cifras reales (tarjetas de esa materia ahora mismo). Se calcula al dibujar, no se guarda: cambia solo cuando repasas.
+   go: qué hace el botón «Empezar» (due = las vencidas de la materia; quiz = mini quiz con errores primero; '' = nada que lanzar). La fase de comprensión ya trae su cifra en el título. */
+function taskDetail(t, d) {
+  const sub = String(d?.subject || '').trim(); if (!sub || t.done || t.phase === 'comprension') return null;
+  const mine = state.cards.filter((c) => !c.archived && !c.corrupt && norm(c.subject) === norm(sub));
+  if (!mine.length) return { text: `Aún no hay tarjetas de ${sub}: crea algunas para poder practicar.`, go: '' };
+  const due = dueCards().filter((c) => norm(c.subject) === norm(sub));
+  if (t.phase === 'repaso') return due.length ? { text: `Hoy: ${plural(due.length, 'tarjeta', 'tarjetas')} de ${sub} por repasar.`, go: 'due' } : { text: `Hoy no hay tarjetas de ${sub} por repasar.`, go: '' };
+  if (t.phase === 'practica') return { text: `Hoy: práctica con ${plural(Math.min(10, mine.length), 'tarjeta', 'tarjetas')} de ${sub}, tus errores primero.`, go: 'quiz10' };
+  if (t.phase === 'simulacro') return { text: `Simulacro: ${plural(Math.min(20, mine.length), 'tarjeta', 'tarjetas')} de ${sub}.`, go: 'quiz20' };
+  const errs = mine.filter((c) => lastOf(c.history || [])?.rating === 'again').length;
+  return errs ? { text: `Revisión: ${plural(errs, 'tarjeta', 'tarjetas')} de ${sub} con fallos recientes.`, go: 'quiz10' } : { text: `Revisión: sin fallos recientes en ${sub}; repasa por encima.`, go: '' };
+}
+function taskGo(id) {
+  const t = state.tasks.find((x) => x.id === id), d = t && state.deadlines.find((x) => x.id === t.deadlineId), det = t && taskDetail(t, d); if (!det || !det.go) return;
+  if (det.go === 'due') { const pool = dueCards().filter((c) => norm(c.subject) === norm(d.subject)); if (pool.length) { showPage('practice'); startExam(pool.slice(0, 20), 20); } }
+  else startSubjectQuiz(state.cards.find((c) => !c.archived && !c.corrupt && norm(c.subject) === norm(d.subject))?.subject, det.go === 'quiz20' ? 20 : 10);
+}
+
 function pendingHours(deadline) {
   const left = state.tasks.filter((t) => t.deadlineId === deadline.id && !t.done);
   return (left.length * deadline.dailyMinutes) / 60;
@@ -165,7 +184,8 @@ function renderDeadlines() {
   $('#today-tasks').innerHTML = tasks.length ? tasks.map((t) => {
     const d = state.deadlines.find((x) => x.id === t.deadlineId);
     const phase = PHASES.find((p) => p.id === t.phase)?.label || t.phase;
-    return `<label class="task-row"><input type="checkbox" data-task="${esc(t.id)}" ${t.done ? 'checked' : ''}><span><b>${esc(phase)}</b> · <span translate="no">${esc(d?.title || '')}</span><br>${esc(t.title)}</span></label>`;
+    const det = taskDetail(t, d), extra = det ? `<p class="task-go">${esc(det.text)}${det.go ? ` <button class="text-button" type="button" data-task-go="${esc(t.id)}">Empezar</button>` : ''}</p>` : '';
+    return `<div class="task-item"><label class="task-row"><input type="checkbox" data-task="${esc(t.id)}" ${t.done ? 'checked' : ''}><span><b>${esc(phase)}</b> · <span translate="no">${esc(d?.title || '')}</span><br>${esc(t.title)}</span></label>${extra}</div>`;
   }).join('') : '<p class="empty">Cuando tengas un examen, aquí aparecerán las tareas de hoy.</p>';
 }
 

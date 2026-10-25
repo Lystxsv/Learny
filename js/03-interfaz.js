@@ -227,5 +227,18 @@ function subjects() {
   return [...set];
 }
 
-const dueCards = () => cached('due', () => state.cards.filter((c) => !c.archived && c.nextReview <= today()).sort((a, b) => a.nextReview.localeCompare(b.nextReview) || a.easeFactor - b.easeFactor));
-const overdueCards = () => cached('overdue', () => state.cards.filter((c) => !c.archived && c.nextReview < today()));
+/* v71 (Fase 8): límite de tarjetas NUEVAS por día (settings.newPerDay; 0 = sin límite). Una tarjeta es nueva si nunca se repasó; la primera entrada de su historial dice cuándo se vio por primera vez
+   (el historial guarda 40 entradas, de sobra para una tarjeta que se estrenó hoy). Las nuevas que sobran quedan en `held` y siguen siendo de hoy: mañana entran las primeras. Nada se borra ni se reprograma. */
+const isNewCard = (c) => !c.lastReviewed && !(c.history || []).length;
+const dueSplit = () => cached('dueSplit', () => {
+  const all = state.cards.filter((c) => !c.archived && c.nextReview <= today()).sort((a, b) => a.nextReview.localeCompare(b.nextReview) || a.easeFactor - b.easeFactor);
+  const limit = Number(state.settings.newPerDay) || 0;
+  if (limit <= 0) return { due: all, held: [] };
+  const seenToday = state.cards.filter((c) => !c.corrupt && (c.history || []).length && c.history[0].date === today()).length;
+  let room = Math.max(0, limit - seenToday); const due = [], held = [];
+  all.forEach((c) => { if (!isNewCard(c)) due.push(c); else if (room > 0) { room--; due.push(c); } else held.push(c); });
+  return { due, held };
+});
+const dueCards = () => dueSplit().due;
+const heldNewCards = () => dueSplit().held;
+const overdueCards = () => cached('overdue', () => dueCards().filter((c) => c.nextReview < today()));

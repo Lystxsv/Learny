@@ -46,6 +46,7 @@ $('#pomodoro-config').onclick = configurePomodoro;
 $('#daily-goal-input').onchange = () => { state.settings.dailyGoal = num($('#daily-goal-input').value, 1, 12, 2); save(); renderTimer(); };
 $('#add-deadline').onclick = addDeadline;
 $('#add-card').onclick = () => cardForm();
+$('#gen-cards-top').onclick = () => document.dispatchEvent(new Event('learny:gen-cards')); // Fase 7: «Crear con IA» a la vista (lo atiende extras.js, igual que el botón de «Más formas de repasar»)
 $('#exam-mode').onclick = () => startExam();
 $('#reveal-card').onclick = revealCard;
 $$('#rating-row button').forEach((b) => { b.onclick = () => rateCard(b.dataset.rating); });

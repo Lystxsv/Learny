@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v69` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v71` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -79,7 +79,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v69`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v71`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -128,6 +128,19 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v71 · Plan y datos útiles (Fase 8)
+- **Límite de tarjetas nuevas por día** (Ajustes → Estudio y avisos, 20 por defecto, 0 = sin límite): una tarjeta es nueva si nunca se repasó. Las que sobran esperan a otro día y siguen siendo «de hoy»; los repasos de tarjetas ya vistas nunca se limitan. Desde Practicar se pueden adelantar («Aprender algunas nuevas ahora»). Nada se borra ni se reprograma.
+- **Tarjetas que se te resisten** (Reforzar): las que acumulan 4 fallos («No lo sabía») desde que se atendieron. Cada una ofrece reescribir, dividir o dejarla como está (con «Deshacer»). Reescribirla la da por atendida (campo opcional `leechSince` en la tarjeta; sin cambio de esquema).
+- **Tareas del plan con cifras reales:** cada tarea de hoy en Planificar dice cuántas tarjetas de la materia toca («Hoy: 12 tarjetas de Biología por repasar») y tiene un botón «Empezar». La recomendación de Hoy cita la misma cifra. Se calcula al dibujar; no se guarda.
+- **Retención real frente al objetivo** (Reforzar): de los repasos de tarjetas ya vistas, cuántos no fueron «No lo sabía», separando jóvenes (volvían en menos de 21 días) y maduras. El intervalo real sale del historial de cada tarjeta. El 90 % es solo una referencia. No cambia SM-2.
+
+
+### v70 · Crear tarjetas con menos fricción (Fase 7a)
+- **Crear varias seguidas:** el formulario de nueva tarjeta tiene «Guardar y añadir otra» (y Ctrl+Intro / ⌘+Intro): guarda, mantiene la materia, vacía pregunta y respuesta y deja el foco en la pregunta. Muestra cuántas llevas en la tanda. Intro y «Crear tarjeta» siguen guardando y cerrando.
+- **Tarjeta inversa:** casilla opcional que crea además la tarjeta respuesta → pregunta. Es una tarjeta normal (sin cambios de esquema) y llega al día siguiente para que no salga justo detrás de su pareja. Si la respuesta pasa de 500 caracteres no se crea y se avisa.
+- **«✨ Crear con IA» a la vista** junto a «+ Crear» en Practicar (antes solo en «Más formas de repasar»; ese botón se conserva). Sin clave, hace lo de siempre: avisa y lleva a la Biblioteca.
+- No cambian SM-2, datos, copias ni migraciones. Los cloze quedan para una fase propia (7b) porque sí cambian el modelo.
 
 ### v67 · Visibilidad del repaso
 Cada botón de calificar muestra en cuántos días volverá la tarjeta («Dudé · 3 d», «Fácil · 12 d»; «sin cambio» en un repaso anticipado). Se calcula con la misma función que aplica SM-2 (`nextSchedule()` en `js/07-tarjetas.js`), así que lo mostrado coincide con lo que ocurre. En «Reforzar» hay una previsión de los repasos ya programados para los próximos 7 días. Solo representación: el algoritmo, los datos y las copias no cambian.

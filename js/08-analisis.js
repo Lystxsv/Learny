@@ -48,7 +48,7 @@ function renderAnalysis() {
   $('#time-stat').textContent = `${mins} min`;
   $('#time-note').textContent = `de ${plural(state.sessions.filter((x) => !x.abandon && inPeriod(x.date)).length, 'bloque', 'bloques')} · tiempo en sesión, no aprendizaje`;
   $('#overdue-stat').textContent = overdueCards().length;
-  safe(renderForecast, 'previsión de repasos');
+  safe(renderForecast, 'previsión de repasos'); safe(renderRetention, 'retención real'); safe(renderLeeches, 'tarjetas difíciles');
 
   const days = [], names = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   for (let i = 6; i >= 0; i--) {
@@ -125,4 +125,42 @@ function exportReport() {
     download(`learny-semana-${today()}.csv`, rows.map((r) => r.map((x) => { const v = String(x); return `"${(/^[=+\-@\t\r]/.test(v) ? "'" : '') + v.replace(/"/g, '""')}"`; }).join(',')).join('\n'), 'text/csv');
     closeModal(); toast('Informe CSV descargado.');
   };
+}
+
+/* Fase 8 (v71): retención REAL frente a un objetivo. A diferencia de «Recuerdo declarado» (todo lo marcado «Fácil»), aquí solo cuentan los repasos de tarjetas que ya se habían visto antes
+   y se mide si se recordó (no «No lo sabía»). El intervalo real de cada repaso sale del historial de la propia tarjeta: días entre ese repaso y el anterior (sin tocar datos ni algoritmo).
+   «Jóvenes»: volvían en menos de MATURE_DAYS días; «maduras»: en MATURE_DAYS o más. El objetivo es una referencia fija del 90 % (no cambia el repaso). El historial guarda 40 repasos por tarjeta. */
+const TARGET_RETENTION = 90, MATURE_DAYS = 21;
+function retentionReal(inRange = inPeriod) {
+  const out = { young: { ok: 0, n: 0 }, mature: { ok: 0, n: 0 } };
+  state.cards.forEach((c) => {
+    const h = (c.history || []).filter((x) => isDay(x.date));
+    for (let i = 1; i < h.length; i++) {
+      if (!inRange(h[i].date)) continue;
+      const gap = Math.round((new Date(`${h[i].date}T12:00:00`) - new Date(`${h[i - 1].date}T12:00:00`)) / 86400000);
+      if (gap < 1) continue; // dos repasos el mismo día no miden memoria
+      const b = gap >= MATURE_DAYS ? out.mature : out.young;
+      b.n++; if (h[i].rating !== 'again') b.ok++;
+    }
+  });
+  return out;
+}
+function renderRetention() {
+  const box = $('#retention-real'); if (!box) return;
+  const r = retentionReal(), row = (label, b) => {
+    const pct = b.n ? Math.round((b.ok * 100) / b.n) : null, gap = pct == null ? '' : pct >= TARGET_RETENTION ? ' · en el objetivo' : ` · ${TARGET_RETENTION - pct} puntos por debajo`;
+    return `<div class="weak-topic"><span>${label}<br><small>${pct == null ? 'Sin datos en este periodo' : `${b.ok} de ${b.n} recordadas${b.n < 10 ? ' · muestra pequeña' : ''}${gap}`}</small></span><b>${pct == null ? '—' : `${pct}%`}</b></div>`;
+  };
+  $('#retention-real-tag').textContent = `Objetivo ${TARGET_RETENTION}%`;
+  box.innerHTML = row(`Tarjetas jóvenes (volvían en menos de ${MATURE_DAYS} días)`, r.young) + row(`Tarjetas maduras (volvían en ${MATURE_DAYS} días o más)`, r.mature);
+  $('#retention-real-note').textContent = r.young.n + r.mature.n >= 10 ? 'Si pasas semanas por debajo del objetivo, repasa con más frecuencia o reescribe las tarjetas que se te resisten.' : 'Con pocos repasos esta cifra aún no es fiable: se afina a medida que repasas.';
+}
+
+function renderLeeches() {
+  const box = $('#leech-list'); if (!box) return;
+  const list = leechCards();
+  $('#leech-count').textContent = plural(list.length, 'tarjeta', 'tarjetas');
+  box.innerHTML = list.length
+    ? list.slice(0, 5).map((c) => `<div class="weak-topic"><span><b translate="no">${esc(c.question.slice(0, 80))}</b><br><small><span translate="no">${esc(c.subject)}</span> · ${plural(leechCount(c), 'fallo', 'fallos')}</small><br><button class="text-button" type="button" data-leech-open="${esc(c.id)}">Reescribir o dividir</button></span><b>${leechCount(c)}×</b></div>`).join('') + (list.length > 5 ? `<p class="hint">… y ${list.length - 5} más.</p>` : '')
+    : `<p class="empty">Ninguna tarjeta acumula ${LEECH_AT} fallos. Si alguna lo hace, aparecerá aquí con una propuesta para reescribirla o dividirla.</p>`;
 }
