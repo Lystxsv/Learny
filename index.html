@@ -297,10 +297,10 @@
               <button id="exam-mode" class="outline-button" type="button">Modo examen</button>
               <button id="interleave-mode" class="outline-button" type="button">Intercalar</button>
               <button id="quick-five" class="outline-button" type="button">5 minutos</button>
-              <button id="real-exam" class="outline-button" type="button">Examen real</button>
+              <button id="real-exam" class="outline-button" type="button" data-ptxt="realExam">Examen real</button>
               <button id="gen-cards" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Crear con IA</button>
             </div>
-            <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b>Examen real:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
+            <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b><span data-ptxt="realExam">Examen real</span>:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
           </details>
           <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P inicia o pausa el Pomodoro. SM-2: No lo sabía = 1, Dudé = 3, Fácil = 5.</p>
         </article>
@@ -394,13 +394,13 @@
         <div id="plan-log" class="session-list"></div>
       </article>
       <details class="card spaced" id="recovery-more">
-        <summary>Informe de examen <small>registra qué falló y crea un plan de recuperación</small></summary>
-        <p class="lead">Registra qué falló en un parcial y Learny arma un plan de recuperación.</p>
+        <summary><span data-ptxt="recoveryTitle">Informe de examen</span> <small data-ptxt="recoverySub">registra qué falló y crea un plan de recuperación</small></summary>
+        <p class="lead" data-ptxt="recoveryLead">Registra qué falló en un parcial y Learny arma un plan de recuperación.</p>
         <div class="form-row">
           <label>Materia<input id="recovery-subject" list="subject-list" maxlength="60"></label>
-          <label>Qué falló<textarea id="recovery-miss" maxlength="600" placeholder="Temas o tipos de problema"></textarea></label>
+          <label><span data-ptxt="recoveryMiss">Qué falló</span><textarea id="recovery-miss" maxlength="600" placeholder="Temas o tipos de problema"></textarea></label>
         </div>
-        <button id="recovery-plan" class="primary-button" type="button">Crear plan de recuperación</button>
+        <button id="recovery-plan" class="primary-button" type="button" data-ptxt="recoveryBtn">Crear plan de recuperación</button>
       </details>
     </section>
 
@@ -497,8 +497,8 @@
         <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Cada tarea de hoy dice cuántas tarjetas de esa materia toca trabajar y tiene un botón <i>Empezar</i>. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
       </div>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i>Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
-        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → Informe de examen</i>. <i>Reforzar → Más datos</i>. <i>Ajustes → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
+        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i data-ptxt="stuck">Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
+        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, <span data-ptxt="realExam">Examen real</span>, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → <span data-ptxt="recoveryTitle">Informe de examen</span></i>. <i>Reforzar → Más datos</i>. <i>Ajustes → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
         <article class="card"><h2>Qué es Gemini y cómo conseguir tu clave</h2><p class="lead">Las funciones con IA de Learny (tutor, Generar estudio, Crear con IA) usan <b>Gemini</b>, la inteligencia artificial de Google. Sin clave, Learny sigue funcionando con la <i>Guía local</i>. Para activar la IA:</p>
         <ol class="steps"><li>Entra a <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> con tu cuenta de Google y pulsa <i>Create API key</i>.</li>
         <li>Copia la clave y pégala en <i>Ajustes → Inteligencia artificial</i>; pulsa <i>Guardar preferencias</i>. Al volver a abrir Ajustes el campo aparece vacío: es normal, la clave sí está guardada.</li>
@@ -507,10 +507,10 @@
         <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
       </div>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Más formas de repasar</h2><p class="lead">En <i>Practicar → Más formas de repasar</i>: <i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i>Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
+        <article class="card"><h2>Más formas de repasar</h2><p class="lead">En <i>Practicar → Más formas de repasar</i>: <i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i data-ptxt="realExam">Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
         <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar → Más herramientas de práctica</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
         <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
-        <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i>Informe de examen</i> convierte tus fallos en un plan de recuperación de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
+        <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i data-ptxt="recoveryTitle">Informe de examen</i> convierte tus <span data-ptxt="missMany">fallos</span> en <span data-ptxt="recoveryPlan">un plan de recuperación</span> de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
       </div>
       <article class="card spaced"><h2>Apariencia y tipografía</h2>
         <p class="lead">En <i>Ajustes</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
@@ -561,6 +561,7 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <!-- Partes de la app (antes script.js). El orden importa: comparten ámbito global. -->
 <script src="js/01-base.js" defer></script>
+<script src="js/01b-perfil-textos.js" defer></script>
 <script src="js/02-datos.js" defer></script>
 <script src="js/03-interfaz.js" defer></script>
 <script src="js/04-planificador.js" defer></script>
