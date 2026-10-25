@@ -56,7 +56,7 @@ function openSettings() {
         <div class="form-row">${sel('bgStyle', 'Fondo', [['grid', 'Cuadriculado'], ['dots', 'Puntos'], ['plain', 'Liso']])}${sel('density', 'Densidad', [['normal', 'Normal'], ['compact', 'Compacta'], ['roomy', 'Amplia']])}</div>
       </details>
       <details class="more-inline settings-group"><summary>Tipografía y lectura</summary>
-        <p class="hint">Solo fuentes del sistema: no se descarga nada.</p>
+        <p class="hint">Para el texto solo se usan fuentes del sistema: no se descarga nada de internet.</p>
         ${sel('font', 'Fuente del texto', [['sans', 'Sistema (sans)'], ['humanist', 'Humanista'], ['serif', 'Serif de lectura'], ['rounded', 'Redondeada'], ['mono', 'Monoespaciada'], ['dyslexic', 'Lectura fácil (OpenDyslexic si está instalada; si no, Verdana)']])}
         ${sel('headFont', 'Fuente de los títulos', [['serif', 'Serif (actual)'], ['same', 'La misma del texto']])}
         <label>Tamaño de texto: <output id="fs-out"></output><input name="fontSize" type="range" min="13" max="24" step="1"></label>

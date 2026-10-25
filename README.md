@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v74` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v75` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -25,6 +25,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 |---|---|
 | `js/01-base.js` | Base: modo demo, constantes (incluida `MASCOT_AVATARS`), utilidades y el objeto `state`. |
 | `js/02-datos.js` | Datos: tarjetas, migraciones, validación (`sanitizeSettings`), copias automáticas, datos de la demo y carga inicial. |
+| `material-symbols.woff2` | Fuente de iconos (Material Symbols, subconjunto de 26 iconos) guardada en el repo: funciona sin conexión y no descarga nada. |
 | `js/03-interfaz.js` | Interfaz base: confirmación, guardado, avisos (toast, que se coloca dentro del diálogo abierto) y deshacer, páginas, ventana modal, sonido. |
 | `js/04-planificador.js` | Planificador: plan inverso, tareas diarias y reajuste si te atrasas. |
 | `js/05-temporizador.js` | Temporizador: Pomodoro, sincronización entre pestañas, racha y pantalla «Hoy». Emite `learny:timer`. |
@@ -52,7 +53,7 @@ Reglas para tocarlos:
 - Si ya tenías `script.js` publicado, bórralo del repositorio: ya no se usa. Lo mismo con cualquier copia con sufijo «(2)» de un archivo de `js/`: ninguna se referencia.
 
 ## Lumi (compañero de estudio)
-Lumi es un compañero **opcional** (desactivado por defecto desde la v73; quien ya la tenía activada la conserva) que acompaña en momentos concretos. No guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot` y `settings.mascotAvatar`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes ⚙️ → *Disposición*, o con el «×» junto al personaje (con «Deshacer»).
+Lumi es un compañero **opcional** (desactivado por defecto desde la v73; quien ya la tenía activada la conserva) que acompaña en momentos concretos. No guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot` y `settings.mascotAvatar`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes → *Disposición*, o con el «×» junto al personaje (con «Deshacer»).
 
 - **Apariencias** (`settings.mascotAvatar`): `bee` (predeterminada, «Abeja pixelada»), `eevee`, `walle`, `daniel`, `yor` y `gato` («Cat Black»). Se eligen en Ajustes → Disposición → «Apariencia de Lumi» con vista previa; cambiar de apariencia solo cambia el dibujo, no el comportamiento. Un valor desconocido, o un archivo de arte ausente, cae a la abeja. Cada apariencia tiene su caja y sus poses propias en `style.css`.
 - **Dibujo:** SVG en pixel art (`crispEdges`, sin curvas, sin degradados, sin `id`) insertado por JS en `#lumi`. Los personajes de terceros se usan con la autorización que declara el responsable del proyecto; para retirar uno basta borrar su archivo de arte, su `<script>`, su línea en `CORE` de `sw.js` y su entrada en `MASCOT_AVATARS`.
@@ -82,14 +83,14 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v74`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v75`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
-- **Clave propia:** cada persona pega su clave gratuita de Gemini en Ajustes ⚙️ (https://aistudio.google.com/apikey).
+- **Clave propia:** cada persona pega su clave gratuita de Gemini en Ajustes (https://aistudio.google.com/apikey).
   Queda solo en su navegador y nunca se incluye en copias ni mazos. No la uses en un equipo compartido.
 - **Proxy (recomendado en producción):** despliega `proxy-worker.example.js`, define `GEMINI_API_KEY` y
-  `ALLOWED_ORIGIN` como secretos/variables y pega la URL del Worker en Ajustes ⚙️ → "URL de tu proxy".
+  `ALLOWED_ORIGIN` como secretos/variables y pega la URL del Worker en Ajustes → "URL de tu proxy".
   Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-3.8-flash`) y un binding `RATE_LIMITER`.
   El Worker limita también el tamaño de peticiones sin `Content-Length`; si lo desplegaste antes de la v53, vuelve a desplegarlo.
 
@@ -101,7 +102,7 @@ Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el 
 - **Biblioteca:** tarjetas archivadas, mazos iniciales y propios, importación de CSV/Anki y de mazos JSON con vista previa.
 - **Planificar:** plan inverso por fases (comprensión → práctica → repaso → simulacro → revisión), reajuste si te atrasas con explicación, comprobación de carga y *Replanificar desde hoy*.
 - **Reforzar:** seis indicadores honestos con su muestra y periodo (7 días, 30 días o todo), previsión de los repasos ya programados para los próximos 7 días, materias débiles y mini quiz; informe semanal en JSON o CSV.
-- **Ajustes ⚙️:** idioma, apariencia, tipografía, disposición, estudio y avisos, IA y datos/copias; casilla y selector de Lumi.
+- **Ajustes:** idioma, apariencia, tipografía, disposición, estudio y avisos, IA y datos/copias; casilla y selector de Lumi.
 - **Apariencia:** temas Automático, Oscuro, Negro (OLED), Claro, Sepia, Alto contraste y **Cromo**; acento Cielo/Menta/Violeta/Ámbar/Rosa o personalizado con contraste 4,5:1; cinco **estilos rápidos** (Cuaderno, Lectura nocturna, Papel, Biblioteca, Enfoque).
 - **Idioma:** inglés (predeterminado) o español, con botón EN/ES en la barra superior (en móvil, en Ajustes).
 - **Portada, bienvenida y demo:** quien nunca entró ve una portada con «Probar Learny»; la bienvenida de 4 pasos es opcional.
@@ -132,6 +133,12 @@ npx playwright test
 
 ## Novedades
 
+### v75 · Iconos Material Symbols en lugar de emojis
+- Todos los emojis y símbolos-icono de la interfaz (menú, barra móvil, botones, temporizador, estados, cerrar) pasan a **Material Symbols**, con la fuente `material-symbols.woff2` dentro del repo (también en la caché del service worker): sin conexión y sin descargar nada de internet.
+- Uso: `<span class="material-symbols-outlined" aria-hidden="true" translate="no">nombre</span>`; desde JS, `icon('nombre')` (js/01-base.js). Solo existen los 26 iconos del subconjunto; para otro hay que regenerar la fuente.
+- «Ajustes ⚙️» dentro de frases pasa a «Ajustes» a secas (también en js/18-idioma.js). Los avisos de error del tema Chrome conservan el texto «Error:» sin icono.
+- Las claves de traducción ya no llevan emojis; los botones del temporizador se traducen con el diccionario `ONLY` (solo texto completo).
+
 ### v74 · Lumi dice el dato curioso y tiene más mensajes
 - **El dato curioso diario lo dice Lumi** (una vez al día, en la primera visita a Hoy; con Lumi activa se oculta el de «Más sobre hoy»). Se amplían los datos de 9 a 15.
 - **Más mensajes:** consejos de estudio, días hasta el próximo examen, progreso de la meta y racha, y frases alternativas al celebrar, apoyar y marcar progreso. Sigue habiendo UN mensaje proactivo por visita y nada en enfoque ni examen.
@@ -150,7 +157,7 @@ npx playwright test
 ### v70 · Crear tarjetas con menos fricción (Fase 7a)
 - **Crear varias seguidas:** el formulario de nueva tarjeta tiene «Guardar y añadir otra» (y Ctrl+Intro / ⌘+Intro): guarda, mantiene la materia, vacía pregunta y respuesta y deja el foco en la pregunta. Muestra cuántas llevas en la tanda. Intro y «Crear tarjeta» siguen guardando y cerrando.
 - **Tarjeta inversa:** casilla opcional que crea además la tarjeta respuesta → pregunta. Es una tarjeta normal (sin cambios de esquema) y llega al día siguiente para que no salga justo detrás de su pareja. Si la respuesta pasa de 500 caracteres no se crea y se avisa.
-- **«✨ Crear con IA» a la vista** junto a «+ Crear» en Practicar (antes solo en «Más formas de repasar»; ese botón se conserva). Sin clave, hace lo de siempre: avisa y lleva a la Biblioteca.
+- **«Crear con IA» a la vista** junto a «+ Crear» en Practicar (antes solo en «Más formas de repasar»; ese botón se conserva). Sin clave, hace lo de siempre: avisa y lleva a la Biblioteca.
 - No cambian SM-2, datos, copias ni migraciones. Los cloze quedan para una fase propia (7b) porque sí cambian el modelo.
 
 ### v67 · Visibilidad del repaso
