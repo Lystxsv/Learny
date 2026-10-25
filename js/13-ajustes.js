@@ -71,7 +71,7 @@ function openSettings() {
         <label class="check"><input name="immersiveDim" type="checkbox"> Atenuar el menú y la barra superior durante un bloque o examen</label>
         <label class="check"><input name="mascot" type="checkbox"> Compañero de estudio: Lumi</label>
         ${lumiAvatars.length ? `<fieldset class="lumi-avatar-group"><legend>Apariencia de Lumi</legend>
-          <div class="lumi-avatar-opts">${lumiAvatars.map(([id, name]) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}"><span class="lumi-avatar-card">${LC.thumb(id)}<span class="lumi-avatar-name">${esc(name)}</span><span class="lumi-avatar-check" aria-hidden="true">✓</span></span></label>`).join('')}</div>
+          <div class="lumi-avatar-opts">${lumiAvatars.map(([id, name]) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}"><span class="lumi-avatar-card">${LC.thumb(id)}<span class="lumi-avatar-name">${esc(name)}</span><span class="lumi-avatar-check" aria-hidden="true">${icon('check')}</span></span></label>`).join('')}</div>
           <p class="hint">Solo cambia el dibujo: Lumi se comporta igual. Se ve al instante y se guarda con «Guardar preferencias».</p>
         </fieldset>` : ''}
       </details>
@@ -147,7 +147,7 @@ function openSettings() {
     exportData(true); const backed = snapshot('reset');
     [KEY, ...LEGACY_KEYS, 'learny.corrupt', 'learny.newer', 'learny.drafts', 'learny.lumi.fact', TIMER_KEY, DONE_KEY].forEach((k) => store.del(k));
     document.dispatchEvent(new Event('learny:reset')); // extras.js vacía sus borradores en memoria (si no, se reescribirían al teclear)
-    exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast(backed ? 'Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.' : 'Datos borrados. Descargaste una copia, pero no hubo espacio para la copia automática en el navegador.', backed ? 'ok' : 'error');
+    exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast(backed ? 'Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes.' : 'Datos borrados. Descargaste una copia, pero no hubo espacio para la copia automática en el navegador.', backed ? 'ok' : 'error');
   };
 }
 
@@ -170,7 +170,7 @@ function backupNag() {
   const last = s.lastExport;
   if (last && -daysUntil(last) < 14) return;
   s.backupNag = today(); save();
-  queueToast('Hace tiempo que no descargas una copia. Ajustes ⚙️ → Descargar copia.');
+  queueToast('Hace tiempo que no descargas una copia. Ajustes → Descargar copia.');
 }
 
 function fillTutor(silent = false) {

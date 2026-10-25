@@ -67,6 +67,8 @@ const addDays = (date, n) => { const d = new Date(`${date}T12:00:00`); d.setDate
 const daysUntil = (date) => Math.round((new Date(`${date}T12:00:00`) - new Date(`${today()}T12:00:00`)) / 86400000);
 const uid = () => crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const esc = (v = '') => String(v).replace(/[&<>'"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
+/* Iconos Material Symbols (la fuente va en el propio repo: material-symbols.woff2). translate="no": 18-idioma.js no debe traducir el nombre del icono. */
+const icon = (name) => `<span class="material-symbols-outlined" aria-hidden="true" translate="no">${name}</span>`;
 const fmt = (v) => esc(v).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 const cleanNotes = (a) => (Array.isArray(a) ? a : []).map((x) => String(x == null ? '' : x).trim().slice(0, 140)).filter(Boolean).slice(0, 20); // notas de distracción
 const num = (v, min, max, def) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def; };

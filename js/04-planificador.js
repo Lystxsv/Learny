@@ -87,8 +87,8 @@ function loadReport(d) {
   return { days, open, skipped, needed, available, fits: needed <= available, need, canFix: need <= 240 };
 }
 function loadMessage(r) {
-  if (r.fits) return `✔ Cabe: quedan ${hrs(r.needed)} h de trabajo y hay ${hrs(r.available)} h disponibles hasta el examen.`;
-  return `⚠ Ya no cabe a este ritmo: quedan ${hrs(r.needed)} h de trabajo (${plural(r.open, 'sesión pendiente', 'sesiones pendientes')}${r.skipped ? ` y ${plural(r.skipped, 'descartada', 'descartadas')}` : ''}) y solo hay ${hrs(r.available)} h hasta el examen. ${r.canFix ? `Con ${r.need} min/día sí cabe.` : 'Ni con 240 min/día cabe: cambia la fecha o recorta el temario.'}`;
+  if (r.fits) return `Cabe: quedan ${hrs(r.needed)} h de trabajo y hay ${hrs(r.available)} h disponibles hasta el examen.`;
+  return `Ya no cabe a este ritmo: quedan ${hrs(r.needed)} h de trabajo (${plural(r.open, 'sesión pendiente', 'sesiones pendientes')}${r.skipped ? ` y ${plural(r.skipped, 'descartada', 'descartadas')}` : ''}) y solo hay ${hrs(r.available)} h hasta el examen. ${r.canFix ? `Con ${r.need} min/día sí cabe.` : 'Ni con 240 min/día cabe: cambia la fecha o recorta el temario.'}`;
 }
 
 function renderPlanLog() {
@@ -109,7 +109,7 @@ function replanDeadline(id) {
   modal(`<h2>Replanificar «${esc(d.title)}»</h2>
       <p>Se recalculan las tareas desde hoy hasta el ${esc(d.date)}. Lo que completaste antes de hoy se conserva${r.skipped ? `. ${plural(r.skipped, 'sesión descartada se recupera', 'sesiones descartadas se recuperan')} solo si los minutos diarios alcanzan` : ''}.</p>
       <label>Minutos diarios<input name="mins" type="number" min="15" max="240" value="${suggested}" required></label>
-      <p class="modal-tip">Ahora: ${d.dailyMinutes} min/día. ${esc(loadMessage(r))}</p>
+      <p class="modal-tip">Ahora: ${d.dailyMinutes} min/día. ${icon(r.fits ? 'check' : 'warning')} ${esc(loadMessage(r))}</p>
       <button class="primary-button">Replanificar</button>`, (data) => {
     const d = state.deadlines.find((x) => x.id === id); // otra pestaña pudo sustituir state.deadlines mientras el formulario estaba abierto: se trabaja con el objeto vigente
     if (!d) { closeModal(); return toast('Esa fecha ya no existe (otra pestaña la cambió). No se replanificó nada.', 'error'); }

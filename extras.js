@@ -46,7 +46,9 @@
     rt = setInterval(() => {
       if (!L.isExam()) { clearInterval(rt); el.hidden = true; return; }
       const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-      el.hidden = false; el.textContent = `⏱ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      el.hidden = false;
+      if (!el.firstElementChild) el.innerHTML = `${icon('timer')} <span class="exam-time"></span>`; // el icono se crea una vez; solo cambia la hora
+      el.querySelector('.exam-time').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
       if (!left) { clearInterval(rt); el.hidden = true; toast('Se acabó el tiempo. Examen terminado.', 'error'); L.endExam(); }
     }, 500);
   }
@@ -66,15 +68,15 @@
       if (active) { active.stop(); return; }
       const R = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!R) return toast('Tu navegador no admite dictado. Prueba con Chrome o Edge.', 'error');
-      const r = new R(); const nav = navigator.language || '', en = L.state.settings.lang !== 'es'; r.lang = en ? (/^en/i.test(nav) ? nav : 'en-US') : (/^es/i.test(nav) ? nav : 'es-ES'); btn.textContent = '🎤 Escuchando… (pulsa para parar)';
+      const r = new R(); const nav = navigator.language || '', en = L.state.settings.lang !== 'es'; r.lang = en ? (/^en/i.test(nav) ? nav : 'en-US') : (/^es/i.test(nav) ? nav : 'es-ES'); btn.innerHTML = `${icon('graphic_eq')} Escuchando… (pulsa para parar)`;
       r.onresult = (e) => { target().value = `${target().value} ${e.results[0][0].transcript}`.trim(); target().dispatchEvent(new Event('input')); };
-      r.onend = () => { active = null; btn.textContent = label; };
+      r.onend = () => { active = null; btn.innerHTML = `${icon('mic')} ${label}`; };
       r.onerror = () => toast('No se pudo dictar. Revisa el permiso del micrófono.', 'error');
-      try { r.start(); active = r; } catch { btn.textContent = label; }
+      try { r.start(); active = r; } catch { btn.innerHTML = `${icon('mic')} ${label}`; }
     };
   };
-  dictate($('#tutor-voice'), () => $('#ai-question'), '🎤 Dictar');
-  dictate($('#feynman-voice'), () => $('#feynman-text'), '🎤 Dictar explicación');
+  dictate($('#tutor-voice'), () => $('#ai-question'), 'Dictar');
+  dictate($('#feynman-voice'), () => $('#feynman-text'), 'Dictar explicación');
 
   /* ---- Tutor: ejercicios y modo error ---- */
   $('#tutor-exercises').onclick = () => L.gemini(
@@ -135,7 +137,7 @@
   };
   const allDecks = () => ({ ...DECKS, ...Object.fromEntries(state.decks.map((d) => [d.name, d.cards])) });
   function renderDecks() {
-    $('#topic-library').innerHTML = Object.entries(allDecks()).map(([n, c]) => `<span class="topic-wrap"><button class="topic-chip" data-deck="${esc(n)}" type="button">${esc(n)} <small>· ${plural(c.length, 'tarjeta', 'tarjetas')}</small></button>${state.decks.some((d) => d.name === n) ? `<button class="chip-x" data-del-deck="${esc(n)}" type="button" aria-label="Quitar mazo ${esc(n)}">×</button>` : ''}</span>`).join('')
+    $('#topic-library').innerHTML = Object.entries(allDecks()).map(([n, c]) => `<span class="topic-wrap"><button class="topic-chip" data-deck="${esc(n)}" type="button">${esc(n)} <small>· ${plural(c.length, 'tarjeta', 'tarjetas')}</small></button>${state.decks.some((d) => d.name === n) ? `<button class="chip-x" data-del-deck="${esc(n)}" type="button" aria-label="Quitar mazo ${esc(n)}">${icon('close')}</button>` : ''}</span>`).join('')
       + '<button class="outline-button" data-new-deck type="button">+ Crear mazo</button>';
   }
   function newDeck() {
@@ -172,7 +174,7 @@
       const d = addDays(today(), i), dt = new Date(`${d}T12:00:00`);
       const tasks = state.tasks.filter((t) => t.date === d), dl = state.deadlines.filter((x) => x.date === d);
       const due = i === 0 ? L.dueCards().length : live().filter((c) => c.nextReview === d).length;
-      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? '✔ ' : ''}${esc(Object.prototype.hasOwnProperty.call(PH, t.phase) ? PH[t.phase] : t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
+      h += `<div class="day${i === 0 ? ' today' : ''}"><b>${DAYS[dt.getDay()]} ${dt.getDate()}</b>${dl.map((x) => `<span class="tag urgent">${esc(x.title)}</span>`).join('')}${tasks.map((t) => `<small class="${t.done ? 'done' : ''}">${t.done ? `${icon('check')} ` : ''}${esc(Object.prototype.hasOwnProperty.call(PH, t.phase) ? PH[t.phase] : t.phase)}</small>`).join('')}<small>${plural(due, 'tarjeta', 'tarjetas')}</small></div>`;
     }
     $('#week-calendar').innerHTML = h;
     const t = state.tasks.find((x) => x.date === today() && !x.done), dl = t && state.deadlines.find((x) => x.id === t.deadlineId);
@@ -248,7 +250,7 @@
 
   /* ---- Crear tarjetas con IA ---- */
   function genCards() {
-    if (!L.hasAi()) { toast('Para generar con IA añade tu clave en Ajustes ⚙️. Mientras tanto, prueba un mazo de ejemplo.', 'error'); L.showPage('library'); return; }
+    if (!L.hasAi()) { toast('Para generar con IA añade tu clave en Ajustes. Mientras tanto, prueba un mazo de ejemplo.', 'error'); L.showPage('library'); return; }
     const prefill = raw($('#source-text').value, 3000) || raw($('#quick-note').value, 3000);
     modal(`<h2>Crear tarjetas con IA</h2>
       <label>Tema<input name="topic" required maxlength="80" value="${esc(subj() === 'el tema' ? '' : subj())}"></label>
@@ -350,7 +352,7 @@
   function renderMissions() {
     const rv = state.reviews.filter((r) => r.date === today()).length, pm = state.sessions.filter((s) => s.date === today() && !s.abandon).length, fy = state.feynman.includes(today());
     const m = [['Repasa 10 tarjetas', rv >= 10, `${Math.min(rv, 10)}/10`], ['Completa un Pomodoro', pm >= 1, `${Math.min(pm, 1)}/1`], ['Explica un tema con Feynman', fy, fy ? '1/1' : '0/1']];
-    $('#missions-list').innerHTML = m.map((x) => `<div class="task-row${x[1] ? ' done' : ''}"><span aria-hidden="true">${x[1] ? '✔' : '○'}</span><span>${x[0]} <small>${x[2]}</small></span></div>`).join('');
+    $('#missions-list').innerHTML = m.map((x) => `<div class="task-row${x[1] ? ' done' : ''}"><span aria-hidden="true">${icon(x[1] ? 'check_circle' : 'radio_button_unchecked')}</span><span>${x[0]} <small>${x[2]}</small></span></div>`).join('');
     $('#mission-count').textContent = `${m.filter((x) => x[1]).length}/3`;
   }
   function renderInsights() {
@@ -359,7 +361,7 @@
     const subs = Object.entries(by), none = '<p class="empty">Crea tarjetas para ver este panel.</p>';
     $('#concept-map').innerHTML = subs.length ? subs.map(([n, b]) => `<div class="node" style="--s:${Math.min(1.5, 0.85 + b.cards / 25)}"><b>${esc(n)}</b><small>${plural(b.cards, 'tarjeta', 'tarjetas')}</small></div>`).join('') : none;
     const master = subs.filter(([, b]) => b.tot >= 30 && b.ok / b.tot >= 0.8);
-    $('#badges-list').innerHTML = master.length ? master.map(([n, b]) => `<p>🏅 Buen resultado en ${esc(n)}: ${b.ok} de ${b.tot} repasos sin fallar. Falta comprobarlo en próximos repasos.</p>`).join('') : '<p class="empty">Un resultado destacado aparece con 30 repasos de una materia y al menos 80 % sin fallar.</p>';
+    $('#badges-list').innerHTML = master.length ? master.map(([n, b]) => `<p>${icon('military_tech')} Buen resultado en ${esc(n)}: ${b.ok} de ${b.tot} repasos sin fallar. Falta comprobarlo en próximos repasos.</p>`).join('') : '<p class="empty">Un resultado destacado aparece con 30 repasos de una materia y al menos 80 % sin fallar.</p>';
     $('#levels-list').innerHTML = subs.length ? subs.map(([n, b]) => `<p class="level"><span>${esc(n)}</span><b>Práctica nivel ${1 + Math.floor(Math.sqrt(b.tot))} · ${plural(b.tot, 'repaso', 'repasos')}</b></p>`).join('') : '';
     const weak = subs.filter(([, b]) => b.tot >= 5).map(([n, b]) => [n, Math.round((b.ok * 100) / b.tot), b.ok, b.tot]).sort((a, b) => a[1] - b[1])[0];
     $('#adaptive-route').innerHTML = weak && weak[1] < 60 ? `<b>Ruta sugerida</b><br>Repasa <b>${esc(weak[0])}</b> (${weak[1]} % sin fallar: ${weak[2]} de ${weak[3]} repasos), practica con ejercicios y avanza cuando pases del 70 %.` : '<b>Ruta sugerida</b><br>Sin huecos claros: sigue con tu plan y añade tarjetas nuevas.';

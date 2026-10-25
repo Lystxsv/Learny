@@ -59,7 +59,7 @@ function importPreview({ title, intro, counts, groups = [], okLabel, canImport =
     modal(`<h2>${esc(title)}</h2><p>${intro}</p>
         <ul class="import-sum">${counts.map((c) => `<li class="${c.cls || ''}"><b>${c.n}</b> ${esc(c.label)}</li>`).join('')}</ul>
         ${groups.filter((g) => g.lines.length).map(group).join('')}
-        <p class="modal-tip">${canImport ? 'Antes de modificar tus datos se guarda una copia automática (Ajustes ⚙️ → Restaurar copia automática).' : 'No hay nada que importar.'}</p>
+        <p class="modal-tip">${canImport ? 'Antes de modificar tus datos se guarda una copia automática (Ajustes → Restaurar copia automática).' : 'No hay nada que importar.'}</p>
         <div class="actions"><button class="outline-button" type="button" data-close-modal>${canImport ? 'Cancelar' : 'Cerrar'}</button>${canImport ? `<button class="${danger ? 'danger-button' : 'primary-button'}">${esc(okLabel)}</button>` : ''}</div>`,
     () => finish(true), () => finish(false));
   });
@@ -95,7 +95,7 @@ const previewCards = (title, total, A, { extra = [], over = 0, note = '' } = {})
 /* Antes de REEMPLAZAR datos: si no cabe la copia automática previa, se avisa en vez de continuar en silencio. */
 async function ensureBackup(reason, what) {
   if (snapshot(reason)) return true;
-  return confirmDialog({ title: 'No se pudo guardar una copia previa', message: `${what} No hay espacio para la copia automática, así que no podrás recuperar tus datos actuales desde Learny. Si quieres conservarlos, cancela y descarga antes una copia en Ajustes ⚙️.`, ok: 'Continuar sin copia', danger: true });
+  return confirmDialog({ title: 'No se pudo guardar una copia previa', message: `${what} No hay espacio para la copia automática, así que no podrás recuperar tus datos actuales desde Learny. Si quieres conservarlos, cancela y descarga antes una copia en Ajustes.`, ok: 'Continuar sin copia', danger: true });
 }
 
 function importData(file) {
