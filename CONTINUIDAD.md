@@ -6,6 +6,8 @@ Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la últ
 Cada novedad ornamental (Lumi, temas, animaciones) exige antes una mejora del núcleo de estudio (repaso, tarjetas, copias, pruebas).
 
 ## Bloques completados
+- **Perfiles · Etapa 3b** (`learny-v81`, misma versión que 3a): bordes de los controles de la bienvenida con contraste ≥ 3:1 (WCAG 1.4.11). Ver «Perfiles · Etapa 3b» al final.
+- **Perfiles · Etapa 3a** (`learny-v80` → `learny-v81`): opciones de accesibilidad en el paso «Personalizar» de la bienvenida. Ver «Perfiles · Etapa 3a» al final.
 - **Perfiles · Etapa 1** (`learny-v75` → `learny-v76`): bienvenida de una pregunta + `settings.profile`; `tests/perfil.spec.js` (6 pruebas, pasan). Suite: 55 de 59; las 4 de `fase8.spec.js` siguen fallando igual sin estos cambios. Pendiente: Etapas 2–4 (textos por perfil, accesibilidad en la entrada, modo autodidacta), probar en móvil.
 - **Iconos «Material Symbols»** (`learny-v74` → `learny-v75`): emojis sustituidos por iconos de una fuente local (`material-symbols.woff2`, 26 iconos). Helper `icon(nombre)` en `js/01-base.js`; CORE del service worker incluye la fuente. Probado: pruebas Playwright (49 de 53; las 4 de `fase8.spec.js` fallan igual sin estos cambios), capturas con `?demo` en español e inglés y modo sin conexión. Pendiente: móvil real, y revisar las 4 pruebas de fase8.
 - **Fase 9 (parcial, 2.ª parte) «Lumi dice el dato curioso y tiene más mensajes»** (`learny-v73` → `learny-v74`): dato curioso diario por Lumi, `studyChatter()` y variantes de reacciones. Ver «Fase 9 (parcial, 2.ª parte)» al final.
@@ -867,3 +869,23 @@ Solo representación: ninguna lógica, dato ni algoritmo cambia. Archivos: `js/0
 - **No probado:** navegador real, inglés a ojo en cada variante, lector de pantalla, actualización PWA v77 → v78.
 - **Límite conocido:** «con fallos recientes» (tarea de revisión) no tiene traducción al inglés, como antes. Los textos de los modales de tarjetas difíciles y de las estadísticas (verbo «fallar») no cambian por perfil.
 - **Siguiente:** Etapa 3 (accesibilidad en la entrada) o Etapa 4 (modo autodidacta, que sí se apoya en estas variantes).
+
+
+---
+## Perfiles · Etapa 3a «Accesibilidad en Personalizar» (`learny-v80` → `learny-v81`)
+Nota: no hay notas en este archivo para v78 → v80 (el CSS cita cambios de Alisa Kujou en v79 y v80); la Etapa 2 terminó en `learny-v78`.
+- **Qué hace:** en el segundo paso de la bienvenida, tras el tiempo de hoy, grupo «Accesibilidad» con tamaño de texto (16 / 19 / 22 px), «Lectura fácil» (`font: 'dyslexic'`) y «Reducir animaciones» (`reduceMotion`). Vista previa en vivo con `applyAppearance(copia)`: no toca `state.settings`. «Terminar» guarda `fontSize`, `font` y `reduceMotion` (pasan por `sanitizeSettings`). Omitir, × y Esc llaman a `end(false)` → `applyPreferences()`, que restaura la apariencia guardada. Atrás y volver conserva lo elegido. Si el sistema ya pide movimiento reducido, aparece un aviso. Sin cambio de esquema ni claves nuevas.
+- **Archivos:** `js/15-inicio.js` (solo `welcomeFlow()`), `js/18-idioma.js`, `sw.js` (`CACHE = 'learny-v81'`; `CORE` no cambia), `tests/accesibilidad-bienvenida.spec.js` (11 pruebas). `style.css` no cambió en 3a (reutiliza `.welcome-times`, `.welcome-time`, `label.check`, `.hint`).
+- **Idioma:** entradas nuevas en `EX`: «Accesibilidad», «Tamaño de texto», «Terminar», el aviso de movimiento reducido del sistema y «Se ve al instante; se guarda al pulsar «Terminar».». «Normal» se escribe igual en inglés y «Grande», «Muy grande» y «Reducir animaciones» ya existían.
+- **Pruebas:** escritas pero NO ejecutadas en este entorno.
+- **Límites conocidos:** el tamaño de texto es de tres pasos (el resto, 16–24 px, sigue en Ajustes y en A−/A+); si alguien llega al paso 2 con un tamaño distinto de 16/19/22 ninguna opción aparece marcada y se conserva ese valor; con texto muy grande el modal es más alto y en móvil se desplaza dentro de la ventana.
+- **Pendiente:** foco a 320–1000 px en los seis temas, 3c (guion NVDA/VoiceOver), 3d (persona con lector de pantalla).
+
+---
+## Perfiles · Etapa 3b «Contraste de los controles de la bienvenida» (`learny-v81`)
+Solo CSS, al final de `style.css`; va en la misma versión que 3a (`style.css` está en `CORE`, así que la subida de caché a v81 ya lo cubre).
+- **Problema:** el borde normal (`--border`) da 1,25–1,47:1 en Oscuro, Negro, Claro y Sepia (WCAG 1.4.11 pide ≥ 3:1). Alto contraste y Cromo ya cumplían.
+- **Solución:** variable `--ui-edge` por tema (`:root` `#6f759b`, `.theme-oled` `#64656f`, `.theme-light` `#81869e`, `.theme-sepia` `#9c9079`, `.theme-contrast` `#ffffff`, `.theme-chrome` `#7a7a7a`), con 3,11–3,9:1 frente a la superficie, a la superficie secundaria y al fondo del campo en los cuatro temas con problema. Se aplica solo a la bienvenida: `button.stuck-opt.profile-opt`, `label.welcome-time span`, `.modal-content input.w-edge` (campo de nombre) y `button.outline-button.w-edge` («Atrás»). La opción marcada conserva su borde de acento de 2 px. Los selectores llevan un elemento más de especificidad para ganar a las reglas `hover: none` de `motion.css`.
+- **Dependencia:** la clase `w-edge` debe estar puesta en el campo de nombre y en «Atrás» desde `js/15-inicio.js`; comprobarlo al integrar.
+- **Pruebas:** los contrastes se midieron con los valores de cada tema; no consta prueba en navegador.
+- **Pendiente:** ver la bienvenida a ojo en los seis temas, 3c y 3d.

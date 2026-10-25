@@ -2,16 +2,16 @@
 
 App web de estudio: Pomodoro con descanso, flashcards con repaso espaciado (SM-2), método Feynman,
 ruleta de temas, planificador inverso, estadísticas, un tutor socrático opcional con IA y **Lumi**,
-un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, WALL·E, Daniel Carreon, Yor Forger y Cat Black).
+un compañero de estudio opcional con ocho apariencias (abeja pixelada, Eevee, WALL·E, Daniel Carreon, Yor Forger, Cat Black, Miku Nakano y Alisa Kujou).
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v77` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v81` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (24 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (27 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `package.json`, `playwright.config.js`, `tests/` | Pruebas automáticas (solo para quien desarrolla; la app no las necesita). Ver «Pruebas». |
 | `sw.js`, `manifest.json` | Modo sin conexión e instalación como app (PWA). |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Iconos de la app (ya subidos al repositorio). Son opcionales para `sw.js`, pero `manifest.json` los referencia. |
@@ -83,7 +83,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v77`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v81`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -132,6 +132,9 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v81 · Perfiles, etapa 3: accesibilidad en la bienvenida
+En el paso «Personalizar» de la bienvenida hay un grupo «Accesibilidad» (tamaño de texto, lectura fácil y reducir animaciones) con vista previa en vivo; se guarda al pulsar «Terminar» y Omitir, × o Esc lo revierten. Los bordes de los controles de la bienvenida (opciones de perfil, tiempo, tamaño de texto, nombre y «Atrás») pasan a un contraste de al menos 3:1 en todos los temas (`--ui-edge`). Pruebas en `tests/accesibilidad-bienvenida.spec.js`, escritas pero no ejecutadas.
 
 ### v77 · Lumi: apariencia «Alisa Kujou»
 Nueva apariencia de Lumi (`settings.mascotAvatar = 'alisa'`): una chica chibi de pelo plateado con ahoge, lazo rojo y uniforme, en pixel art (`js/16-lumi-alisa.js`, 62×96 celdas en rejilla 100×100) con poses propias (ojos, cabeza, lazo, ahoge y brazo) y reposo. Solo representación: sin cambios de lógica, textos ni esquema. Caché `learny-v77`.
