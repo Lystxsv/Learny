@@ -9,6 +9,9 @@
 * { box-sizing: border-box; }
 html { font-size: var(--base); }
 body { margin: 0; background: var(--bg); color: var(--text); min-width: 320px; }
+/* Iconos: Material Symbols (subconjunto guardado en el propio repo; no se descarga nada de internet). Uso: <span class="material-symbols-outlined" aria-hidden="true" translate="no">nombre</span> */
+@font-face { font-family: 'Material Symbols Outlined'; font-style: normal; font-weight: 400; font-display: block; src: url(material-symbols.woff2) format('woff2'); }
+.material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-weight: 400; font-style: normal; font-size: 1.2em; line-height: 1; display: inline-block; vertical-align: -0.2em; text-transform: none; letter-spacing: normal; white-space: nowrap; -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; user-select: none; }
 [hidden] { display: none !important; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
@@ -595,7 +598,7 @@ body.theme-chrome[data-cards="border"] :is(.card, .metric) { border-color: #3d3d
 /* Avisos: el error se distingue por texto, icono y recuadro, no solo por el tono */
 .theme-chrome .toast { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 1px 0 #fff, 0 10px 30px #000c; }
 .theme-chrome .toast.error { background: #1d1d1d; color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 10px 30px #000c; }
-.theme-chrome .toast.error::before { content: "⚠ Error: "; font-weight: 800; }
+.theme-chrome .toast.error::before { content: "Error: "; font-weight: 800; } /* el aviso de error se distingue por el texto «Error:» y el recuadro blanco, sin depender del color */
 .theme-chrome .tag.urgent { background: #f2f2f2; color: #0a0a0a; box-shadow: 0 0 0 1px #fff; } /* urgente = claro sobre oscuro con anillo: no depende del tono ni cambia el tamaño de la etiqueta */
 .theme-chrome :is(.modal-content, .lead, .modal-tip) a { text-decoration: underline; text-underline-offset: .15em; }
 /* Ventanas y marca */
@@ -836,7 +839,7 @@ body.session-study .lumi { --lumi-size: 40px; }
 body.session-study .lumi[data-avatar="eevee"] { --lumi-size: 42px; }
 .lumi[data-pose="focus"] .lumi-svg--eevee, .lumi[data-pose="focus"] .lumi-svg--eevee * { animation: none !important; } /* enfoque: pose estática */
 
-/* Selector «Apariencia de Lumi» (Ajustes → Disposición). Radios nativos (teclado: flechas) con tarjeta; la elegida se distingue por borde grueso, «✓» y negrita, no solo por color. */
+/* Selector «Apariencia de Lumi» (Ajustes → Disposición). Radios nativos (teclado: flechas) con tarjeta; la elegida se distingue por borde grueso, marca de verificación y negrita, no solo por color. */
 .lumi-avatar-group { border: 0; padding: 0; margin: var(--s2) 0 0; min-width: 0; }
 .lumi-avatar-group legend { padding: 0; margin-bottom: var(--s1); color: var(--muted); }
 .lumi-avatar-opts { display: flex; flex-wrap: wrap; gap: var(--s1); }

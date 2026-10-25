@@ -76,7 +76,7 @@ function renderCardBody() {
   if (!activeCard) {
     const has = state.cards.some((c) => !c.archived), held = heldNewCards().length;
     $('#flashcard').innerHTML = held
-      ? `<div><b>Terminaste tus repasos de hoy.</b><br><span>Hay tarjetas nuevas que esperan a mañana por tu límite diario de tarjetas nuevas. Puedes cambiarlo en Ajustes ⚙️.</span><div class="actions center"><button class="outline-button" data-empty="more-new" type="button">Aprender algunas nuevas ahora</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>`
+      ? `<div><b>Terminaste tus repasos de hoy.</b><br><span>Hay tarjetas nuevas que esperan a mañana por tu límite diario de tarjetas nuevas. Puedes cambiarlo en Ajustes.</span><div class="actions center"><button class="outline-button" data-empty="more-new" type="button">Aprender algunas nuevas ahora</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>`
       : has
       ? '<div><b>No tienes repasos hoy.</b><br><span>Puedes adelantar 5 tarjetas o crear nuevas.</span><div class="actions center"><button class="outline-button" data-empty="advance" type="button">Adelantar 5 tarjetas</button><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button></div></div>'
       : '<div><b>Aún no tienes tarjetas.</b><br><span>Crea una desde tus apuntes, pide 5 al tutor o añade un mazo de ejemplo.</span><div class="actions center"><button class="outline-button" data-empty="create" type="button">Crear tarjeta</button><button class="outline-button" data-empty="ai" type="button">Pedir 5 al tutor</button><button class="outline-button" data-empty="deck" type="button">Mazo de ejemplo</button></div></div>';
@@ -197,7 +197,7 @@ function cardForm(card = null, preset = null) {
       <label>Materia<input name="subject" required maxlength="60" value="${esc(card?.subject || preset?.subject || $('#tutor-subject').value || '')}"></label>
       <label>Pregunta<textarea name="question" required maxlength="500">${esc(q0)}</textarea></label>
       <label>Respuesta<textarea id="card-answer" name="answer" required maxlength="1200">${esc(a0)}</textarea></label>
-      <button id="generate-answer" class="outline-button" type="button">✨ Generar respuesta con IA</button>
+      <button id="generate-answer" class="outline-button" type="button">${icon('auto_awesome')} Generar respuesta con IA</button>
       ${card ? '' : `<label class="check"><input name="reverse" type="checkbox"${preset?.reverse ? ' checked' : ''}> Crear también la tarjeta inversa (respuesta → pregunta)</label>`}
       ${batch ? `<p class="modal-tip">Añadidas en esta tanda: ${batch}</p>` : ''}
       <button id="save-card" class="primary-button">${card ? 'Guardar cambios' : 'Crear tarjeta'}</button>
@@ -242,13 +242,13 @@ function cardForm(card = null, preset = null) {
   $('#generate-answer').onclick = async () => {
     const question = clean($('[name="question"]').value, 500), button = $('#generate-answer');
     if (!question) return toast('Escribe primero una pregunta.', 'error');
-    if (!hasAi()) return toast('Añade tu clave de Gemini en Ajustes ⚙️ o usa una plantilla.', 'error');
+    if (!hasAi()) return toast('Añade tu clave de Gemini en Ajustes o usa una plantilla.', 'error');
     button.disabled = true; button.textContent = 'Generando…';
     try {
       const text = await askGemini(`Responde en español, máximo 3 frases, útil para flashcard. Pregunta: ${question}`);
       const out = $('#card-answer'); if (out) out.value = text;
     } catch (error) { toast(error.message, 'error'); }
-    finally { if ($('#generate-answer')) { button.disabled = false; button.textContent = '✨ Generar respuesta con IA'; } }
+    finally { if ($('#generate-answer')) { button.disabled = false; button.innerHTML = `${icon('auto_awesome')} Generar respuesta con IA`; } }
   };
 }
 

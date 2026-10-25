@@ -29,7 +29,7 @@ function welcomeFlow() {
     applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); // applyPreferences refresca los campos del tutor: así fillTutor no pisa lo guardado con valores viejos
     closeModal();
     setTimeout(() => $('.page.active h1')?.focus({ preventScroll: true }), 0);
-    if (completed) toast(`${a.name ? `Listo, ${a.name}. ` : 'Listo. '}Puedes cambiar todo esto en Ajustes ⚙️.`);
+    if (completed) toast(`${a.name ? `Listo, ${a.name}. ` : 'Listo. '}Puedes cambiar todo esto en Ajustes.`);
   };
   function onClick(e) {
     const b = e.target.closest('[data-w]'); if (!b) return;
@@ -47,7 +47,7 @@ function welcomeFlow() {
     const title = ['¿Cómo quieres que te llame?', '¿Qué quieres estudiar?', '¿Qué quieres lograr?', '¿Cuánto tiempo tienes hoy?'][i];
     modal(`<p class="eyebrow">Paso ${i + 1} de 4 · ${esc(label)}</p><h2>${esc(title)}</h2>
         ${field}
-        <p class="modal-tip">Todo es opcional y lo puedes cambiar después en Ajustes ⚙️.${last ? ' El tiempo ajusta la duración de tu Pomodoro.' : ''}</p>
+        <p class="modal-tip">Todo es opcional y lo puedes cambiar después en Ajustes.${last ? ' El tiempo ajusta la duración de tu Pomodoro.' : ''}</p>
         <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button>${i ? '<button class="outline-button" type="button" data-w="back">Atrás</button>' : ''}<button class="primary-button" type="submit">${last ? 'Terminar' : 'Siguiente'}</button></div>`,
     () => { read(); if (last) end(true); else { apply(); save(); i++; render(); } },
     () => end(false)); // × o Esc: cerrar sin completar cuenta como omitir
@@ -114,8 +114,8 @@ if (newerFrom) queueToast(newerKept
   ? `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos (hay además una copia intacta en learny.newer). Actualiza la app.`
   : `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos, pero NO pude guardar una copia aparte (sin espacio). Actualiza la app.`, 'error');
 if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
-if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes ⚙️ → Restaurar copia automática.`);
-  else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes ⚙️.`, 'error'); }
+if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes → Restaurar copia automática.`);
+  else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes.`, 'error'); }
 safe(redistributeIfBehind, 'plan'); renderAll(); // JS-103: el aviso con «Deshacer» se encola DESPUÉS de los avisos graves de arranque (y antes de soltar bootHold, así no pisa datos protegidos)
 bootHold = false;
 if ((corruptKept || !loadProblem) && !newerFrom) { try { const json = JSON.stringify(state); localStorage.setItem(KEY, json); lastSavedRaw = json; } catch { /* ok */ } } // con datos dañados y sin copia, o de una versión más nueva (JS-004), no se pisa la clave principal en el arranque: lo guardado queda intacto y el resto de guardados los frena newerStored()

@@ -330,7 +330,7 @@ const LumiCompanion = (() => {
   function hide() { // el botón de Lumi: oculta y ofrece deshacer (mismo patrón que el resto de la app)
     state.settings.mascot = false; save(); applyAppearance();
     document.querySelector('.page.active h1')?.focus({ preventScroll: true }); // JS-101: el dock vive en todas las secciones; el foco pasa al título visible de la página actual
-    offerUndo('Lumi está oculto. Puedes reactivarlo en Ajustes ⚙️.', () => { state.settings.mascot = true; save(); applyAppearance(); });
+    offerUndo('Lumi está oculto. Puedes reactivarlo en Ajustes.', () => { state.settings.mascot = true; save(); applyAppearance(); });
   }
 
   function init() {

@@ -16,10 +16,10 @@ function unsupportedShare(answer, source) {
 }
 function reviewCards(items, { topic = '', source = '', origin = 'ia', intro = '' } = {}) {
   const srcNorm = normText(source);
-  const warnText = (answer) => (source && unsupportedShare(answer, source) > 0.4 ? '⚠ Parte de la respuesta no aparece en tus apuntes: puede haberla añadido la IA. Revísala o corrígela.' : '');
+  const warnText = (answer) => (source && unsupportedShare(answer, source) > 0.4 ? `${icon('warning')} Parte de la respuesta no aparece en tus apuntes: puede haberla añadido la IA. Revísala o corrígela.` : '');
   const srcLine = (it) => {
     if (it.fragment && source) return srcNorm.includes(normText(it.fragment))
-      ? `Del apunte: “${esc(it.fragment)}”` : `⚠ El fragmento que cita la IA no aparece en tus apuntes: “${esc(it.fragment)}”`;
+      ? `Del apunte: “${esc(it.fragment)}”` : `${icon('warning')} El fragmento que cita la IA no aparece en tus apuntes: “${esc(it.fragment)}”`;
     return source ? 'Sin fragmento de respaldo en tus apuntes.' : 'Sin fuente: la IA la generó solo a partir del tema. Verifica la respuesta antes de aceptarla.';
   };
   modal(`<h2>Revisa las tarjetas</h2>
@@ -50,7 +50,7 @@ function reviewCards(items, { topic = '', source = '', origin = 'ia', intro = ''
   };
   body.oninput = (e) => { // al editar la respuesta se vuelve a comprobar contra los apuntes
     const m = /^a(\d+)$/.exec(e.target.name || ''); if (!m) return;
-    const w = body.querySelector(`[data-warn="${m[1]}"]`); if (w) w.textContent = warnText(e.target.value);
+    const w = body.querySelector(`[data-warn="${m[1]}"]`); if (w) w.innerHTML = warnText(e.target.value);
   };
 }
 
@@ -99,7 +99,7 @@ function addTopic(name, category = 'Personal') {
 function renderTopics() {
   const query = $('#topic-search').value.trim().toLowerCase();
   const topics = state.topics.filter((t) => !query || t.name.toLowerCase().includes(query));
-  $('#topic-results').innerHTML = topics.length ? topics.map((t) => `<span class="topic-wrap"><button class="topic-chip" data-topic="${esc(t.name)}" type="button">${esc(t.name)} <small>· ${esc(t.category)}</small></button><button class="chip-x" data-delete-topic="${esc(t.id)}" type="button" aria-label="Quitar ${esc(t.name)}">×</button></span>`).join('') : '<p class="empty">No hay coincidencias. Añade el tema que quieras estudiar hoy.</p>';
+  $('#topic-results').innerHTML = topics.length ? topics.map((t) => `<span class="topic-wrap"><button class="topic-chip" data-topic="${esc(t.name)}" type="button">${esc(t.name)} <small>· ${esc(t.category)}</small></button><button class="chip-x" data-delete-topic="${esc(t.id)}" type="button" aria-label="Quitar ${esc(t.name)}">${icon('close')}</button></span>`).join('') : '<p class="empty">No hay coincidencias. Añade el tema que quieras estudiar hoy.</p>';
 }
 async function suggestTopic() {
   const subject = clean($('#topic-search').value, 80);

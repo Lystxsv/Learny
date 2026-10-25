@@ -105,14 +105,14 @@
     </div>
     <nav class="nav" aria-label="Secciones">
       <p class="nav-label">Estudiar</p>
-      <button class="nav-button active" data-page="study" aria-current="page"><span aria-hidden="true">🏠</span> Hoy</button>
-      <button class="nav-button" data-page="practice"><span aria-hidden="true">🧠</span> Practicar</button>
-      <button class="nav-button" data-page="library"><span aria-hidden="true">📚</span> Biblioteca</button>
+      <button class="nav-button active" data-page="study" aria-current="page"><span class="material-symbols-outlined" aria-hidden="true" translate="no">home</span> Hoy</button>
+      <button class="nav-button" data-page="practice"><span class="material-symbols-outlined" aria-hidden="true" translate="no">psychology</span> Practicar</button>
+      <button class="nav-button" data-page="library"><span class="material-symbols-outlined" aria-hidden="true" translate="no">library_books</span> Biblioteca</button>
       <p class="nav-label">Organizar</p>
-      <button class="nav-button" data-page="planner"><span aria-hidden="true">📅</span> Planificar</button>
-      <button class="nav-button" data-page="analysis"><span aria-hidden="true">📊</span> Reforzar</button>
+      <button class="nav-button" data-page="planner"><span class="material-symbols-outlined" aria-hidden="true" translate="no">calendar_month</span> Planificar</button>
+      <button class="nav-button" data-page="analysis"><span class="material-symbols-outlined" aria-hidden="true" translate="no">bar_chart</span> Reforzar</button>
       <p class="nav-label">Ayuda</p>
-      <button class="nav-button" data-page="guide"><span aria-hidden="true">📖</span> Guía de uso</button>
+      <button class="nav-button" data-page="guide"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span> Guía de uso</button>
     </nav>
     <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy) o el dictado por voz, que usa el servicio de tu navegador (en Chrome, Google). No guardes tu clave en un equipo compartido.</div>
   </aside>
@@ -120,7 +120,7 @@
   <main class="main" id="main" tabindex="-1">
     <header class="topbar">
       <div class="ai-input">
-        <span aria-hidden="true">✦</span>
+        <span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span>
         <select id="search-engine" aria-label="Buscador o tutor">
           <option value="gemini">Gemini</option>
           <option value="local">Guía local</option>
@@ -134,11 +134,11 @@
       </div>
       <div class="topbar-tools">
         <span id="save-status" class="save-status"></span>
-        <button class="icon-button" data-page="guide" aria-label="Guía de uso">📖</button>
+        <button class="icon-button" data-page="guide" aria-label="Guía de uso"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span></button>
         <button id="lang-toggle" class="icon-button lang-toggle" type="button" translate="no"></button>
         <button id="font-down" class="icon-button" aria-label="Reducir tamaño de texto">A−</button>
         <button id="font-up" class="icon-button" aria-label="Aumentar tamaño de texto">A+</button>
-        <button id="settings-button" class="icon-button" aria-label="Ajustes">⚙️</button>
+        <button id="settings-button" class="icon-button" aria-label="Ajustes"><span class="material-symbols-outlined" aria-hidden="true" translate="no">settings</span></button>
       </div>
     </header>
     <p id="offline-note" class="alert info" role="status" hidden>Sin conexión: tarjetas, Pomodoro y plan siguen funcionando. El tutor con IA no estará disponible hasta que vuelvas a conectarte.</p>
@@ -169,7 +169,7 @@
       </label>
       <div class="actions">
         <button id="save-tutor-context" class="outline-button" type="button">Guardar contexto</button>
-        <button id="tutor-voice" class="outline-button" type="button">🎤 Dictar</button>
+        <button id="tutor-voice" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">mic</span> Dictar</button>
         <button id="tutor-exercises" class="outline-button" type="button">5 ejercicios</button>
         <button id="tutor-error" class="outline-button" type="button">Modo error</button>
         <button id="clear-tutor-history" class="text-button danger" type="button">Borrar historial del tema</button>
@@ -200,7 +200,7 @@
           <p id="distraction-count" class="hint" aria-live="polite"></p>
         </div>
         <div class="actions">
-          <button id="pomodoro-button" class="primary-button">▶ Iniciar enfoque</button>
+          <button id="pomodoro-button" class="primary-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">play_arrow</span> Iniciar enfoque</button>
           <button id="pomodoro-skip" class="outline-button" hidden>Saltar descanso</button>
           <button id="pomodoro-reset" class="outline-button">Reiniciar</button>
         </div>
@@ -237,7 +237,7 @@
           <div class="metric"><b id="average-energy">—</b><span>Concentración media</span></div>
         </div>
         <p id="daily-rhythm" class="lead rhythm"></p>
-        <p class="fact"><span aria-hidden="true">💡</span> <span id="daily-fact"></span></p>
+        <p class="fact"><span class="material-symbols-outlined" aria-hidden="true" translate="no">lightbulb</span> <span id="daily-fact"></span></p>
       </details>
     </section>
 
@@ -271,7 +271,7 @@
             <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
             <div class="actions tight">
               <button id="add-card" class="outline-button">+ Crear</button>
-              <button id="gen-cards-top" class="outline-button" type="button">✨ Crear con IA</button>
+              <button id="gen-cards-top" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Crear con IA</button>
               <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
             </div>
           </div>
@@ -298,7 +298,7 @@
               <button id="interleave-mode" class="outline-button" type="button">Intercalar</button>
               <button id="quick-five" class="outline-button" type="button">5 minutos</button>
               <button id="real-exam" class="outline-button" type="button">Examen real</button>
-              <button id="gen-cards" class="outline-button" type="button">✨ Crear con IA</button>
+              <button id="gen-cards" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Crear con IA</button>
             </div>
             <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b>Examen real:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
           </details>
@@ -306,7 +306,7 @@
         </article>
 
         <article class="card feynman-card">
-          <div class="card-head"><h2>Método Feynman</h2><span aria-hidden="true">✍️</span></div>
+          <div class="card-head"><h2>Método Feynman</h2><span class="material-symbols-outlined" aria-hidden="true" translate="no">edit_note</span></div>
           <label class="field">Tema que estás explicando
             <input id="feynman-topic" class="intention" placeholder="Ej.: la fotosíntesis" maxlength="80"></label>
           <label class="field">Tu explicación
@@ -316,7 +316,7 @@
           </div>
           <details class="more-inline" id="feynman-more">
             <summary>Más opciones</summary>
-            <div class="actions"><button id="feynman-voice" class="outline-button" type="button">🎤 Dictar explicación</button></div>
+            <div class="actions"><button id="feynman-voice" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">mic</span> Dictar explicación</button></div>
           </details>
           <div id="feynman-guide" class="guided-feedback" aria-live="polite">Escribe o dicta una explicación: Learny detecta vacíos, pregunta y propone tarjetas. Sin clave también funciona.</div>
         </article>
@@ -327,13 +327,13 @@
       <section class="tool-block roulette-panel">
         <div class="card-head">
           <div><h2>Ruleta temática</h2><p class="lead">Elige un tema al azar, estúdialo y luego explícalo: recuperación activa en dos fases.</p></div>
-          <button id="spin-roulette" class="primary-button">🎲 Girar tema</button>
+          <button id="spin-roulette" class="primary-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">casino</span> Girar tema</button>
         </div>
         <div class="roulette-tools">
           <label class="field grow">Añadir o buscar un tema
             <input id="topic-search" class="intention" placeholder="Cualquier tema o concepto"></label>
           <button id="add-topic" class="outline-button">Añadir</button>
-          <button id="suggest-topic" class="outline-button">✨ Sugerir con IA</button>
+          <button id="suggest-topic" class="outline-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Sugerir con IA</button>
         </div>
         <div id="topic-results" class="topic-results"></div>
       </section>
@@ -491,43 +491,43 @@
         <li><b>Explicar.</b> Usa Feynman o la ruleta para explicar con tus palabras.</li>
         <li><b>Reforzar.</b> En <i>Reforzar</i> mira qué materias fallan y empieza ahí mañana.</li></ol></article>
       <div class="grid planner-grid spaced">
-        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes ⚙️). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas. Al terminar un bloque o un examen, Learny muestra un cierre con solo los datos de esa sesión y te deja elegir entre <i>Terminar por hoy</i> y <i>Seguir un poco más</i>. Si el menú atenuado durante el bloque te molesta, apágalo en <i>Ajustes ⚙️ → Disposición</i>.</p></article>
-        <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Para crear varias seguidas usa <i>Guardar y añadir otra</i> (o Ctrl+Intro); la casilla de <i>tarjeta inversa</i> crea también la pregunta al revés, que llega al día siguiente. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta; cada botón indica en cuántos días volverá. Las que dominas, envíalas a la Biblioteca. Para no abrumarte, cada día solo entran las tarjetas nuevas que fijes en <i>Ajustes ⚙️ → Estudio y avisos</i> (20 por defecto; 0 = sin límite): las demás esperan, y puedes adelantarlas desde Practicar. En <i>Reforzar</i>, <i>Tarjetas que se te resisten</i> reúne las que fallaste 4 veces o más para reescribirlas o dividirlas.</p></article>
-        <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes ⚙️). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
+        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas. Al terminar un bloque o un examen, Learny muestra un cierre con solo los datos de esa sesión y te deja elegir entre <i>Terminar por hoy</i> y <i>Seguir un poco más</i>. Si el menú atenuado durante el bloque te molesta, apágalo en <i>Ajustes → Disposición</i>.</p></article>
+        <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Para crear varias seguidas usa <i>Guardar y añadir otra</i> (o Ctrl+Intro); la casilla de <i>tarjeta inversa</i> crea también la pregunta al revés, que llega al día siguiente. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta; cada botón indica en cuántos días volverá. Las que dominas, envíalas a la Biblioteca. Para no abrumarte, cada día solo entran las tarjetas nuevas que fijes en <i>Ajustes → Estudio y avisos</i> (20 por defecto; 0 = sin límite): las demás esperan, y puedes adelantarlas desde Practicar. En <i>Reforzar</i>, <i>Tarjetas que se te resisten</i> reúne las que fallaste 4 veces o más para reescribirlas o dividirlas.</p></article>
+        <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
         <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Cada tarea de hoy dice cuántas tarjetas de esa materia toca trabajar y tiene un botón <i>Empezar</i>. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
       </div>
       <div class="grid planner-grid spaced">
         <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i>Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
-        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → Informe de examen</i>. <i>Reforzar → Más datos</i>. <i>Ajustes ⚙️ → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
+        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, Examen real, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → Informe de examen</i>. <i>Reforzar → Más datos</i>. <i>Ajustes → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
         <article class="card"><h2>Qué es Gemini y cómo conseguir tu clave</h2><p class="lead">Las funciones con IA de Learny (tutor, Generar estudio, Crear con IA) usan <b>Gemini</b>, la inteligencia artificial de Google. Sin clave, Learny sigue funcionando con la <i>Guía local</i>. Para activar la IA:</p>
         <ol class="steps"><li>Entra a <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> con tu cuenta de Google y pulsa <i>Create API key</i>.</li>
-        <li>Copia la clave y pégala en <i>Ajustes ⚙️ → Inteligencia artificial</i>; pulsa <i>Guardar preferencias</i>. Al volver a abrir Ajustes el campo aparece vacío: es normal, la clave sí está guardada.</li>
+        <li>Copia la clave y pégala en <i>Ajustes → Inteligencia artificial</i>; pulsa <i>Guardar preferencias</i>. Al volver a abrir Ajustes el campo aparece vacío: es normal, la clave sí está guardada.</li>
         <li>Opcional: cambia el modelo en ese mismo bloque. Por defecto es <code>gemini-3.8-flash</code>. Lista de modelos: <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/models</a>.</li></ol>
         <p class="lead">La clave es personal: no la compartas. Los límites de uso gratuito los define Google.</p></article>
-        <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes ⚙️ puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
+        <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
       </div>
       <div class="grid planner-grid spaced">
         <article class="card"><h2>Más formas de repasar</h2><p class="lead">En <i>Practicar → Más formas de repasar</i>: <i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i>Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
-        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar → Más herramientas de práctica</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono 🎤 dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
-        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes ⚙️) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
+        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar → Más herramientas de práctica</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
+        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
         <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i>Informe de examen</i> convierte tus fallos en un plan de recuperación de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
       </div>
       <article class="card spaced"><h2>Apariencia y tipografía</h2>
-        <p class="lead">En <i>Ajustes ⚙️</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
+        <p class="lead">En <i>Ajustes</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
       <article class="card spaced"><h2>Atajos de teclado</h2>
         <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana · <kbd>Enter</kbd> en el resultado concreto inicia el bloque · <kbd>Z</kbd> deshace. Los atajos de tarjetas funcionan en <i>Practicar</i>. Todo el recorrido (planificar, iniciar un Pomodoro, repasar y calificar, crear una tarjeta, importar) se puede hacer solo con teclado: <kbd>Tab</kbd> avanza, <kbd>Mayús</kbd>+<kbd>Tab</kbd> retrocede, <kbd>Enter</kbd> o <kbd>Espacio</kbd> pulsan, y al cerrar una ventana el foco vuelve al botón que la abrió.</p></article>
       <article class="card spaced"><h2>Datos, copias e instalación</h2>
-        <p class="lead">En Ajustes ⚙️ puedes descargar una copia, importar JSON o CSV, y compartir un mazo sin tu progreso. En el móvil, usa <i>Añadir a pantalla de inicio</i> para instalarla y usarla sin conexión. Antes de borrar o importar, Learny guarda una copia automática que puedes restaurar en Ajustes ⚙️. Si borras los datos del navegador, pierdes tu progreso: descarga copias de vez en cuando.</p></article>
+        <p class="lead">En Ajustes puedes descargar una copia, importar JSON o CSV, y compartir un mazo sin tu progreso. En el móvil, usa <i>Añadir a pantalla de inicio</i> para instalarla y usarla sin conexión. Antes de borrar o importar, Learny guarda una copia automática que puedes restaurar en Ajustes. Si borras los datos del navegador, pierdes tu progreso: descarga copias de vez en cuando.</p></article>
     </section>
   </main>
 </div>
 
 <nav class="bottom-nav" aria-label="Secciones en móvil">
-  <button class="nav-button active" data-page="study"><span aria-hidden="true">🏠</span><small>Hoy</small></button>
-  <button class="nav-button" data-page="practice"><span aria-hidden="true">🧠</span><small>Practicar</small></button>
-  <button class="nav-button" data-page="library"><span aria-hidden="true">📚</span><small>Biblioteca</small></button>
-  <button class="nav-button" data-page="planner"><span aria-hidden="true">📅</span><small>Planificar</small></button>
-  <button class="nav-button" data-page="analysis"><span aria-hidden="true">📊</span><small>Reforzar</small></button>
+  <button class="nav-button active" data-page="study"><span class="material-symbols-outlined" aria-hidden="true" translate="no">home</span><small>Hoy</small></button>
+  <button class="nav-button" data-page="practice"><span class="material-symbols-outlined" aria-hidden="true" translate="no">psychology</span><small>Practicar</small></button>
+  <button class="nav-button" data-page="library"><span class="material-symbols-outlined" aria-hidden="true" translate="no">library_books</span><small>Biblioteca</small></button>
+  <button class="nav-button" data-page="planner"><span class="material-symbols-outlined" aria-hidden="true" translate="no">calendar_month</span><small>Planificar</small></button>
+  <button class="nav-button" data-page="analysis"><span class="material-symbols-outlined" aria-hidden="true" translate="no">bar_chart</span><small>Reforzar</small></button>
 </nav>
 
 <!-- Lumi (compañero de estudio opcional): dock fijo, visible en todas las secciones. El SVG es decorativo; el mensaje es texto real. Solo se muestra si settings.mascot está activo. -->
@@ -535,14 +535,14 @@
   <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
   <div class="lumi" id="lumi" data-avatar="bee" data-pose="neutral" data-anim="none" hidden>
     <!-- El dibujo de Lumi (SVG decorativo) lo inserta js/16-lumi.js al iniciar -->
-    <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span aria-hidden="true">×</span></button>
+    <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button>
   </div>
   <span id="lumi-live" class="sr-only" aria-live="polite"></span>
 </div>
 <datalist id="subject-list"></datalist>
 <dialog id="app-modal" class="modal" aria-label="Ventana de Learny">
   <form id="modal-form" class="modal-content">
-    <button class="modal-close" type="button" aria-label="Cerrar">×</button>
+    <button class="modal-close" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button>
     <div id="modal-body"></div>
   </form>
 </dialog>

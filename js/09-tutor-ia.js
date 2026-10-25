@@ -78,7 +78,7 @@ const hasAi = () => !DEMO && !!(state.apiKey || state.settings.proxyUrl); // Eta
 const cancelAi = () => { if (aiController) aiController.abort(); };
 
 async function askGemini(prompt) {
-  if (!hasAi()) throw new Error('Falta la clave de Gemini. Añádela en Ajustes ⚙️ o usa Guía local.');
+  if (!hasAi()) throw new Error('Falta la clave de Gemini. Añádela en Ajustes o usa Guía local.');
   const text = cleanMl(prompt, MAX_PROMPT);
   if (!text) throw new Error('El texto está vacío o es demasiado corto.');
   const proxy = state.settings.proxyUrl, who = proxy ? 'El proxy' : 'La clave de Gemini';
@@ -102,12 +102,12 @@ async function askGemini(prompt) {
       const raw = data.error?.message || `Error ${response.status}`;
       if (response.status === 401 || response.status === 403 || (response.status === 400 && /api[ _-]?key/i.test(raw))) throw new Error(`${who} no es válido o no tiene permiso. (${raw})`);
       if (response.status === 400) throw new Error(`La consulta no es válida. (${raw})`);
-      if (response.status === 404) throw new Error(`El modelo “${model}” no existe. Cámbialo en Ajustes ⚙️. (${raw})`);
+      if (response.status === 404) throw new Error(`El modelo “${model}” no existe. Cámbialo en Ajustes. (${raw})`);
       if (response.status === 429) throw new Error('Se agotó la cuota de la IA. Espera un rato e inténtalo de nuevo.');
       throw new Error(raw);
     }
     const out = (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
-    if (!out) throw new Error(data.candidates?.[0]?.finishReason === 'MAX_TOKENS' ? 'La IA agotó su límite de respuesta antes de escribir. Prueba otro modelo en Ajustes ⚙️ o una pregunta más corta.' : 'La IA no devolvió texto para esta consulta.');
+    if (!out) throw new Error(data.candidates?.[0]?.finishReason === 'MAX_TOKENS' ? 'La IA agotó su límite de respuesta antes de escribir. Prueba otro modelo en Ajustes o una pregunta más corta.' : 'La IA no devolvió texto para esta consulta.');
     return out;
   } catch (error) {
     if (error.name === 'AbortError') { const e = new Error(timedOut ? 'La IA tardó demasiado. Inténtalo de nuevo.' : 'Consulta cancelada.'); e.cancelled = !timedOut; e.stale = !!controller.stale; throw e; }
@@ -155,9 +155,9 @@ async function gemini(prompt, title, fallback, onDone) {
     return { text, fromAi: false };
   };
   if (!hasAi()) {
-    if (modalOpen()) { toast('Añade tu clave de Gemini en Ajustes ⚙️ o elige Guía local.', 'error'); return { text: fallback?.() || localGuide(title), fromAi: false }; }
+    if (modalOpen()) { toast('Añade tu clave de Gemini en Ajustes o elige Guía local.', 'error'); return { text: fallback?.() || localGuide(title), fromAi: false }; }
     if (!state.settings.skipAi) return new Promise((resolve) => requestKey(async () => resolve(await gemini(prompt, title, fallback, onDone)), () => resolve(showLocal('Modo local activo.')), () => resolve({ text: '', fromAi: false, cancelled: true })));
-    return showLocal('Guía local. Añade tu clave en Ajustes ⚙️ para IA.');
+    return showLocal('Guía local. Añade tu clave en Ajustes para IA.');
   }
   modal(`<h2>${esc(title)}</h2><div class="skeleton" aria-hidden="true"></div><p class="lead">Consultando tutor…</p><button class="outline-button" type="button" data-cancel-ai>Cancelar</button>`);
   $('#modal-body').setAttribute('aria-live', 'polite');

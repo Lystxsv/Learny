@@ -60,7 +60,12 @@ function renderTimer() {
   clock.textContent = time(timer.remaining);
   $('#timer-clock').parentElement.setAttribute('aria-live', timer.running ? 'off' : 'polite');
   $('#pomodoro-profile').textContent = `${state.settings.focus}/${state.settings.rest} · ${focusMode ? 'Foco' : 'Descanso'}`;
-  $('#pomodoro-button').textContent = timer.running ? 'Ⅱ Pausar' : focusMode ? (fresh ? '▶ Iniciar enfoque' : '▶ Continuar') : (fresh ? '☕ Iniciar descanso' : '▶ Continuar descanso');
+  /* El botón solo se reescribe cuando cambia su estado (renderTimer corre cada 500 ms): así el icono no parpadea ni se vuelve a traducir. */
+  const pb = $('#pomodoro-button'), pbKey = timer.running ? 'pause' : focusMode ? (fresh ? 'start' : 'resume') : (fresh ? 'break' : 'resume-break');
+  if (pb.dataset.state !== pbKey) {
+    pb.dataset.state = pbKey;
+    pb.innerHTML = { pause: `${icon('pause')} Pausar`, start: `${icon('play_arrow')} Iniciar enfoque`, resume: `${icon('play_arrow')} Continuar`, break: `${icon('coffee')} Iniciar descanso`, 'resume-break': `${icon('play_arrow')} Continuar descanso` }[pbKey];
+  }
   $('#pomodoro-skip').hidden = focusMode;
   $('#timer-note').textContent = focusMode
     ? (timer.intention ? `Intención: ${timer.intention}${timer.label ? ` · ${timer.label}` : ''}` : '¿Qué resultado concreto quieres lograr?')
@@ -75,7 +80,7 @@ function renderTimer() {
   if (mini) {
     const show = timer.started && currentPage !== 'study';
     mini.hidden = !show; document.body.classList.toggle('has-mini', show);
-    if (show) { mini.textContent = `${focusMode ? '🎯' : '☕'} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`; mini.setAttribute('aria-label', `Volver al temporizador. ${focusMode ? 'Foco' : 'Descanso'}: quedan ${time(timer.remaining)}${timer.running ? '' : ', en pausa'}`); }
+    if (show) { mini.innerHTML = `${icon(focusMode ? 'target' : 'coffee')} ${time(timer.remaining)}${timer.running ? '' : ' · en pausa'}`; mini.setAttribute('aria-label', `Volver al temporizador. ${focusMode ? 'Foco' : 'Descanso'}: quedan ${time(timer.remaining)}${timer.running ? '' : ', en pausa'}`); }
   }
   emitTimerState();
 }

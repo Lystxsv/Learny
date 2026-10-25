@@ -53,13 +53,13 @@ const save = () => {
       }
       if (saved) {
         lastSavedRaw = json; setSaved(true); saveErrorShown = false;
-        if (!save.trimmed) { save.trimmed = true; toast('Poco espacio: se borraron copias automáticas antiguas para poder guardar. Descarga una copia en Ajustes ⚙️.', 'error'); }
+        if (!save.trimmed) { save.trimmed = true; toast('Poco espacio: se borraron copias automáticas antiguas para poder guardar. Descarga una copia en Ajustes.', 'error'); }
         return true;
       }
       if (rawBackups != null) store.set(BACKUP_KEY, rawBackups); // ni liberando todas las copias cabe: se devuelven las copias, no se pierden en vano
     }
     setSaved(false);
-    if (!saveErrorShown) { saveErrorShown = true; toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes ⚙️.', 'error'); }
+    if (!saveErrorShown) { saveErrorShown = true; toast('No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes.', 'error'); }
     return false; }
 };
 
