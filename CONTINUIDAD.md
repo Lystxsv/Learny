@@ -773,3 +773,6 @@ Paquete PARCIAL, acumulativo sobre la Fase 5. Archivos nuevos: `package.json`, `
 - **No probado:** el selector de archivos real de Chrome/Edge (en las pruebas es simulado), que el handle sobreviva al reinicio del navegador (IndexedDB real), Firefox/Safari, móvil, textos en inglés a ojo (hay entradas en `EX` y una regla en `RULES`), actualización PWA v67 → v68.
 - **Límites conocidos:** solo copia mientras Learny esté abierta (no hay segundo plano); un único archivo; no restaura desde ese archivo (se restaura con «Importar JSON»).
 - **Siguiente:** decidir Fases 7–10 tras probar con 3–4 estudiantes.
+
+## v69 · Modelo de IA por defecto
+Paquete PARCIAL, acumulativo sobre la Fase 6 (`learny-v68` → `learny-v69`). `DEFAULT_MODEL` pasa de `gemini-flash-latest` a `gemini-4-argon` (`js/01-base.js`). `sanitizeSettings` (`js/02-datos.js`) migra el valor antiguo guardado al nuevo; un modelo elegido a mano se respeta. También: `proxy-worker.example.js`, `README.md`, `sw.js` y `tests/modelo.spec.js` (3 pruebas; suite total: 20). No cambian SM-2, modelo de datos ni copias.

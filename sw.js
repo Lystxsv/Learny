@@ -1,4 +1,4 @@
-const CACHE = 'learny-v68';
+const CACHE = 'learny-v69';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
   './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json',

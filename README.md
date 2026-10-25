@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v68` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v69` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -79,7 +79,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v68`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v69`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -87,7 +87,7 @@ Hay dos formas; sin ninguna, Learny funciona con su guía local.
   Queda solo en su navegador y nunca se incluye en copias ni mazos. No la uses en un equipo compartido.
 - **Proxy (recomendado en producción):** despliega `proxy-worker.example.js`, define `GEMINI_API_KEY` y
   `ALLOWED_ORIGIN` como secretos/variables y pega la URL del Worker en Ajustes ⚙️ → "URL de tu proxy".
-  Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-flash-latest`) y un binding `RATE_LIMITER`.
+  Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-4-argon`) y un binding `RATE_LIMITER`.
   El Worker limita también el tamaño de peticiones sin `Content-Length`; si lo desplegaste antes de la v53, vuelve a desplegarlo.
 
 Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el código. La demo nunca usa IA. Con el idioma en inglés, la IA recibe la instrucción de responder en inglés.

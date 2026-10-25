@@ -84,7 +84,7 @@ function sanitizeSettings(s, d) {
   s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
   ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed', 'mascot'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
   ['name', 'model', 'lastExport', 'backupNag', 'lastRemind', 'lastRollover'].forEach((k) => { s[k] = typeof s[k] === 'string' ? s[k].slice(0, 100) : d[k]; });
-  s.name = s.name.slice(0, 30); s.model = s.model.trim() || DEFAULT_MODEL;
+  s.name = s.name.slice(0, 30); s.model = s.model.trim(); if (!s.model || s.model === OLD_DEFAULT_MODEL) s.model = DEFAULT_MODEL;
   s.recentTurns = arr(s.recentTurns).filter((x) => typeof x === 'string').slice(0, 8);
   const t = isObj(s.tutor) ? s.tutor : {};
   s.tutor = { subject: String(t.subject || '').slice(0, 60), level: String(t.level || '').slice(0, 40), known: String(t.known || '').slice(0, 400), goal: String(t.goal || '').slice(0, 200),
