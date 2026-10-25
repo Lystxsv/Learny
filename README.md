@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v76` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v77` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -39,7 +39,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/13-ajustes.js` | Ajustes: estilos rápidos, ambientes, ventana de Ajustes (casilla de Lumi, selector de apariencia e idioma), recordatorios y contexto del tutor. |
 | `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny` (46 claves). |
 | `js/15-inicio.js` | Inicio: bienvenida, portada, banner de la demo y arranque. |
-| `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
+| `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js`, `16-lumi-cc.js`, `16-lumi-alisa.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (`lumiBeeSvg()`), el controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
 | `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas (escalonado y borrado continuo), fundido cruzado entre páginas, velo al calificar y barras con la Web Animations API. Con movimiento reducido solo quedan fundidos de opacidad de 80–100 ms (sin desplazamientos ni escalas). |
 | `js/18-idioma.js` | Idioma: inglés por defecto y español opcional (`settings.lang`). Diccionario es→en + reglas, traducción del DOM con `MutationObserver`, guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido. Botón EN/ES en la barra superior y selector en Ajustes → Apariencia. |
@@ -55,7 +55,7 @@ Reglas para tocarlos:
 ## Lumi (compañero de estudio)
 Lumi es un compañero **opcional** (desactivado por defecto desde la v73; quien ya la tenía activada la conserva) que acompaña en momentos concretos. No guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot` y `settings.mascotAvatar`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes → *Disposición*, o con el «×» junto al personaje (con «Deshacer»).
 
-- **Apariencias** (`settings.mascotAvatar`): `bee` (predeterminada, «Abeja pixelada»), `eevee`, `walle`, `daniel`, `yor` y `gato` («Cat Black»). Se eligen en Ajustes → Disposición → «Apariencia de Lumi» con vista previa; cambiar de apariencia solo cambia el dibujo, no el comportamiento. Un valor desconocido, o un archivo de arte ausente, cae a la abeja. Cada apariencia tiene su caja y sus poses propias en `style.css`.
+- **Apariencias** (`settings.mascotAvatar`): `bee` (predeterminada, «Abeja pixelada»), `eevee`, `walle`, `daniel`, `yor` y `gato` («Cat Black»), `cc` («Miku Nakano») y `alisa` («Alisa Kujou»). Se eligen en Ajustes → Disposición → «Apariencia de Lumi» con vista previa; cambiar de apariencia solo cambia el dibujo, no el comportamiento. Un valor desconocido, o un archivo de arte ausente, cae a la abeja. Cada apariencia tiene su caja y sus poses propias en `style.css`.
 - **Dibujo:** SVG en pixel art (`crispEdges`, sin curvas, sin degradados, sin `id`) insertado por JS en `#lumi`. Los personajes de terceros se usan con la autorización que declara el responsable del proyecto; para retirar uno basta borrar su archivo de arte, su `<script>`, su línea en `CORE` de `sw.js` y su entrada en `MASCOT_AVATARS`.
 - **Dock global:** `#lumi-dock` es un dock fijo (abajo a la derecha), visible en todas las secciones. Contiene `#lumi`, `#lumi-msg` y `#lumi-live` (región `aria-live` solo para lo que ningún aviso anuncia).
 - **Estados y mensajes** (texto real; el dibujo es `aria-hidden`):
@@ -83,7 +83,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v76`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v77`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -132,6 +132,9 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v77 · Lumi: apariencia «Alisa Kujou»
+Nueva apariencia de Lumi (`settings.mascotAvatar = 'alisa'`): una chica chibi de pelo plateado con ahoge, lazo rojo y uniforme, en pixel art (`js/16-lumi-alisa.js`, 62×96 celdas en rejilla 100×100) con poses propias (ojos, cabeza, lazo, ahoge y brazo) y reposo. Solo representación: sin cambios de lógica, textos ni esquema. Caché `learny-v77`.
 
 ### v76 · Perfiles, etapa 1: bienvenida de una pregunta
 `welcomeFlow()` ahora muestra una sola pantalla con tres botones (examen / por mi cuenta / enseño) y guarda `settings.profile` (`'exam' | 'self' | 'teach'`, `''` = sin elegir). Nombre y tiempo pasan a un paso opcional «Personalizar». Quien ya tenía datos o copia antigua recibe `'exam'` en `hydrate`/`load`. Selector «Uso principal» en Ajustes. Sin cambio de esquema.

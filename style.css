@@ -1194,5 +1194,59 @@ body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-en
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-head { animation: idle-tilt 9s ease-in-out infinite; }
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-tail { animation: idle-wag 4s ease-in-out infinite; }
 
+/* ===== Lumi · avatar Alisa Kujou (bloque 1) =====
+   Octava apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'alisa'). El arte es el SVG de js/16-lumi-alisa.js (pixel art, 62×96 celdas en una rejilla 100×100), trazado de la imagen aportada.
+   Conserva sus colores en todos los temas (tiene contorno oscuro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--al-rim).
+   Caja propia: 100 px (1 px por celda) en escritorio, 70 px en móvil y 50 px en sesión de enfoque; miniatura del selector 70 px. */
+.lumi .lumi-svg--alisa { display: none; }
+.lumi[data-avatar="alisa"] .lumi-svg--alisa { display: block; }
+.lumi[data-avatar="alisa"] .lumi-svg--bee { display: none; }
+.lumi { --al-ink: #190d1e; --al-ink2: #2e1f2d; --al-ribD: #671e2d; --al-dark: #403648; --al-gray: #554f59; --al-rib: #9f3346; --al-hairDD: #6f5e71; --al-hairD: #8b7886; --al-eye: #4e93b3; --al-ribL: #d45d6b; --al-hairM: #a28fa2; --al-hairL2: #c9afb5; --al-hair: #d5c7cd; --al-eyeL: #abd8eb; --al-hairL: #e2d4dc; --al-blush: #f6dce0; --al-skin: #fceee5; --al-white: #fbf8fb; --al-rim: transparent; }
+.theme-contrast .lumi { --al-rim: #fff; }
+.al-rim { fill: var(--al-rim); }
+.al-ink { fill: var(--al-ink); } .al-ink2 { fill: var(--al-ink2); } .al-ribD { fill: var(--al-ribD); } .al-dark { fill: var(--al-dark); } .al-gray { fill: var(--al-gray); } .al-rib { fill: var(--al-rib); } .al-hairDD { fill: var(--al-hairDD); } .al-hairD { fill: var(--al-hairD); } .al-eye { fill: var(--al-eye); } .al-ribL { fill: var(--al-ribL); } .al-hairM { fill: var(--al-hairM); } .al-hairL2 { fill: var(--al-hairL2); } .al-hair { fill: var(--al-hair); } .al-eyeL { fill: var(--al-eyeL); } .al-hairL { fill: var(--al-hairL); } .al-blush { fill: var(--al-blush); } .al-skin { fill: var(--al-skin); } .al-white { fill: var(--al-white); }
+.lumi[data-avatar="alisa"] { --lumi-size: 100px; }
+@media (max-width: 820px) { .lumi[data-avatar="alisa"] { --lumi-size: 70px; } }
+body.session-study .lumi[data-avatar="alisa"] { --lumi-size: 50px; }
+.lumi-svg--alisa { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--alisa, .lumi[data-pose="focus"] .lumi-svg--alisa * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="alisa"] { --lumi-size: 70px; }
+
+/* ===== Lumi · poses de Alisa Kujou (bloque 2) =====
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 100; el sprite está desplazado (19, 2)); un ciclo de ≤ 400 ms que el controlador limpia con temporizador.
+   Movimiento reducido (sistema y Learny), pestaña oculta y desactivación de Lumi los cubren las reglas generales sobre .lumi *; FOCUS anula toda animación. Sin cambios de textos, frecuencias ni condiciones.
+   Los ojos van dentro de la cabeza; el lazo, el ahoge y el brazo son grupos aparte (movimientos pequeños, ≤ 12°). */
+.alisa-head { transform-origin: 50px 55px; }    /* cuello */
+.alisa-eyes { transform-origin: 51px 42px; }    /* centro de los ojos */
+.alisa-ribbon { transform-origin: 30px 40px; }  /* donde el lazo se une al pelo */
+.alisa-ahoge { transform-origin: 46px 13px; }   /* base del mechón */
+.alisa-arm-r { transform-origin: 65px 68px; }   /* hombro del brazo extendido */
+@keyframes alisa-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes alisa-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-3deg); } }
+@keyframes alisa-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(2deg); } }
+@keyframes alisa-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes alisa-flick { 0%, 100% { transform: none; } 35% { transform: rotate(-9deg); } 70% { transform: rotate(3deg); } }
+@keyframes alisa-sway { 0%, 100% { transform: none; } 35% { transform: rotate(-8deg); } 70% { transform: rotate(5deg); } }
+@keyframes alisa-arm-up { 0%, 100% { transform: none; } 40% { transform: rotate(-12deg); } }
+@keyframes alisa-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-22deg); } 55% { transform: rotate(-6deg); } 80% { transform: rotate(-16deg); } }
+.lumi[data-avatar="alisa"].is-entering .alisa-eyes { animation: alisa-blink .3s ease-in-out 1; }
+.lumi[data-avatar="alisa"].is-entering .alisa-ahoge { animation: alisa-sway .3s ease-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-arm-r { animation: alisa-arm-up .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-ribbon { animation: alisa-flick .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-eyes { animation: alisa-blink .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="welcome"] .alisa-arm-r { animation: alisa-wave .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="welcome"] .alisa-head { animation: alisa-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="support"] .lumi-svg--alisa { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="support"] .alisa-head { animation: alisa-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="progress"] .lumi-svg--alisa { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="progress"] .alisa-head { animation: alisa-nod .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="empty"] .alisa-ahoge { animation: alisa-sway .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="empty"] .alisa-head { animation: alisa-tilt-r .4s ease-in-out 1; }
+/* Reposo con vida */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-head { animation: idle-tilt 9s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-ribbon { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-ahoge { animation: idle-ear-r 7s ease-in-out infinite; }
+
 /* v74: con Lumi activa, el dato curioso del día lo dice ella; el de «Más sobre hoy» se oculta (sin Lumi se sigue viendo) */
 body.has-lumi #study .fact { display: none; }
