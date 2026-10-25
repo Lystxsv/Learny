@@ -7,7 +7,7 @@
  *   2. Variable ALLOWED_ORIGIN = https://TU-USUARIO.github.io   (sin barra final).
  *      Admite varios orígenes separados por comas, p. ej. para probar en local:
  *      https://TU-USUARIO.github.io,http://localhost:8000
- *   3. Opcional: MODEL = gemini-4-argon
+ *   3. Opcional: MODEL = gemini-3.8-flash
  *   4. Recomendado: crea un binding "RATE_LIMITER" (Workers Rate Limiting) para limitar el uso por IP.
  *   5. Copia la URL del Worker en Learny → Ajustes ⚙️ → "URL de tu proxy".
  *
@@ -79,7 +79,7 @@ export default {
     const text = String(payload?.prompt || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, MAX_PROMPT);
     if (!text) return json({ error: { message: 'Pregunta vacía' } }, 400);
 
-    const model = encodeURIComponent(env.MODEL || 'gemini-4-argon');
+    const model = encodeURIComponent(env.MODEL || 'gemini-3.8-flash');
     let upstream;
     try {
       upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {

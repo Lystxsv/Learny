@@ -87,6 +87,8 @@ function openSettings() {
       </details>
       <details class="more-inline settings-group" id="settings-advanced"><summary>Inteligencia artificial</summary>
         <label>Clave de Gemini (opcional)<input name="apikey" type="password" autocomplete="off" maxlength="200" placeholder="${state.apiKey ? 'Clave guardada (vacío = conservar)' : 'Pega aquí tu clave'}"></label>
+        <p class="modal-tip">Gemini es la inteligencia artificial de Google que usa Learny. Consigue una clave gratuita en <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+        <p class="modal-tip">Modelos disponibles: <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/models</a></p>
         <p class="modal-tip">Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.</p>
         <label>Modelo de Gemini<input name="model" value="${esc(state.settings.model)}"></label>
         <label>URL de tu proxy (opcional, para no exponer la clave)<input name="proxy" type="url" inputmode="url" maxlength="200" placeholder="https://tu-worker.workers.dev" value="${esc(state.settings.proxyUrl)}"></label>

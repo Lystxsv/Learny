@@ -21,7 +21,7 @@ const KEY = 'learny.v3';
 const LEGACY_KEYS = ['learny.v2', 'learny.v1'];
 const BACKUP_KEY = 'learny.backup';
 const MAX_BACKUPS = 3;
-const DEFAULT_MODEL = 'gemini-4-argon'; const OLD_DEFAULT_MODEL = 'gemini-flash-latest'; // v69: nuevo modelo por defecto; quien conservaba el antiguo se migra en sanitizeSettings
+const DEFAULT_MODEL = 'gemini-3.8-flash'; const OLD_DEFAULT_MODELS = ['gemini-flash-latest', 'gemini-4-argon']; // v69: nuevo modelo por defecto; quien conservaba un valor anterior se migra en sanitizeSettings
 const MAX_PROMPT = 9000;
 const MAX_INTERVAL = 180;
 const MAX_PLAN_DAYS = 730;

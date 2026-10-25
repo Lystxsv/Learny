@@ -774,5 +774,10 @@ Paquete PARCIAL, acumulativo sobre la Fase 5. Archivos nuevos: `package.json`, `
 - **Límites conocidos:** solo copia mientras Learny esté abierta (no hay segundo plano); un único archivo; no restaura desde ese archivo (se restaura con «Importar JSON»).
 - **Siguiente:** decidir Fases 7–10 tras probar con 3–4 estudiantes.
 
-## v69 · Modelo de IA por defecto
-Paquete PARCIAL, acumulativo sobre la Fase 6 (`learny-v68` → `learny-v69`). `DEFAULT_MODEL` pasa de `gemini-flash-latest` a `gemini-4-argon` (`js/01-base.js`). `sanitizeSettings` (`js/02-datos.js`) migra el valor antiguo guardado al nuevo; un modelo elegido a mano se respeta. También: `proxy-worker.example.js`, `README.md`, `sw.js` y `tests/modelo.spec.js` (3 pruebas; suite total: 20). No cambian SM-2, modelo de datos ni copias.
+## v69 · Modelo de IA por defecto y ayuda sobre Gemini
+Paquete PARCIAL, acumulativo sobre la Fase 6 (`learny-v68` → `learny-v69`).
+- `DEFAULT_MODEL` pasa de `gemini-flash-latest` a `gemini-3.8-flash` (`js/01-base.js`). `sanitizeSettings` (`js/02-datos.js`) migra los valores por defecto anteriores (`OLD_DEFAULT_MODELS`: `gemini-flash-latest`, `gemini-4-argon`) y el vacío al nuevo; un modelo elegido a mano se respeta.
+- Ajustes (`js/13-ajustes.js`): bajo el campo de la clave, explicación de qué es Gemini, enlace a Google AI Studio y enlace a la lista de modelos (https://ai.google.dev/gemini-api/docs/models).
+- Guía de uso: tarjeta «Qué es Gemini y cómo conseguir tu clave» en `index.html` (español) y en `GUIDE_EN` de `js/18-idioma.js` (inglés); traducciones del texto de Ajustes en el mismo archivo.
+- `proxy-worker.example.js`, `README.md`, `sw.js` (`learny-v69`) y `tests/modelo.spec.js` (6 pruebas; suite total: 23). No cambian SM-2, modelo de datos ni copias.
+- Los nombres de modelo salen de la lista de Google AI que dio el usuario; no se verificó que la clave gratuita cubra `gemini-3.8-flash`.

@@ -87,7 +87,7 @@ Hay dos formas; sin ninguna, Learny funciona con su guía local.
   Queda solo en su navegador y nunca se incluye en copias ni mazos. No la uses en un equipo compartido.
 - **Proxy (recomendado en producción):** despliega `proxy-worker.example.js`, define `GEMINI_API_KEY` y
   `ALLOWED_ORIGIN` como secretos/variables y pega la URL del Worker en Ajustes ⚙️ → "URL de tu proxy".
-  Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-4-argon`) y un binding `RATE_LIMITER`.
+  Con proxy activo no hace falta ninguna clave en el navegador. Opcionales: `MODEL` (por defecto `gemini-3.8-flash`) y un binding `RATE_LIMITER`.
   El Worker limita también el tamaño de peticiones sin `Content-Length`; si lo desplegaste antes de la v53, vuelve a desplegarlo.
 
 Si Google cambia el nombre del modelo, se puede cambiar en Ajustes sin tocar el código. La demo nunca usa IA. Con el idioma en inglés, la IA recibe la instrucción de responder en inglés.
