@@ -6,25 +6,40 @@
 
 /* Perfiles · Etapa 1: bienvenida de UNA pregunta («¿Para qué usas Learny?»). Tres botones grandes; el perfil se guarda al elegir
    (settings.profile: 'exam' | 'self' | 'teach'). Nombre, tiempo diario y apariencia pasan a un paso opcional («Personalizar»).
-   Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola. «Decidir después» deja el perfil en 'exam' (comportamiento de siempre). */
+   Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola. «Decidir después» deja el perfil en 'exam' (comportamiento de siempre).
+   Etapa 3a: el paso «Personalizar» ofrece tamaño de texto, lectura fácil y reducir animaciones, con vista previa en vivo (applyAppearance).
+   Nada se guarda hasta «Terminar»; Omitir, × o Esc restauran la apariencia guardada (end(false) llama a applyPreferences). Usa ajustes que ya existen: fontSize, font y reduceMotion. */
 function welcomeFlow() {
   if (DEMO || state.settings.welcomed || hasUserData() || modalOpen()) return; // la demo nunca abre la bienvenida
   const PROFILES = [['exam', 'Tengo un examen', 'Plan con fecha, tareas diarias y repasos.'], ['self', 'Estudio por mi cuenta', 'Ritmo y temas, sin fecha de examen.'], ['teach', 'Enseño', 'Preparo material para mis alumnos.']];
   const TIMES = [[10, '10 min', 'Algo corto'], [25, '25 min', 'Un Pomodoro'], [45, '45 min', 'Sesión larga']];
-  const a = { name: '', minutes: 0 }, body = $('#modal-body');
+  const SIZES = [[16, 'Normal', '16 px'], [19, 'Grande', '19 px'], [22, 'Muy grande', '22 px']];
+  const a = { name: '', minutes: 0, fs: state.settings.fontSize, easy: state.settings.font === 'dyslexic', calm: !!state.settings.reduceMotion }, body = $('#modal-body');
+  const fontFor = () => (a.easy ? 'dyslexic' : state.settings.font === 'dyslexic' ? 'sans' : state.settings.font);
   let step = 0, ended = false;
   const read = () => {
     const d = new FormData($('#modal-form'));
     a.name = clean(d.get('v') || '', 30);
     const m = Number(d.get('t')); if (TIMES.some((t) => t[0] === m)) a.minutes = m;
+    const f = Number(d.get('fs')); if (SIZES.some((s) => s[0] === f)) a.fs = f;
+    a.easy = d.get('easy') === 'on'; a.calm = d.get('calm') === 'on';
   };
+  const preview = () => { // vista previa en vivo: no toca state.settings
+    const d = { ...state.settings, fontSize: a.fs, font: fontFor(), reduceMotion: a.calm };
+    sanitizeSettings(d, defaults().settings); applyAppearance(d);
+  };
+  const onChange = (e) => { if (!e.target.closest('[name="fs"],[name="easy"],[name="calm"]')) return; read(); preview(); };
   const end = (completed) => {
     if (ended) return; ended = true;
-    body.removeEventListener('click', onClick);
-    if (completed) { state.settings.name = a.name; if (a.minutes) state.settings.focus = a.minutes; }
+    body.removeEventListener('click', onClick); body.removeEventListener('change', onChange);
+    if (completed) {
+      state.settings.name = a.name; if (a.minutes) state.settings.focus = a.minutes;
+      state.settings.fontSize = a.fs; state.settings.font = fontFor(); state.settings.reduceMotion = a.calm;
+      sanitizeSettings(state.settings, defaults().settings);
+    }
     if (!state.settings.profile) state.settings.profile = 'exam';
     state.settings.welcomed = true; save();
-    applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll();
+    applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); // applyPreferences() restaura la apariencia guardada si la vista previa no se confirmó
     closeModal();
     setTimeout(() => $('.page.active h1')?.focus({ preventScroll: true }), 0);
     if (completed) toast(`${a.name ? `Listo, ${a.name}. ` : 'Listo. '}Puedes cambiar todo esto en Ajustes.`);
@@ -45,14 +60,22 @@ function welcomeFlow() {
       () => {}, () => end(false));
       return;
     }
+    const sysCalm = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     modal(`<p class="eyebrow">Personalizar · opcional</p><h2>¿Quieres ajustar algo más?</h2>
         <label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="done" value="${esc(a.name)}"></label>
         <fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
+        <p class="eyebrow">Accesibilidad</p>
+        <p class="hint" id="w-fs"><b>Tamaño de texto</b></p>
+        <fieldset class="welcome-times" aria-labelledby="w-fs">${SIZES.map(([v, t, sub]) => `<label class="welcome-time"><input type="radio" name="fs" value="${v}"${a.fs === v ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
+        <label class="check"><input name="easy" type="checkbox"${a.easy ? ' checked' : ''}> Lectura fácil (OpenDyslexic si está instalada; si no, Verdana)</label>
+        <label class="check"><input name="calm" type="checkbox"${a.calm ? ' checked' : ''}> Reducir animaciones</label>
+        ${sysCalm ? '<p class="hint">Tu sistema ya pide reducir el movimiento: Learny lo respeta aunque no marques esto.</p>' : ''}
+        <p class="hint">Se ve al instante; se guarda al pulsar «Terminar».</p>
         <p class="modal-tip">Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.</p>
         <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button><button class="outline-button" type="button" data-w="back">Atrás</button><button class="primary-button" type="submit">Terminar</button></div>`,
     () => { read(); end(true); }, () => end(false));
   }
-  body.addEventListener('click', onClick);
+  body.addEventListener('click', onClick); body.addEventListener('change', onChange);
   render();
 }
 

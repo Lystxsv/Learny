@@ -1,0 +1,15 @@
+/* ===== v81 · Perfiles · Etapa 3b: bordes de los controles de la bienvenida con contraste ≥ 3:1 (WCAG 1.4.11) =====
+   AÑADIR AL FINAL de style.css (sustituye a css-3b-bienvenida.css).
+   Medido con los valores de cada tema: el borde normal (--border) da 1,25–1,47:1 en Oscuro, Negro, Claro y Sepia (Alto contraste y Cromo ya cumplen).
+   --ui-edge es el borde con ≥ 3:1 frente a la superficie, a la superficie secundaria y al fondo del campo (3,11–3,9:1 en los cuatro temas).
+   Solo se aplica a la bienvenida (opciones de perfil, tiempo y tamaño de texto, campo de nombre y «Atrás»); el resto de la app conserva su borde.
+   Los selectores llevan un elemento más de especificidad para ganar también a las reglas «hover: none» de motion.css (que se carga después). */
+:root { --ui-edge: #6f759b; }
+.theme-oled { --ui-edge: #64656f; }
+.theme-light { --ui-edge: #81869e; }
+.theme-sepia { --ui-edge: #9c9079; }
+.theme-contrast { --ui-edge: #ffffff; }
+.theme-chrome { --ui-edge: #7a7a7a; }
+button.stuck-opt.profile-opt, label.welcome-time span { border-color: var(--ui-edge); }   /* la opción marcada conserva su borde de acento de 2 px (más específico) */
+.modal-content input.w-edge:not([type=checkbox]):not([type=radio]) { border-color: var(--ui-edge); }
+button.outline-button.w-edge { border-color: var(--ui-edge); }
