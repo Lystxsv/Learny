@@ -6,6 +6,7 @@ Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la últ
 Cada novedad ornamental (Lumi, temas, animaciones) exige antes una mejora del núcleo de estudio (repaso, tarjetas, copias, pruebas).
 
 ## Bloques completados
+- **Perfiles · Etapa 1** (`learny-v75` → `learny-v76`): bienvenida de una pregunta + `settings.profile`; `tests/perfil.spec.js` (6 pruebas, pasan). Suite: 55 de 59; las 4 de `fase8.spec.js` siguen fallando igual sin estos cambios. Pendiente: Etapas 2–4 (textos por perfil, accesibilidad en la entrada, modo autodidacta), probar en móvil.
 - **Iconos «Material Symbols»** (`learny-v74` → `learny-v75`): emojis sustituidos por iconos de una fuente local (`material-symbols.woff2`, 26 iconos). Helper `icon(nombre)` en `js/01-base.js`; CORE del service worker incluye la fuente. Probado: pruebas Playwright (49 de 53; las 4 de `fase8.spec.js` fallan igual sin estos cambios), capturas con `?demo` en español e inglés y modo sin conexión. Pendiente: móvil real, y revisar las 4 pruebas de fase8.
 - **Fase 9 (parcial, 2.ª parte) «Lumi dice el dato curioso y tiene más mensajes»** (`learny-v73` → `learny-v74`): dato curioso diario por Lumi, `studyChatter()` y variantes de reacciones. Ver «Fase 9 (parcial, 2.ª parte)» al final.
 - **Fase 9 (parcial) «Lumi más útil y opcional»** (`learny-v72` → `learny-v73`): aviso «Mañana te tocan N repasos» y Lumi desactivada por defecto (`mascot: false`; sustituye la decisión 1). Ver «Fase 9 (parcial)» al final. (La nota de v71 → v72 no existe en los archivos recibidos.)

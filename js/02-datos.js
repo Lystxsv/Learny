@@ -80,6 +80,7 @@ function sanitizeSettings(s, d) {
   s.accent = pick(s.accent, ['mint', 'violet', 'amber', 'sky', 'rose', 'custom'], 'sky'); s.density = pick(s.density, ['normal', 'compact', 'roomy'], 'normal');
   s.mascotAvatar = pick(s.mascotAvatar, MASCOT_AVATARS, 'bee'); // ausente, inválido o antiguo («firefly») → abeja; Eevee solo si el usuario lo elige
   s.lang = pick(s.lang, ['en', 'es'], 'en'); // idioma de la interfaz: inglés por defecto
+  s.profile = pick(s.profile, ['exam', 'self', 'teach'], ''); // Etapa 1 (perfiles): '' = aún sin elegir
   s.statsPeriod = pick(s.statsPeriod, ['7', '30', 'all'], '30');
   s.engine = pick(s.engine, ['gemini', 'local', 'google', 'wikipedia', 'perplexity'], 'gemini');
   ['reduceMotion', 'immersiveDim', 'notify', 'sound', 'skipAi', 'showMissions', 'showFact', 'welcomed', 'mascot'].forEach((k) => { s[k] = typeof s[k] === 'boolean' ? s[k] : d[k]; });
@@ -113,6 +114,7 @@ function hydrate(raw) {
     if (!Array.isArray(state[k])) state[k] = [];
   });
   if (!Array.isArray(state.settings.recentTurns)) state.settings.recentTurns = [];
+  if (!state.settings.profile && (state.settings.welcomed || hasUserData())) state.settings.profile = 'exam'; // copias antiguas e importaciones: modo examen, como hasta ahora
   const rawCards = state.cards;
   state.cards = rawCards.filter((c) => c && typeof c === 'object' && !Array.isArray(c)).map(normalizeCard);
   droppedCards += rawCards.length - state.cards.length;
@@ -250,4 +252,5 @@ let migrationBackup = true; // ¿se pudo guardar la copia previa a la migración
   hydrate(merged);
   // Etapa 5: quien ya tiene datos (o cuyo archivo estaba dañado) nunca verá la bienvenida; se marca una vez y se guarda al final del arranque.
   if (!state.settings.welcomed && (loadProblem || hasUserData())) state.settings.welcomed = true;
+  if (!state.settings.profile && state.settings.welcomed) state.settings.profile = 'exam';
 })();

@@ -77,6 +77,7 @@ function openSettings() {
       </details>
       <details class="more-inline settings-group"><summary>Estudio y avisos</summary>
         <label>Tu nombre (opcional, para el saludo)<input name="name" maxlength="30" autocomplete="given-name" value="${esc(state.settings.name)}"></label>
+        <label>Uso principal<select name="profile">${[['exam', 'Tengo un examen'], ['self', 'Estudio por mi cuenta'], ['teach', 'Enseño']].map(([k, t]) => `<option value="${k}"${state.settings.profile === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
         <p class="modal-tip">Materia y objetivo de estudio: se editan en «Contexto del tutor», arriba en la página.</p>
         <label class="check"><input name="sound" type="checkbox"> Sonido al terminar</label>
         <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
@@ -110,7 +111,7 @@ function openSettings() {
     if (clean(data.get('proxy'), 200) && !validProxy(data.get('proxy'))) return toast('La URL del proxy debe empezar por https:// (o http://localhost).', 'error');
     { const k0 = clean(data.get('apikey'), 200); if (k0 && !validKey(k0)) return toast('La clave de Gemini solo puede tener caracteres ASCII (letras, números y símbolos), sin espacios. Cópiala de nuevo desde Google AI Studio.', 'error'); } // JS-111
     Object.assign(state.settings, {
-      name: clean(data.get('name'), 30), proxyUrl: validProxy(data.get('proxy')), ...read(),
+      name: clean(data.get('name'), 30), profile: ['exam', 'self', 'teach'].includes(data.get('profile')) ? data.get('profile') : state.settings.profile, proxyUrl: validProxy(data.get('proxy')), ...read(),
       sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar') || state.settings.mascotAvatar, lang: data.get('lang'),
       focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
       roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),

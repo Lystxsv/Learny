@@ -4,53 +4,53 @@
    (los const/let/function de nivel superior son visibles entre archivos; no hay import/export). */
 'use strict';
 
-/* Etapa 5: bienvenida opcional (4 pasos, todo opcional). Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola.
-   Los pasos ya confirmados con «Siguiente» se conservan; lo escrito en el paso abierto al omitir no se guarda. */
+/* Perfiles · Etapa 1: bienvenida de UNA pregunta («¿Para qué usas Learny?»). Tres botones grandes; el perfil se guarda al elegir
+   (settings.profile: 'exam' | 'self' | 'teach'). Nombre, tiempo diario y apariencia pasan a un paso opcional («Personalizar»).
+   Solo si no hay datos; Omitir, × o Esc la cierran y no vuelve sola. «Decidir después» deja el perfil en 'exam' (comportamiento de siempre). */
 function welcomeFlow() {
-  if (DEMO || state.settings.welcomed || hasUserData() || modalOpen()) return; // Etapa 7: la demo nunca abre la bienvenida
+  if (DEMO || state.settings.welcomed || hasUserData() || modalOpen()) return; // la demo nunca abre la bienvenida
+  const PROFILES = [['exam', 'Tengo un examen', 'Plan con fecha, tareas diarias y repasos.'], ['self', 'Estudio por mi cuenta', 'Ritmo y temas, sin fecha de examen.'], ['teach', 'Enseño', 'Preparo material para mis alumnos.']];
   const TIMES = [[10, '10 min', 'Algo corto'], [25, '25 min', 'Un Pomodoro'], [45, '45 min', 'Sesión larga']];
-  const a = { name: '', subject: '', goal: '', minutes: 0 }, body = $('#modal-body');
-  let i = 0, ended = false;
+  const a = { name: '', minutes: 0 }, body = $('#modal-body');
+  let step = 0, ended = false;
   const read = () => {
-    const d = new FormData($('#modal-form')), v = (max) => clean(d.get('v') || '', max);
-    if (i === 0) a.name = v(30); else if (i === 1) a.subject = v(60); else if (i === 2) a.goal = v(200);
-    else { const m = Number(d.get('t')); if (TIMES.some((t) => t[0] === m)) a.minutes = m; }
-  };
-  const apply = () => { // solo campos que la bienvenida posee (estaban vacíos); el tiempo solo si se eligió uno
-    const s = state.settings;
-    s.name = a.name; s.tutor = { ...s.tutor, subject: a.subject, goal: a.goal };
-    if (a.minutes) s.focus = a.minutes;
+    const d = new FormData($('#modal-form'));
+    a.name = clean(d.get('v') || '', 30);
+    const m = Number(d.get('t')); if (TIMES.some((t) => t[0] === m)) a.minutes = m;
   };
   const end = (completed) => {
     if (ended) return; ended = true;
     body.removeEventListener('click', onClick);
-    if (completed) apply();
+    if (completed) { state.settings.name = a.name; if (a.minutes) state.settings.focus = a.minutes; }
+    if (!state.settings.profile) state.settings.profile = 'exam';
     state.settings.welcomed = true; save();
-    applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll(); // applyPreferences refresca los campos del tutor: así fillTutor no pisa lo guardado con valores viejos
+    applyPreferences(); if (!timer.started) resetTimer(timer.mode); else renderTimer(); renderAll();
     closeModal();
     setTimeout(() => $('.page.active h1')?.focus({ preventScroll: true }), 0);
     if (completed) toast(`${a.name ? `Listo, ${a.name}. ` : 'Listo. '}Puedes cambiar todo esto en Ajustes.`);
   };
   function onClick(e) {
-    const b = e.target.closest('[data-w]'); if (!b) return;
-    if (b.dataset.w === 'skip') end(false);
-    else if (b.dataset.w === 'back' && i > 0) { read(); i--; render(); }
+    const b = e.target.closest('[data-profile],[data-w]'); if (!b) return;
+    if (b.dataset.profile) { state.settings.profile = b.dataset.profile; save(); step = 1; render(); }
+    else if (b.dataset.w === 'later') end(false);
+    else if (b.dataset.w === 'skip') end(false);
+    else if (b.dataset.w === 'back') { read(); step = 0; render(); }
   }
   function render() {
-    const last = i === 3, label = ['Nombre', 'Materia', 'Objetivo', 'Tiempo'][i];
-    const field = [
-      () => `<label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="next" value="${esc(a.name)}"></label>`,
-      () => `<label>Materia o tema<input name="v" maxlength="60" placeholder="p. ej. Química" enterkeyhint="next" value="${esc(a.subject)}"></label>`,
-      () => `<label>Objetivo<input name="v" maxlength="200" placeholder="p. ej. Aprobar el parcial del viernes" enterkeyhint="next" value="${esc(a.goal)}"></label>`,
-      () => `<fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>`
-    ][i]();
-    const title = ['¿Cómo quieres que te llame?', '¿Qué quieres estudiar?', '¿Qué quieres lograr?', '¿Cuánto tiempo tienes hoy?'][i];
-    modal(`<p class="eyebrow">Paso ${i + 1} de 4 · ${esc(label)}</p><h2>${esc(title)}</h2>
-        ${field}
-        <p class="modal-tip">Todo es opcional y lo puedes cambiar después en Ajustes.${last ? ' El tiempo ajusta la duración de tu Pomodoro.' : ''}</p>
-        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button>${i ? '<button class="outline-button" type="button" data-w="back">Atrás</button>' : ''}<button class="primary-button" type="submit">${last ? 'Terminar' : 'Siguiente'}</button></div>`,
-    () => { read(); if (last) end(true); else { apply(); save(); i++; render(); } },
-    () => end(false)); // × o Esc: cerrar sin completar cuenta como omitir
+    if (step === 0) {
+      modal(`<p class="eyebrow">Bienvenida</p><h2>¿Para qué usas Learny?</h2>
+        <div class="stuck-list">${PROFILES.map(([k, t, sub]) => `<button class="stuck-opt profile-opt" type="button" data-profile="${k}"><b>${esc(t)}</b><small>${esc(sub)}</small></button>`).join('')}</div>
+        <p class="modal-tip">Lo puedes cambiar después en Ajustes.</p>
+        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="later">Decidir después</button></div>`,
+      () => {}, () => end(false));
+      return;
+    }
+    modal(`<p class="eyebrow">Personalizar · opcional</p><h2>¿Quieres ajustar algo más?</h2>
+        <label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="done" value="${esc(a.name)}"></label>
+        <fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
+        <p class="modal-tip">Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.</p>
+        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button><button class="outline-button" type="button" data-w="back">Atrás</button><button class="primary-button" type="submit">Terminar</button></div>`,
+    () => { read(); end(true); }, () => end(false));
   }
   body.addEventListener('click', onClick);
   render();

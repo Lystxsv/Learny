@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v75` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v76` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -83,7 +83,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v75`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v76`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -132,6 +132,9 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v76 · Perfiles, etapa 1: bienvenida de una pregunta
+`welcomeFlow()` ahora muestra una sola pantalla con tres botones (examen / por mi cuenta / enseño) y guarda `settings.profile` (`'exam' | 'self' | 'teach'`, `''` = sin elegir). Nombre y tiempo pasan a un paso opcional «Personalizar». Quien ya tenía datos o copia antigua recibe `'exam'` en `hydrate`/`load`. Selector «Uso principal» en Ajustes. Sin cambio de esquema.
 
 ### v75 · Iconos Material Symbols en lugar de emojis
 - Todos los emojis y símbolos-icono de la interfaz (menú, barra móvil, botones, temporizador, estados, cerrar) pasan a **Material Symbols**, con la fuente `material-symbols.woff2` dentro del repo (también en la caché del service worker): sin conexión y sin descargar nada de internet.

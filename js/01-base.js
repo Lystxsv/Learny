@@ -97,7 +97,7 @@ const defaults = () => ({
     focus: 25, rest: 5, roulettePrepare: 10, rouletteExplain: 1, fontSize: 16, font: 'sans',
     theme: 'dark', accent: 'sky', accentCustom: '#5b84ff', density: 'normal', reduceMotion: false, immersiveDim: true, radius: 'soft', cardStyle: 'border', bgStyle: 'grid', headFont: 'serif', lineHeight: 'normal', letterSpacing: 'normal', cardText: 'normal', contentWidth: 'normal', sidebar: 'full', showMissions: true, showFact: true, engine: 'gemini', model: DEFAULT_MODEL, skipAi: false, mascot: false /* v73: desactivada por defecto (pruebas con estudiantes); quien ya la tenía activada conserva su ajuste guardado */, mascotAvatar: 'bee', lang: 'en',
     recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
-    tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', lastRollover: '', welcomed: false
+    tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', lastRollover: '', welcomed: false, profile: ''
   },
   notes: [], feynman: [], decks: [], planLog: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
 });

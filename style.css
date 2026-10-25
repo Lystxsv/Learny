@@ -670,6 +670,7 @@ body.no-dim .sidebar, body.no-dim .topbar, body.no-dim .bottom-nav { opacity: 1;
 /* ===== Etapa 4: «Hoy me cuesta arrancar» ===== */
 .stuck-list { display: grid; gap: var(--s1); }
 .stuck-opt { display: grid; gap: .2rem; text-align: left; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); color: var(--text); }
+.profile-opt { min-height: 64px; font-size: 1.05em; }
 .stuck-opt:hover { border-color: var(--accent); }
 .stuck-opt small { color: var(--muted); font-size: var(--fs-cap); }
 

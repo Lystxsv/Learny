@@ -9,6 +9,11 @@
 (() => {
   const EX = Object.assign(Object.create(null), {
     /* ---- Estructura, menú y barra superior ---- */
+    /* ---- Perfiles (etapa 1) ---- */
+    'Bienvenida': 'Welcome', '¿Para qué usas Learny?': 'What do you use Learny for?', 'Tengo un examen': 'I have an exam', 'Plan con fecha, tareas diarias y repasos.': 'A dated plan, daily tasks and reviews.',
+    'Estudio por mi cuenta': 'I study on my own', 'Ritmo y temas, sin fecha de examen.': 'A rhythm and topics, no exam date.', 'Enseño': 'I teach', 'Preparo material para mis alumnos.': 'I prepare material for my students.',
+    'Lo puedes cambiar después en Ajustes.': 'You can change this later in Settings.', 'Decidir después': 'Decide later', 'Personalizar · opcional': 'Personalize · optional', '¿Quieres ajustar algo más?': 'Want to adjust anything else?',
+    'Tu nombre': 'Your name', 'Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.': 'Everything is optional. The time sets the length of your Pomodoro.', 'Uso principal': 'Main use',
     'Saltar al contenido': 'Skip to content', 'Learny necesita JavaScript activado para funcionar.': 'Learny needs JavaScript enabled to work.',
     'Estudia con intención': 'Study with intention', 'Estudiar': 'Study', 'Organizar': 'Organize', 'Ayuda': 'Help',
     'Hoy': 'Today', 'Practicar': 'Practice', 'Biblioteca': 'Library', 'Planificar': 'Plan', 'Reforzar': 'Reinforce', 'Guía de uso': 'User guide',
