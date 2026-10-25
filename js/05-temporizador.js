@@ -286,7 +286,7 @@ function calcStreakRaw() {
   return { streak, graceUsed };
 }
 
-const facts = ['Los pulpos tienen tres corazones.', 'La miel puede conservarse durante miles de años.', 'Tu cerebro consolida recuerdos mientras duermes.', 'Los árboles intercambian nutrientes mediante redes de hongos.', 'La luz solar tarda unos 8 minutos en llegar a la Tierra.', 'Los tiburones existen desde antes que los árboles.', 'Un día en Venus dura más que un año en Venus.', 'Explicar algo con tus palabras revela lo que realmente entiendes.', 'Repasar justo antes de olvidar fortalece más la memoria que releer sin pausa.'];
+const facts = ['Los pulpos tienen tres corazones.', 'La miel puede conservarse durante miles de años.', 'Tu cerebro consolida recuerdos mientras duermes.', 'Los árboles intercambian nutrientes mediante redes de hongos.', 'La luz solar tarda unos 8 minutos en llegar a la Tierra.', 'Los tiburones existen desde antes que los árboles.', 'Un día en Venus dura más que un año en Venus.', 'Explicar algo con tus palabras revela lo que realmente entiendes.', 'Repasar justo antes de olvidar fortalece más la memoria que releer sin pausa.', 'El corazón de un colibrí puede latir más de mil veces por minuto.', 'El cuerpo humano adulto tiene 206 huesos.', 'Las abejas se comunican entre sí con una especie de baile.', 'Hacer pausas cortas ayuda a mantener la atención durante más tiempo.', 'Dormir bien antes de un examen suele ayudar más que estudiar toda la noche.', 'El agua cubre aproximadamente el 71 % de la superficie de la Tierra.']; // v74: Lumi dice el dato del día (mismo índice que renderFocus)
 
 function renderFocus() {
   const sessions = state.sessions.filter((s) => s.date === today() && !s.abandon);

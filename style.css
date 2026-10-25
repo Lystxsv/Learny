@@ -1189,3 +1189,6 @@ body .lumi.lumi-thumb[data-avatar="cc"] { --lumi-size: 88px; }
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-eyes { animation: idle-blink 5s ease-in-out infinite; }
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-head { animation: idle-tilt 9s ease-in-out infinite; }
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-tail { animation: idle-wag 4s ease-in-out infinite; }
+
+/* v74: con Lumi activa, el dato curioso del día lo dice ella; el de «Más sobre hoy» se oculta (sin Lumi se sigue viendo) */
+body.has-lumi #study .fact { display: none; }

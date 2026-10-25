@@ -6,7 +6,7 @@ un compañero de estudio opcional con seis apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v71` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v74` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
@@ -52,7 +52,7 @@ Reglas para tocarlos:
 - Si ya tenías `script.js` publicado, bórralo del repositorio: ya no se usa. Lo mismo con cualquier copia con sufijo «(2)» de un archivo de `js/`: ninguna se referencia.
 
 ## Lumi (compañero de estudio)
-Lumi es un compañero **opcional** (activado por defecto) que acompaña en momentos concretos. No guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot` y `settings.mascotAvatar`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes ⚙️ → *Disposición*, o con el «×» junto al personaje (con «Deshacer»).
+Lumi es un compañero **opcional** (desactivado por defecto desde la v73; quien ya la tenía activada la conserva) que acompaña en momentos concretos. No guarda datos propios: solo lee `state`/`timer` y respeta `settings.mascot` y `settings.mascotAvatar`. Se activa o desactiva con la casilla «Compañero de estudio: Lumi» en Ajustes ⚙️ → *Disposición*, o con el «×» junto al personaje (con «Deshacer»).
 
 - **Apariencias** (`settings.mascotAvatar`): `bee` (predeterminada, «Abeja pixelada»), `eevee`, `walle`, `daniel`, `yor` y `gato` («Cat Black»). Se eligen en Ajustes → Disposición → «Apariencia de Lumi» con vista previa; cambiar de apariencia solo cambia el dibujo, no el comportamiento. Un valor desconocido, o un archivo de arte ausente, cae a la abeja. Cada apariencia tiene su caja y sus poses propias en `style.css`.
 - **Dibujo:** SVG en pixel art (`crispEdges`, sin curvas, sin degradados, sin `id`) insertado por JS en `#lumi`. Los personajes de terceros se usan con la autorización que declara el responsable del proyecto; para retirar uno basta borrar su archivo de arte, su `<script>`, su línea en `CORE` de `sw.js` y su entrada en `MASCOT_AVATARS`.
@@ -64,6 +64,9 @@ Lumi es un compañero **opcional** (activado por defecto) que acompaña en momen
   - *Apoyo*: «Esta vuelve pronto. Sin prisa.» tras «No lo sabía».
   - *Progreso*: si en la misma tarjeta pasaste de «No lo sabía» a «Fácil».
   - *Bienvenida*: tras 3 o más días sin actividad (sesiones o repasos, mismo criterio que el saludo).
+  - *Dato curioso* (v74): el dato del día lo dice Lumi (la primera visita a Hoy de cada día; 9 s en pantalla) y, con Lumi activa, ya no se muestra en «Más sobre hoy». «Mostrar el dato curioso» en Ajustes también lo apaga. Ahora hay 15 datos.
+  - *Mensajes variados* (v74): en las demás visitas a Hoy, uno al azar entre el neutro, un consejo de estudio, los días que faltan para el próximo examen (≤ 7), el progreso de la meta de hoy y la racha (≥ 2), sin repetir el anterior. Celebrar, apoyo y progreso rotan entre 3, 3 y 2 frases.
+  - *Mañana* (v73): «Mañana te tocan N repasos.» en Hoy si hay 10 o más programados para mañana (`tomorrowMin` en `LUMI_CONFIG`); ocupa el lugar del mensaje neutro, así que sigue habiendo un solo proactivo por visita.
   - *Vacío*: «Crea tu primera tarjeta para empezar.» al entrar en Práctica sin tarjetas.
 - **Reglas de frecuencia** (en `LUMI_CONFIG`): mensaje visible 5 s; un solo mensaje proactivo por visita; 90 s mínimo entre apoyos y entre progresos; prioridad reacción > contexto > genérico; sin cola (una reacción en espera caduca a los 20 s). Las reacciones salen en cualquier sección; los mensajes proactivos dependen de la página. Nada durante un examen, un bloque de enfoque, una ventana abierta, la portada o con la pestaña oculta.
 - **Reposo** (solo CSS): movimientos pequeños y espaciados mientras hay actividad; tras 30 s sin ella se detienen (`data-anim="rest"`) y se reanudan al interactuar.
@@ -79,7 +82,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v71`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v74`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -128,6 +131,14 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v74 · Lumi dice el dato curioso y tiene más mensajes
+- **El dato curioso diario lo dice Lumi** (una vez al día, en la primera visita a Hoy; con Lumi activa se oculta el de «Más sobre hoy»). Se amplían los datos de 9 a 15.
+- **Más mensajes:** consejos de estudio, días hasta el próximo examen, progreso de la meta y racha, y frases alternativas al celebrar, apoyar y marcar progreso. Sigue habiendo UN mensaje proactivo por visita y nada en enfoque ni examen.
+
+### v73 · Lumi más útil y opcional (Fase 9, parcial)
+- **Aviso de repasos de mañana:** Lumi dice «Mañana te tocan N repasos.» cuando hay 10 o más programados para mañana (misma cifra que la previsión de Reforzar). Sustituye al mensaje neutro; respeta un proactivo por visita y no sale en enfoque, examen ni con una ventana abierta.
+- **Lumi desactivada por defecto** para quien empieza de cero (pruebas con estudiantes). Quien ya la tenía activada la conserva; se activa en Ajustes → Disposición.
 
 ### v71 · Plan y datos útiles (Fase 8)
 - **Límite de tarjetas nuevas por día** (Ajustes → Estudio y avisos, 20 por defecto, 0 = sin límite): una tarjeta es nueva si nunca se repasó. Las que sobran esperan a otro día y siguen siendo «de hoy»; los repasos de tarjetas ya vistas nunca se limitan. Desde Practicar se pueden adelantar («Aprender algunas nuevas ahora»). Nada se borra ni se reprograma.

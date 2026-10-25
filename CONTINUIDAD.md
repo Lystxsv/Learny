@@ -6,6 +6,11 @@ Estado del trabajo de la mascota Lumi sobre Learny. Cada bloque parte de la últ
 Cada novedad ornamental (Lumi, temas, animaciones) exige antes una mejora del núcleo de estudio (repaso, tarjetas, copias, pruebas).
 
 ## Bloques completados
+- **Fase 9 (parcial, 2.ª parte) «Lumi dice el dato curioso y tiene más mensajes»** (`learny-v73` → `learny-v74`): dato curioso diario por Lumi, `studyChatter()` y variantes de reacciones. Ver «Fase 9 (parcial, 2.ª parte)» al final.
+- **Fase 9 (parcial) «Lumi más útil y opcional»** (`learny-v72` → `learny-v73`): aviso «Mañana te tocan N repasos» y Lumi desactivada por defecto (`mascot: false`; sustituye la decisión 1). Ver «Fase 9 (parcial)» al final. (La nota de v71 → v72 no existe en los archivos recibidos.)
+- **Fase 8 «Plan y datos útiles»** (`learny-v70` → `learny-v71`): límite de nuevas por día, tarjetas difíciles, tareas concretas y retención real. Ver «Fase 8» al final.
+- **Fase 7a «Crear tarjetas con menos fricción»** (`learny-v69` → `learny-v70`): guardar y añadir otra, tarjeta inversa, «✨ Crear con IA» visible. Ver «Fase 7a» al final. (7b, cloze, pendiente de decisión.)
+- **v69 · Modelo de IA por defecto y ayuda sobre Gemini** (`learny-v68` → `learny-v69`). Ver «v69» al final.
 - **Fase 6 «Red de seguridad»** (`learny-v67` → `learny-v68`): suite Playwright y copia automática a archivo. Ver «Fase 6» al final.
 - **Movimiento · Fase 5 «Visibilidad del repaso»** (`learny-v66` → `learny-v67`): intervalo en los botones de calificar (`nextSchedule()`) y previsión de 7 días en Reforzar. Ver «Fase 5» al final.
 - **Movimiento · Fase 4 «Pulido»** (`learny-v65` → `learny-v66`): escalonado de listas y velo al calificar. Ver «Fase 4» al final.
@@ -78,7 +83,7 @@ No se tocaron: `window.Learny`, eventos `learny:*` existentes, claves de almacen
 - `welcomeAfterDays` (3) ya en uso; `reactMs` (400) para los gestos; `progressCooldownMs` (90 s).
 
 ## Decisiones aprobadas
-1. `settings.mascot` activada por defecto, con «Ocultar a Lumi» a la vista (con «Deshacer»).
+1. `settings.mascot` activada por defecto, con «Ocultar a Lumi» a la vista (con «Deshacer»). **(Sustituida en la Fase 9, v73: ahora `mascot: false` por defecto; quien ya tenía datos conserva su ajuste.)**
 2. FOCUS mediante el evento `learny:timer`.
 3. WELCOME usará el mismo criterio que el saludo actual (sesiones **y** repasos).
 4. Reacciones de repaso: segundo slot junto a `#card-count` en Práctica (solo texto) y ninguna reacción durante un examen.
@@ -781,3 +786,56 @@ Paquete PARCIAL, acumulativo sobre la Fase 6 (`learny-v68` → `learny-v69`).
 - Guía de uso: tarjeta «Qué es Gemini y cómo conseguir tu clave» en `index.html` (español) y en `GUIDE_EN` de `js/18-idioma.js` (inglés); traducciones del texto de Ajustes en el mismo archivo.
 - `proxy-worker.example.js`, `README.md`, `sw.js` (`learny-v69`) y `tests/modelo.spec.js` (6 pruebas; suite total: 23). No cambian SM-2, modelo de datos ni copias.
 - Los nombres de modelo salen de la lista de Google AI que dio el usuario; no se verificó que la clave gratuita cubra `gemini-3.8-flash`.
+
+
+---
+## Fase 7a «Crear tarjetas con menos fricción» (`learny-v69` → `learny-v70`)
+Paquete PARCIAL, acumulativo sobre v69 (añadir al final de `CONTINUIDAD.md`): `js/07-tarjetas.js`, `js/14-eventos.js`, `js/18-idioma.js`, `index.html`, `sw.js`, `README.md`, `tests/crear-tarjetas.spec.js` y esta nota. `CORE` de `sw.js` no cambia.
+- **Comprobado antes de empezar:** no existía crear varias seguidas ni tarjeta inversa; «Crear con IA» solo estaba dentro del bloque plegado «Más formas de repasar» y en el estado vacío.
+- **Guardar y añadir otra** (`cardForm`, `07-tarjetas.js`): segundo botón de envío + Ctrl/⌘+Intro. Guarda sin cerrar la ventana y vuelve a llamar a `cardForm` con `{subject, reverse, batch}` (materia y casilla se conservan, campos vacíos, foco en la pregunta, contador «Añadidas en esta tanda»). El indicador `again` lo activa solo ese botón; «Crear tarjeta» (primer botón, el de Intro) lo apaga, así una validación fallida no lo deja pegado.
+- **Tarjeta inversa:** casilla solo al crear. Crea una segunda tarjeta normal (pregunta = respuesta, respuesta = pregunta) con `nextReview` mañana. Sin cambios de esquema ni de migración. Si la respuesta supera 500 caracteres (límite de pregunta) no se crea y se avisa.
+- **«✨ Crear con IA»** junto a «+ Crear» (`#gen-cards-top`, dispara `learny:gen-cards`, que ya atendía `extras.js`). El botón de `#review-more` se conserva (`extras.js` lo busca por id).
+- **Decisiones que tomé yo:** la inversa llega mañana (no hoy) para que no salga justo después de su pareja; no se avisa de duplicados al crear (el aviso existe solo al importar).
+- **Pruebas:** `node --check` de todos los archivos tocados; `tests/crear-tarjetas.spec.js` (9 pruebas Playwright, `?demo`) escritas pero NO ejecutadas en este entorno (sin red para instalar Playwright). Ejecutar: `npx playwright test`. Suite total esperada: 32.
+- **No probado:** móvil físico (teclado virtual al enfocar la pregunta), lector de pantalla, textos en inglés a ojo, actualización PWA v69 → v70.
+- **Fuera de esta fase (7b, decisión pendiente):** cloze. Sí cambia el modelo (campo nuevo, render al revelar, SM-2 por hueco, importación/exportación y migración a v5). Propongo hacerlo solo si los estudiantes lo piden.
+
+
+---
+## Fase 8 «Plan y datos útiles» (`learny-v70` → `learny-v71`)
+Paquete PARCIAL, acumulativo sobre la 7a (añadir al final de `CONTINUIDAD.md`): `js/01-base.js`, `js/02-datos.js`, `js/03-interfaz.js`, `js/04-planificador.js`, `js/06-hoy.js`, `js/07-tarjetas.js`, `js/08-analisis.js`, `js/13-ajustes.js`, `js/14-eventos.js`, `js/18-idioma.js`, `index.html`, `style.css`, `sw.js`, `README.md`, `tests/fase8.spec.js` y esta nota. `CORE` de `sw.js` no cambia (sin archivos nuevos en la app).
+- **Comprobado antes de empezar:** ni límite de nuevas, ni detección de tarjetas difíciles, ni cifras concretas en las tareas, ni retención real existían (grep sin coincidencias; solo «Recuerdo declarado», que es autoevaluación).
+- **Límite de nuevas por día** (`settings.newPerDay`, 20 por defecto, 0 = sin límite; validado en `sanitizeSettings`). `dueSplit()` (`03-interfaz.js`) separa `due` y `held`. Nueva = nunca repasada; el cupo gastado hoy = tarjetas cuya primera entrada de historial es de hoy. Las ya vistas nunca se limitan. `overdueCards()` ahora sale de `dueCards()` para que «vencidas» nunca supere a «de hoy». «Aprender algunas nuevas ahora» (estado vacío de Practicar) salta el límite a petición. Nada se reprograma ni se borra.
+- **Tarjetas que se te resisten:** `LEECH_AT = 4` fallos desde `leechSince` (campo opcional nuevo en la tarjeta, cadena de fecha; `normalizeCard` lo conserva; sin migración ni cambio de esquema). Tarjeta en Reforzar con «Reescribir o dividir» (`leechHelp`): reescribir (editar la tarjeta la da por atendida), dividir (nueva tarjeta con la respuesta precargada) o dejarla (con «Deshacer»). Solo lee el historial: SM-2 no cambia. No propone nada con IA.
+- **Tareas concretas:** `taskDetail()` / `taskGo()` (`04-planificador.js`): cifra real de tarjetas de la materia de la fecha, calculada al dibujar (no se guarda) y botón «Empezar» (repaso → examen con las vencidas de la materia; práctica/simulacro/revisión → `startSubjectQuiz`). La fase de comprensión ya traía su cifra. La recomendación de Hoy la cita.
+- **Retención real:** `retentionReal()` (`08-analisis.js`): por cada tarjeta, el intervalo de un repaso = días desde el anterior de su historial; jóvenes < 21 días, maduras ≥ 21; no cuenta el primer repaso ni dos el mismo día. Objetivo fijo del 90 % como referencia (no es ajuste ni toca el repaso). Limitación: el historial guarda 40 repasos por tarjeta.
+- **Idioma:** entradas en `EX`/`RULES` y las dos tarjetas de la guía en inglés. Los textos dentro de `#flashcard` son fijos a propósito (ahí solo se traducen rótulos exactos).
+- **Pruebas:** `node --check` de todos los archivos tocados; prueba rápida en Node con stubs de la lógica (límite, cupo del día, tarjeta difícil, retención): correcta. `tests/fase8.spec.js` (10 pruebas Playwright, `?demo`) escritas pero NO ejecutadas (sin red para instalar Playwright). Ejecutar: `npx playwright test`. Suite total esperada: 42.
+- **No probado:** navegador real (interfaz de Reforzar y Planificar, modal de tarjeta difícil, botón Empezar), inglés a ojo, móvil, lector de pantalla, actualización PWA v70 → v71.
+- **Decisiones que tomé yo:** límite por defecto de 20 (cambia lo que ven quienes ya tienen muchas nuevas pendientes: no pierden nada, esperan); la retención usa 21 días como corte jóven/madura; el 90 % no es configurable; «tarjeta difícil» en la interfaz (no «sanguijuela»).
+- **Pendiente de la Fase 8 según tu lista:** nada. Los cloze siguen en la 7b, solo si los estudiantes la piden.
+- **Regla de proporción:** cada novedad ornamental (Lumi, temas, animaciones) exige antes una mejora del núcleo de estudio. Esta fase es del núcleo.
+
+
+---
+## Fase 9 (parcial) «Lumi más útil y opcional» (`learny-v72` → `learny-v73`)
+Paquete PARCIAL, acumulativo sobre la Fase 8 (añadir al final de `CONTINUIDAD.md`): `js/01-base.js`, `js/16-lumi.js`, `js/18-idioma.js`, `sw.js`, `README.md`, `tests/fase9.spec.js` y esta nota. `CORE` de `sw.js` no cambia. Del plan de la Fase 9 solo se aplica esto; la carga perezosa de dibujos (toca `CORE`) queda fuera.
+- **Aviso «Mañana te tocan N repasos.»** (`16-lumi.js`): en `maybeProactive()`, página Hoy. Si no corresponde WELCOME y hay ≥ `tomorrowMin` (10, en `LUMI_CONFIG`) tarjetas vivas con `nextReview` = mañana, sustituye al mensaje neutro (prioridad de contexto). La cifra sale del mismo criterio que la previsión de 7 días de Reforzar (activas, no dañadas). Sigue habiendo UN proactivo por visita; nada en enfoque, examen, ventana abierta ni pestaña oculta. Sin gesto propio. Texto generado por `lumiTomorrowText(n)`.
+- **Idioma:** como lleva cifra no cabe en `EX`; va como regla en `RULES` de `18-idioma.js` («Tomorrow you have N reviews due.»).
+- **Lumi desactivada por defecto:** `mascot: false` en `defaults()`. Quien ya tiene datos guardados conserva su ajuste (se guardó `true`); el borrador de la regla «activada por defecto» de la decisión 1 queda sustituido. La demo (`?demo`) también arranca sin Lumi.
+- **Decisiones que tomé yo:** umbral de 10 repasos (con pocos, el aviso no aporta); el aviso reemplaza al neutro en vez de sumarse; «tarjetas difíciles» NO se añadió (solo pediste uno).
+- **Pruebas:** `node --check` de todos los archivos tocados. `tests/fase9.spec.js` (5 pruebas Playwright, `?demo`) escritas pero NO ejecutadas (sin red para instalar Playwright). Suite total esperada: 47. Ejecutar: `npx playwright test`.
+- **No probado:** navegador real, inglés a ojo, que a los estudiantes sin Lumi no les falte el botón de activarla (está en Ajustes → Disposición), actualización PWA v72 → v73.
+
+
+---
+## Fase 9 (parcial, 2.ª parte) «Lumi dice el dato curioso y tiene más mensajes» (`learny-v73` → `learny-v74`)
+Paquete PARCIAL, acumulativo sobre la v73 (añadir al final de `CONTINUIDAD.md`): `js/05-temporizador.js`, `js/13-ajustes.js`, `js/16-lumi.js`, `js/18-idioma.js`, `style.css`, `sw.js`, `README.md`, `tests/fase9.spec.js` (sustituye al de la v73) y esta nota. `CORE` de `sw.js` no cambia.
+- **Dato curioso diario por Lumi:** en la primera visita a Hoy de cada día (si no hay bienvenida), Lumi dice «Dato curioso: …» durante 9 s (`longMessageMs`). Es el mismo dato que calcula `renderFocus()` (`facts[día del mes % facts.length]`). El día en que se dijo se guarda en una clave aparte, `learny.lumi.fact` (no es parte de `state`, no viaja en copias, «Borrar todo» la elimina). «Mostrar el dato curioso» (Ajustes) también apaga el de Lumi. Con Lumi activa, `body.has-lumi #study .fact { display: none }` oculta el de «Más sobre hoy»; sin Lumi se sigue viendo. Los datos pasan de 9 a 15.
+- **Más mensajes (Hoy):** `studyChatter()` en `16-lumi.js`. Orden: bienvenida > dato del día (una vez al día) > repasos de mañana (≥ 10) > uno al azar entre neutro, consejo (5), «Faltan N días para tu próximo examen.» (≤ 7 días), «Hoy llevas N de M bloques de tu meta.» (0 < N < M) y «Racha actual: N días.» (≥ 2), sin repetir el de la visita anterior. Los textos no incluyen contenido del usuario (así la traducción no lo toca).
+- **Reacciones con variantes:** celebrar (3), apoyo (3), progreso (2); nunca la misma dos veces seguidas. El primer texto de cada lista es el original.
+- **Reglas que no cambian:** UN mensaje proactivo por visita; nada en enfoque, examen, ventana abierta ni pestaña oculta; reacciones de 5 s; prioridades y cooldowns.
+- **Idioma:** 6 datos, 5 consejos y 5 frases nuevas en `EX`; reglas en `RULES` para «Dato curioso:», «Faltan N días…» y «Hoy llevas N de M…».
+- **Decisiones que tomé yo:** el dato va ANTES que los repasos de mañana (quien abre una vez al día no vería el de mañana hasta otra visita); sigue siendo un solo mensaje por visita; el dato de «Más sobre hoy» se oculta con Lumi activa (si te lo pierdes, no hay dónde releerlo: una línea de CSS lo revierte); consejos y frases redactados por mí.
+- **Pruebas:** `node --check` de todos los archivos tocados. `tests/fase9.spec.js` (11 pruebas Playwright, `?demo`) escritas pero NO ejecutadas (sin red). Suite total esperada: 53. Una de ellas (rotación de variantes) solo comprueba que el controlador existe: las listas son privadas.
+- **No probado:** navegador real, que 9 s basten para leer en móvil, inglés a ojo, actualización PWA v73 → v74.

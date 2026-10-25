@@ -206,6 +206,11 @@
     '¿Empezamos con algo corto?': 'Shall we start with something short?', 'Bloque completado.': 'Block completed.', 'Esta vuelve pronto. Sin prisa.': 'This one will be back soon. No rush.',
     'En el repaso anterior marcaste «No lo sabía»; esta vez, «Fácil».': "On the previous review you marked “Didn't know it”; this time, “Easy”.",
     'Bienvenido de nuevo. Podemos empezar con algo corto.': 'Welcome back. We can start with something short.', 'Crea tu primera tarjeta para empezar.': 'Create your first card to get started.',
+    'Un bloque más hecho.': 'One more block done.', 'Buen ritmo: bloque completado.': 'Nice pace: block completed.', 'Volverá pronto; así se fija mejor.': "It will be back soon; that's how it sticks better.", 'Fallar también enseña. Sin prisa.': 'Getting it wrong teaches too. No rush.',
+    'Esta te costó la vez anterior y ahora la marcaste «Fácil».': 'This one was hard last time and now you marked it “Easy”.',
+    'Intentar recordar antes de mirar la respuesta fortalece la memoria.': 'Trying to recall before looking at the answer strengthens memory.', 'Un descanso corto entre bloques ayuda a mantener la atención.': 'A short break between blocks helps you keep your attention.',
+    'Explicar algo en voz alta muestra qué te falta por entender.': 'Explaining something out loud shows what you still need to understand.', 'Estudiar un poco cada día rinde más que mucho un solo día.': 'Studying a little every day works better than a lot on a single day.',
+    'Anotar tus dudas mientras estudias te ayuda a resolverlas después.': 'Writing down your doubts while you study helps you resolve them later.',
     /* ---- Portada ---- */
     'Para estudiar con calma y constancia': 'For calm, consistent studying', 'Estudia con intención, un paso a la vez': 'Study with intention, one step at a time',
     'Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Sin cuenta ni registro: tus datos se quedan en este navegador.': 'Learny brings together a Pomodoro timer, spaced-repetition flashcards and a plan that counts backwards from your exam date. No account or sign-up: your data stays in this browser.',
@@ -222,7 +227,10 @@
     'Los pulpos tienen tres corazones.': 'Octopuses have three hearts.', 'La miel puede conservarse durante miles de años.': 'Honey can keep for thousands of years.', 'Tu cerebro consolida recuerdos mientras duermes.': 'Your brain consolidates memories while you sleep.',
     'Los árboles intercambian nutrientes mediante redes de hongos.': 'Trees exchange nutrients through fungal networks.', 'La luz solar tarda unos 8 minutos en llegar a la Tierra.': 'Sunlight takes about 8 minutes to reach Earth.', 'Los tiburones existen desde antes que los árboles.': 'Sharks have existed since before trees.',
     'Un día en Venus dura más que un año en Venus.': 'A day on Venus lasts longer than a year on Venus.', 'Explicar algo con tus palabras revela lo que realmente entiendes.': 'Explaining something in your own words reveals what you really understand.',
-    'Repasar justo antes de olvidar fortalece más la memoria que releer sin pausa.': 'Reviewing right before you forget strengthens memory more than rereading without pause.'
+    'Repasar justo antes de olvidar fortalece más la memoria que releer sin pausa.': 'Reviewing right before you forget strengthens memory more than rereading without pause.',
+    'El corazón de un colibrí puede latir más de mil veces por minuto.': 'A hummingbird\'s heart can beat more than a thousand times per minute.', 'El cuerpo humano adulto tiene 206 huesos.': 'The adult human body has 206 bones.',
+    'Las abejas se comunican entre sí con una especie de baile.': 'Bees communicate with each other through a kind of dance.', 'Hacer pausas cortas ayuda a mantener la atención durante más tiempo.': 'Taking short breaks helps you keep your attention for longer.',
+    'Dormir bien antes de un examen suele ayudar más que estudiar toda la noche.': 'Sleeping well before an exam usually helps more than studying all night.', 'El agua cubre aproximadamente el 71 % de la superficie de la Tierra.': 'Water covers about 71% of the Earth\'s surface.'
   });
   /* Palabras ambiguas o muy cortas: solo se traducen cuando son TODO el texto del nodo (nunca dentro de una frase). */
   const ONLY = Object.assign(Object.create(null), { 'Sí': 'Yes', 'Tarjeta': 'Card', dom: 'Sun', lun: 'Mon', mar: 'Tue', 'mié': 'Wed', jue: 'Thu', vie: 'Fri', 'sáb': 'Sat' });
@@ -242,6 +250,10 @@
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp('^Mañana te tocan (\\d+) repasos?\\.$', 'u'), (m, n) => `Tomorrow you have ${n} ${pl(n, 'review', 'reviews')} due.`], // Lumi (v73)
+    [new RegExp('^Dato curioso: (.+)$', 'u'), (m, f) => `Fun fact: ${T(f)}`], // Lumi (v74): el dato del día se traduce con su entrada de EX
+    [new RegExp('^Faltan? (\\d+) días? para tu próximo examen\\.$', 'u'), (m, n) => `${n} ${pl(n, 'day', 'days')} left until your next exam.`],
+    [new RegExp('^Hoy llevas (\\d+) de (\\d+) bloques de tu meta\\.$', 'u'), (m, a, b) => `Today you have done ${a} of ${b} blocks of your goal.`],
     [new RegExp(`Copia automática activa(?: · última a las (\\d\\d:\\d\\d))?$`, 'u'), (m, t) => `Automatic backup on${t ? ` · last at ${t}` : ''}`],
     [new RegExp(`Meta: (\\d+) bloques? de (\\d+) minutos · hoy (\\d+)/(\\d+)\\. Racha: (\\d+) días?\\.`, 'u'), (m, a, b, c, d, e) => `Goal: ${a} ${pl(a, 'block', 'blocks')} of ${b} minutes · today ${c}/${d}. Streak: ${e} ${pl(e, 'day', 'days')}.`],
     [new RegExp(`Modo examen: (\\d+) tarjetas?\\.`, 'u'), (m, n) => `Exam mode: ${n} ${pl(n, 'card', 'cards')}.`],

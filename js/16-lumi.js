@@ -20,6 +20,8 @@ const LUMI_CONFIG = Object.freeze({
   supportCooldownMs: 90 * 1000, // mínimo entre dos mensajes de apoyo (medido desde el último mostrado)
   pendingTtlMs: 20 * 1000,      // una reacción bloqueada (ventana abierta, otra página) caduca a los 20 s: no hay cola
   progressCooldownMs: 90 * 1000, // mínimo entre dos mensajes de progreso
+  longMessageMs: 9000,          // v74: los mensajes largos (dato curioso, consejos) se quedan más tiempo para poder leerse
+  tomorrowMin: 10,              // v73: con al menos tantos repasos programados para mañana, Lumi lo menciona (en lugar del mensaje neutro)
   welcomeAfterDays: 3,          // días sin actividad (sesiones y repasos, como el saludo) para dar la bienvenida
   reactMs: 400,                 // duración del gesto breve (solo CSS; la lógica no espera a animationend)
   restAfterMs: 30 * 1000,       // sin actividad durante tanto tiempo, los movimientos de reposo se detienen (0 = nunca); cualquier toque, tecla o evento de la app los reanuda
@@ -28,10 +30,24 @@ const LUMI_CONFIG = Object.freeze({
 const LUMI_TEXT = Object.freeze({
   neutral: '¿Empezamos con algo corto?', celebrate: 'Bloque completado.', support: 'Esta vuelve pronto. Sin prisa.',
   progress: 'En el repaso anterior marcaste «No lo sabía»; esta vez, «Fácil».',
-  welcome: 'Bienvenido de nuevo. Podemos empezar con algo corto.', empty: 'Crea tu primera tarjeta para empezar.'
+  welcome: 'Bienvenido de nuevo. Podemos empezar con algo corto.', empty: 'Crea tu primera tarjeta para empezar.', factPrefix: 'Dato curioso:'
 });
 /* Prioridad: un mensaje no interrumpe a otro de mayor prioridad. reaction = acción confirmada; context = bienvenida / estado vacío; generic = neutro. */
 const LUMI_PRIO = Object.freeze({ generic: 1, context: 2, reaction: 3 });
+/* v74: variedad. Las reacciones rotan entre varias frases (nunca la misma dos veces seguidas); el primer texto de cada lista es el original. Los consejos salen como mensaje proactivo en Hoy. */
+const LUMI_VARIANTS = Object.freeze({
+  celebrate: ['Bloque completado.', 'Un bloque más hecho.', 'Buen ritmo: bloque completado.'],
+  support: ['Esta vuelve pronto. Sin prisa.', 'Volverá pronto; así se fija mejor.', 'Fallar también enseña. Sin prisa.'],
+  progress: ['En el repaso anterior marcaste «No lo sabía»; esta vez, «Fácil».', 'Esta te costó la vez anterior y ahora la marcaste «Fácil».']
+});
+const LUMI_TIPS = Object.freeze([
+  'Intentar recordar antes de mirar la respuesta fortalece la memoria.',
+  'Un descanso corto entre bloques ayuda a mantener la atención.',
+  'Explicar algo en voz alta muestra qué te falta por entender.',
+  'Estudiar un poco cada día rinde más que mucho un solo día.',
+  'Anotar tus dudas mientras estudias te ayuda a resolverlas después.'
+]);
+const lumiTomorrowText = (n) => `Mañana te tocan ${plural(n, 'repaso', 'repasos')}.`; // v73: lleva una cifra, por eso no está en LUMI_TEXT (traducción: regla en RULES de 18-idioma.js)
 
 /* ---- Abeja pixelada (bloque 2): arte fiel a la referencia, rejilla 40×40 (1 celda = 1 rect). Sin curvas, sin degradados y SIN id (varias copias en la página no chocan).
    BEE_MAP es el sprite de 34×29 celdas, colocado en (3, 5) de la rejilla. Cada letra es un rol de color (clase .b-*, variables --bee-* en style.css para los temas):
@@ -115,14 +131,14 @@ const LumiCompanion = (() => {
     if (liveEl) liveEl.textContent = '';
   }
   function dropPending() { clearTimeout(pendingTimer); pendingTimer = 0; pending = null; }
-  function say(text, { announce = false, prio = LUMI_PRIO.generic, slot = 'study' } = {}) { // announce: solo para información que ningún toast anuncia ya
+  function say(text, { announce = false, prio = LUMI_PRIO.generic, slot = 'study', ms = 0 } = {}) { // announce: solo para información que ningún toast anuncia ya
     const el = slot === 'practice' ? cardMsgEl : msgEl;
     if (!enabled || !el || focusActive() || examOn() || document.hidden) return false;
     if (curPrio > prio) return false; // un mensaje de reacción visible no se pisa con uno genérico
     clearMessage();
     el.textContent = text; el.dataset.on = 'true'; curPrio = prio; curSlot = slot;
     if (announce) liveTimer = setTimeout(() => { if (liveEl) liveEl.textContent = text; }, 30);
-    msgTimer = setTimeout(clearMessage, C.messageMs);
+    msgTimer = setTimeout(clearMessage, ms || C.messageMs);
     return true;
   }
 
@@ -169,16 +185,44 @@ const LumiCompanion = (() => {
   /* ---- Mensaje proactivo: como máximo uno por visita (visita = una carga de página, o volver tras visitGapMs oculta) ----
      Un solo candidato por visita, según la página: Inicio → WELCOME (≥ welcomeAfterDays sin actividad) o NEUTRAL; Práctica → EMPTY (sin ninguna tarjeta). */
   const welcomeDue = () => typeof daysSinceActivity === 'function' && daysSinceActivity() >= C.welcomeAfterDays; // mismo cálculo que el saludo de Inicio
+  const tomorrowCount = () => { const d = addDays(today(), 1); return state.cards.filter((c) => !c.archived && !c.corrupt && c.nextReview === d).length; }; // mismo criterio que la previsión de 7 días de Reforzar
   const emptyDue = () => state.cards.length === 0; // ni activas ni archivadas: quien tiene material archivado no es «primera tarjeta»
+  /* v74: qué dice Lumi en Hoy (un solo mensaje proactivo por visita). Orden: el dato curioso del día (una vez al día; la clave aparte guarda el día) > repasos de mañana (≥ tomorrowMin) >
+     uno al azar entre: neutro, consejo, días hasta el próximo examen (≤ 7), progreso de la meta de hoy y racha (≥ 2), sin repetir el de la visita anterior. «Mostrar el dato curioso» (Ajustes) también apaga el del día. */
+  const FACT_KEY = 'learny.lumi.fact';
+  const factToday = () => (typeof facts !== 'undefined' && facts.length ? facts[new Date().getDate() % facts.length] : ''); // el mismo dato que calcula renderFocus()
+  let lastChatter = '';
+  function studyChatter() {
+    const ctx = LUMI_PRIO.context, gen = LUMI_PRIO.generic, fact = factToday(), long = C.longMessageMs;
+    if (fact && state.settings.showFact !== false && store.get(FACT_KEY) !== today()) return { kind: 'fact', text: `${LUMI_TEXT.factPrefix} ${fact}`, prio: ctx, slot: 'study', ms: long };
+    const n = tomorrowCount();
+    if (n >= C.tomorrowMin) return { kind: 'tomorrow', text: lumiTomorrowText(n), prio: ctx, slot: 'study' };
+    const pool = [{ kind: 'neutral', text: LUMI_TEXT.neutral, prio: gen, slot: 'study' }, { kind: 'tip', text: LUMI_TIPS[Math.floor(Math.random() * LUMI_TIPS.length)], prio: gen, slot: 'study', ms: long }];
+    const next = typeof upcoming === 'function' ? upcoming()[0] : null, left = next ? daysUntil(next.date) : -1;
+    if (left >= 1 && left <= 7) pool.push({ kind: 'exam', text: `${left === 1 ? 'Falta' : 'Faltan'} ${plural(left, 'día', 'días')} para tu próximo examen.`, prio: gen, slot: 'study' });
+    const done = state.sessions.filter((s) => s.date === today() && !s.abandon).length, goal = num(state.settings.dailyGoal, 1, 12, 2);
+    if (done > 0 && done < goal) pool.push({ kind: 'goal', text: `Hoy llevas ${done} de ${goal} bloques de tu meta.`, prio: gen, slot: 'study' });
+    const st = typeof calcStreak === 'function' ? calcStreak().streak : 0;
+    if (st >= 2) pool.push({ kind: 'streak', text: `Racha actual: ${plural(st, 'día', 'días')}.`, prio: gen, slot: 'study' });
+    const opts = pool.filter((x) => x.kind !== lastChatter), c = opts[Math.floor(Math.random() * opts.length)];
+    lastChatter = c.kind; return c;
+  }
+  const lastVariant = {};
+  function variant(kind) { // una frase de LUMI_VARIANTS[kind], distinta de la última usada
+    const l = LUMI_VARIANTS[kind]; if (!l) return LUMI_TEXT[kind];
+    let i; do { i = Math.floor(Math.random() * l.length); } while (l.length > 1 && i === lastVariant[kind]);
+    lastVariant[kind] = i; return l[i];
+  }
   function maybeProactive() {
     if (!enabled || visitUsed || document.hidden) return;
     if (focusActive() || sessionOpen() || blocked() || examOn()) return;
     let p = null;
     if (currentPage === 'study') {
       if (welcomeDue()) p = { kind: 'welcome', text: LUMI_TEXT.welcome, prio: LUMI_PRIO.context, slot: 'study' };
-      else if (!(typeof isNewUser === 'function' && isNewUser())) p = { kind: 'neutral', text: LUMI_TEXT.neutral, prio: LUMI_PRIO.generic, slot: 'study' }; // usuario nuevo: sin neutro (su guía es el primer paso de Inicio)
+      else if (!(typeof isNewUser === 'function' && isNewUser())) p = studyChatter(); // v74: dato del día, repasos de mañana o un mensaje variado // usuario nuevo: sin neutro (su guía es el primer paso de Inicio)
     } else if (currentPage === 'practice' && emptyDue()) p = { kind: 'empty', text: LUMI_TEXT.empty, prio: LUMI_PRIO.context, slot: 'practice' };
-    if (!p || !say(p.text, { prio: p.prio, slot: p.slot })) return;
+    if (!p || !say(p.text, { prio: p.prio, slot: p.slot, ms: p.ms })) return;
+    if (p.kind === 'fact') store.set(FACT_KEY, today()); // el dato del día se dice una sola vez al día
     visitUsed = true; playGesture(p.kind);
   }
   const scheduleProactive = (ms = C.proactiveDelayMs) => { clearTimeout(proactiveTimer); proactiveTimer = setTimeout(maybeProactive, ms); };
@@ -206,7 +250,7 @@ const LumiCompanion = (() => {
       const s = [...state.sessions].reverse().find((x) => x && !x.abandon && x.date === today());
       if (!s || !s.id || celebrated.has(s.id)) return; // una vez por sesión registrada
       celebrated.add(s.id);
-      react({ kind: 'celebrate', text: LUMI_TEXT.celebrate, slot: 'study' });
+      react({ kind: 'celebrate', text: variant('celebrate'), slot: 'study' });
     }, 0);
   }
   function onRated() { // en examRate el evento sale ANTES de guardar y con exam activo: se ignora; en rateCard sale con el repaso ya registrado
@@ -218,13 +262,13 @@ const LumiCompanion = (() => {
       if (rv.rating === 'again') { // SUPPORT: una vez por repaso y con espera entre mensajes
         if (rv === lastSupportRv) return; lastSupportRv = rv;
         if (Date.now() - lastSupportAt < C.supportCooldownMs) return; // varios fallos seguidos: no se habla por cada uno
-        react({ kind: 'support', text: LUMI_TEXT.support, slot: 'practice' });
+        react({ kind: 'support', text: variant('support'), slot: 'practice' });
       } else if (rv.rating === 'easy') { // PROGRESS: solo si el historial de ESA tarjeta lo demuestra (el anterior «No lo sabía», el último «Fácil»)
         if (rv === lastProgressRv) return; lastProgressRv = rv;
         const h = (state.cards.find((c) => c.id === rv.cardId)?.history) || [];
         if (h.length < 2 || h[h.length - 1].rating !== 'easy' || h[h.length - 2].rating !== 'again') return;
         if (Date.now() - lastProgressAt < C.progressCooldownMs) return;
-        react({ kind: 'progress', text: LUMI_TEXT.progress, slot: 'practice' });
+        react({ kind: 'progress', text: variant('progress'), slot: 'practice' });
       }
     }, 0);
   }

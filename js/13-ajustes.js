@@ -145,7 +145,7 @@ function openSettings() {
     }
     if (!(await confirmDialog({ title: 'Borrar todo', message: 'Se borrarán tarjetas, sesiones y fechas.\nAntes se descargará una copia y se guardará otra en el navegador.', ok: 'Borrar todo', danger: true }))) return;
     exportData(true); const backed = snapshot('reset');
-    [KEY, ...LEGACY_KEYS, 'learny.corrupt', 'learny.newer', 'learny.drafts', TIMER_KEY, DONE_KEY].forEach((k) => store.del(k));
+    [KEY, ...LEGACY_KEYS, 'learny.corrupt', 'learny.newer', 'learny.drafts', 'learny.lumi.fact', TIMER_KEY, DONE_KEY].forEach((k) => store.del(k));
     document.dispatchEvent(new Event('learny:reset')); // extras.js vacía sus borradores en memoria (si no, se reescribirían al teclear)
     exam = null; hydrate({}); closeModal(); applyPreferences(); resetTimer('focus'); renderAll(); toast(backed ? 'Datos borrados. Descargaste una copia y puedes restaurar la automática desde Ajustes ⚙️.' : 'Datos borrados. Descargaste una copia, pero no hubo espacio para la copia automática en el navegador.', backed ? 'ok' : 'error');
   };
