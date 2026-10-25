@@ -1,7 +1,7 @@
-const CACHE = 'learny-v74';
+const CACHE = 'learny-v75';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
-  './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json',
+  './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json', './material-symbols.woff2',
   // Partes de la app (antes script.js); mantén esta lista igual que los <script> de index.html.
   './js/01-base.js',
   './js/02-datos.js',
