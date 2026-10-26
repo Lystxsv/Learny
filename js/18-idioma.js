@@ -10,6 +10,16 @@
   const EX = Object.assign(Object.create(null), {
     /* ---- Estructura, menú y barra superior ---- */
     /* ---- Perfiles (etapa 1) ---- */
+    /* ---- Pro · Bloque 1 ---- */
+    'Exportar e imprimir': 'Export and print', 'Lleva tus tarjetas a Anki, a una hoja de cálculo o al papel.': 'Take your cards to Anki, a spreadsheet or paper.', 'Qué exportar': 'What to export', 'Todas las materias': 'All subjects',
+    'Anki (.txt)': 'Anki (.txt)', 'Imprimir tarjetas': 'Print cards', 'Imprimir hoja de preguntas': 'Print question sheet', 'Plan Pro activo en este navegador.': 'Pro plan active in this browser.', 'Volver al plan gratis': 'Back to the free plan',
+    'Función Pro.': 'Pro feature.', 'Ver qué incluye Pro': 'See what Pro includes', 'Esta función es Pro.': 'This feature is Pro.', 'Activar Pro en este navegador': 'Turn on Pro in this browser', 'Disponible': 'Available', 'Próximamente': 'Coming soon',
+    'Learny Pro reúne las herramientas para preparar y llevar tu material más lejos. Se irán sumando por bloques.': 'Learny Pro brings together tools to prepare your material and take it further. They will be added block by block.',
+    'Todo lo que ya usas (repaso SM-2, Pomodoro, tutor socrático, plan inverso, importar y copias) sigue siendo gratis. Todavía no hay cobro ni cuenta: Pro se activa solo en este navegador mientras se prueba.': 'Everything you already use (SM-2 review, Pomodoro, Socratic tutor, reverse plan, import and backups) stays free. There is no payment or account yet: Pro is only turned on in this browser while it is being tested.',
+    'Exportar e imprimir (Anki, CSV, papel)': 'Export and print (Anki, CSV, paper)', 'Quizzes y exámenes simulados': 'Quizzes and mock exams', 'Flashcards con IA desde PDF y fotos': 'AI flashcards from PDFs and photos', 'Tutor IA sobre tus documentos, con citas': 'AI tutor on your documents, with citations',
+    'Resúmenes y mapas conceptuales con IA': 'AI summaries and concept maps', 'Repaso dirigido a tus puntos débiles': 'Review targeted at your weak points', 'Gamificación: XP, niveles y medallas': 'Gamification: XP, levels and badges', 'Audio-resumen': 'Audio summary', 'Grupos de estudio': 'Study groups',
+    'Pro activado en este navegador.': 'Pro turned on in this browser.', 'Plan gratis. Tus datos no cambian.': 'Free plan. Your data does not change.', 'En la demostración no se descargan archivos.': 'Files are not downloaded in the demo.', 'No hay tarjetas para exportar.': 'There are no cards to export.',
+    'El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para Learny.': 'The browser blocked the print window. Allow pop-ups for Learny.',
     'Bienvenida': 'Welcome', '¿Para qué usas Learny?': 'What do you use Learny for?', 'Tengo un examen': 'I have an exam', 'Plan con fecha, tareas diarias y repasos.': 'A dated plan, daily tasks and reviews.',
     'Estudio por mi cuenta': 'I study on my own', 'Ritmo y temas, sin fecha de examen.': 'A rhythm and topics, no exam date.', 'Enseño': 'I teach', 'Preparo material para mis alumnos.': 'I prepare material for my students.',
     'Lo puedes cambiar después en Ajustes.': 'You can change this later in Settings.', 'Decidir después': 'Decide later', 'Personalizar · opcional': 'Personalize · optional', '¿Quieres ajustar algo más?': 'Want to adjust anything else?',
@@ -279,6 +289,7 @@
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp('^Exportadas (\\d+) tarjetas? a (.+)\\.$', 'u'), (m, n, d) => `Exported ${n} ${pl(n, 'card', 'cards')} to ${d}.`], // Pro · Bloque 1
     [new RegExp('^metas \\(ahora: (\\d+)\\)$', 'u'), (m, n) => `goals (now: ${n})`], // Fase 1: vista previa de importar
     /* Etapa 4 · modo autodidacta (ETAPA4) */
     [new RegExp('Hace (\\d+) días? que no tocas «([^»]*)»\\. Un mini quiz de 8 tarjetas te ayuda a retomarlo\\.', 'u'), (m, n, s) => `You haven't touched “${s}” in ${n} ${pl(n, 'day', 'days')}. An 8-card mini quiz helps you pick it back up.`],

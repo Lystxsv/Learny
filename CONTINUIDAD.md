@@ -940,3 +940,24 @@ Solo datos: no hay interfaz, ni cambios en SM-2, Pomodoro, Feynman, estadística
 - **NO ejecutadas:** las pruebas Playwright (sin red para instalar Chromium en el entorno). `tests/metas-datos.spec.js` se corrigió: esperaba `window.state`, que no existe (`state` es `const` global, no propiedad de `window`), y el test de «recargar» usaba `?demo`, que vive en memoria y se reinicia al recargar. Ahora ese test va sin demo y se añadieron tres más (importar, `hydrate`, exportar→importar).
 - **Pendiente (a mano):** la comprobación de §2 de la Fase 0 (abrir en la v83 una copia con `"learning": {"v":1,"goals":[]}`, guardar y ver que la clave sigue en `learny.v3`); ejecutar `npx playwright test`; ver los tres avisos de arranque a ojo.
 - **Siguiente:** Fase 2 · interfaz de metas (`js/20-metas.js`, etapas y evidencias).
+
+---
+## Pro · Plan por bloques y Bloque 1 «Base Pro + Exportar e imprimir» (`learny-v85` → `learny-v86`)
+Origen: `Funcin-Quhace-PorquconvierteaPro.csv` (15 funciones). Ya gratis y NO se bloquean: repetición espaciada SM-2, Pomodoro, tutor socrático, plan inverso, detección básica de puntos débiles/tarjetas difíciles, offline (PWA), flashcards con IA desde texto/tema.
+Bloques previstos: **1** base Pro + exportar/imprimir (hecho) · **2** quizzes y exámenes simulados (opción múltiple, V/F, respuesta corta) · **3** flashcards con IA desde PDF/fotos (Gemini con archivo) · **4** tutor sobre tus documentos con citas · **5** resúmenes y mapas conceptuales con IA · **6** repaso dirigido a puntos débiles (y FSRS opcional) · **7** gamificación (XP, niveles, medallas) · **8** audio-resumen (síntesis de voz del navegador) · **9** grupos de estudio (necesita servidor: decisión pendiente).
+- **Base Pro (`js/20-pro.js`, nuevo):** catálogo `PRO_FEATURES`, `isPro()`, `setPro()`, `requirePro(id, run)` y `proModal()` (qué incluye Pro; al activar, ejecuta lo pedido). El plan vive en su propia clave `learny.pro` (no entra en `state`, copias ni `SCHEMA`; en demo, en memoria). **No hay cobro ni cuenta**: «Activar Pro» solo marca el navegador. Con licencia real solo cambia `isPro()`.
+- **Exportar e imprimir** (tarjeta en Biblioteca, creada por JS): Anki (.txt con `#separator:tab`, `#html:true`, `#deck column:3`), CSV (UTF-8 con BOM, resguardo contra fórmulas) e impresión de tarjetas u hoja de preguntas con respuestas aparte. Filtro por materia; incluye archivadas, excluye dañadas. En demo no descarga.
+- Archivos: `js/20-pro.js`, `index.html` (`<script>`), `sw.js` (`CORE` + `learny-v86`), `js/18-idioma.js` (entradas `EX` y una regla `RULES`), este archivo.
+- **Pruebas:** `node --check`; en Node, Anki y CSV exportados se reimportan con el `csvToRecords` real sin pérdidas (saltos de línea, comillas, `<`, `&`, tabuladores). NO probado en navegador (diálogo Pro, impresión, bloqueo de ventanas emergentes, inglés a ojo, PWA v85 → v86). Sin pruebas Playwright aún.
+
+---
+## Pro · Bloque 2 «Quiz y examen simulado» (`learny-v86` → `learny-v87`)
+- **Qué hace:** `js/21-quiz.js` arma preguntas desde TUS tarjetas, sin IA ni red: opción múltiple (distractores = respuestas de otras tarjetas, misma materia primero), verdadero/falso y respuesta corta. Quiz (comentario tras cada pregunta) y simulacro (60 s por pregunta, sin ver respuestas hasta el final; al acabarse el tiempo se entrega solo). Tarjeta «Quiz y examen simulado» en Practicar (creada por JS) tras la puerta `requirePro('quiz', …)`.
+- **Corrección:** opción múltiple y V/F son objetivas; la respuesta corta se corrige por coincidencia de palabras (≥ 60 % de las palabras clave, o ≥ 2 y ninguna de más) y la persona puede cambiar el resultado. «Repasar las falladas» abre el Modo examen de siempre (ese sí programa SM-2).
+- **No toca:** SM-2, estadísticas, `state`, `SCHEMA`, copias. Historial en la clave `learny.quizzes` (20 últimos; en demo, en memoria; «Borrar todo» la vacía por `learny:reset`).
+- **Archivos:** `js/21-quiz.js` (nuevo), `js/20-pro.js` (`quiz` → disponible), `js/18-idioma.js`, `index.html`, `sw.js` (`learny-v87`), `README.md`, `tests/quiz.spec.js`.
+- **Correcciones de la revisión:** `qz` se declara antes de `api` (zona muerta temporal); aviso cuando hay otra ventana abierta al empezar.
+- **Pruebas:** `tests/quiz.spec.js` (10, Playwright, `?demo`) escritas, NO ejecutadas. Ejecutar: `npx playwright test`.
+- **No probado:** navegador real, lector de pantalla con el temporizador del simulacro, inglés a ojo, móvil, PWA v86 → v87.
+- **Límites:** la respuesta corta es coincidencia de palabras, no comprensión; con menos de 4 tarjetas utilizables no hay quiz; las respuestas largas (> 200 caracteres) solo salen como respuesta corta.
+- **Siguiente:** Bloque 3 · flashcards con IA desde PDF y fotos (necesita Gemini con archivos).
