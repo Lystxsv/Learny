@@ -16,7 +16,10 @@
     'Tu nombre': 'Your name', 'Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.': 'Everything is optional. The time sets the length of your Pomodoro.', 'Uso principal': 'Main use',
     'Accesibilidad': 'Accessibility', 'Tamaño de texto': 'Text size', 'Terminar': 'Finish',
     'Tu sistema ya pide reducir el movimiento: Learny lo respeta aunque no marques esto.': 'Your system already asks to reduce motion: Learny respects it even if you do not tick this.',
-    'Se ve al instante; se guarda al pulsar «Terminar».': 'You see it instantly; it is saved when you press “Finish”.',
+    'Los cambios se aplican al instante y se guardan al pulsar «Terminar».': 'Changes apply instantly and are saved when you press “Finish”.',
+    'Lectura fácil activada.': 'Easy reading turned on.', 'Lectura fácil desactivada.': 'Easy reading turned off.', 'Animaciones reducidas.': 'Animations reduced.', 'Animaciones normales.': 'Animations back to normal.',
+    'Completada:': 'Completed:', 'Pendiente:': 'Pending:',
+    'Listo. Puedes cambiar todo esto en Ajustes.': 'Done. You can change all of this in Settings.', 'Filtro quitado.': 'Filter removed.',
     'Saltar al contenido': 'Skip to content', 'Learny necesita JavaScript activado para funcionar.': 'Learny needs JavaScript enabled to work.',
     'Estudia con intención': 'Study with intention', 'Estudiar': 'Study', 'Organizar': 'Organize', 'Ayuda': 'Help',
     'Hoy': 'Today', 'Practicar': 'Practice', 'Biblioteca': 'Library', 'Planificar': 'Plan', 'Reforzar': 'Reinforce', 'Guía de uso': 'User guide',
@@ -96,6 +99,18 @@
     'Tiempo:': 'Time:', 'Tu intención:': 'Your intention:', 'dijiste que la lograste': 'you said you achieved it', 'dijiste que aún no': 'you said not yet', 'sin valorar': 'not rated',
     'Tarjetas respondidas:': 'Cards answered:', 'Listo por hoy. Lo que estudiaste ya está guardado.': 'Done for today. What you studied is already saved.',
     'No tienes nada urgente pendiente. Descansar también es parte de estudiar.': 'You have nothing urgent pending. Resting is also part of studying.',
+    /* ---- Fase 1 · metas (avisos de arranque) ---- */
+    'Las metas guardadas no tenían un formato válido y se ignoraron. Si tenías metas, restaura una copia automática en Ajustes.': 'The saved goals were not in a valid format and were ignored. If you had goals, restore an automatic backup in Settings.',
+    'Las metas de la copia no tienen un formato válido.': 'The goals in the backup are not in a valid format.',
+    /* ---- Etapa 4 · modo autodidacta (ETAPA4) ---- */
+    'Retomar': 'Resume', 'Al día': 'Up to date', 'Sin empezar': 'Not started', 'Sin sesión': 'No session',
+    'Tu ritmo de esta semana': 'Your rhythm this week', 'Empezar una sesión': 'Start a session', 'Cambiar ritmo': 'Change rhythm',
+    'Sin fecha de examen: lo que cuenta es volver con regularidad. Una sesión es un bloque de enfoque completado.': 'No exam date: what counts is coming back regularly. A session is a completed focus block.',
+    'Tu ritmo semanal': 'Your weekly rhythm', '¿Cuántas sesiones (bloques de enfoque) quieres hacer por semana?': 'How many sessions (focus blocks) do you want to do per week?',
+    'Sesiones por semana': 'Sessions per week', 'Se cuentan los últimos 7 días. Puedes cambiarlo cuando quieras.': 'The last 7 days are counted. You can change it whenever you want.', 'Ritmo guardado.': 'Rhythm saved.',
+    'Progreso por tema': 'Progress by topic', 'Qué has tocado esta semana en cada tema y cuánto hace de lo último. Aquí no hay fechas: solo constancia.': 'What you touched this week in each topic and how long ago you last did. There are no dates here: only consistency.',
+    'Crea tarjetas para ver tu progreso por tema.': 'Create cards to see your progress by topic.',
+    'sin repasos todavía': 'no reviews yet', 'último contacto': 'last contact',
     /* ---- Tarjetas / Practicar ---- */
     'Recuerda de memoria, explica con tus palabras': 'Recall from memory, explain in your own words', 'Repasa tarjetas, usa el método Feynman y captura material de clase.': 'Review cards, use the Feynman method and capture class material.',
     'Repasar hoy': 'Review today', '+ Crear': '+ Create', 'Salir del examen': 'Exit exam', 'Tu respuesta (recuperación activa)': 'Your answer (active recall)',
@@ -243,7 +258,9 @@
   const PT = typeof PROFILE_TEXT !== 'undefined' ? PROFILE_TEXT : {};
   Object.entries(PT).forEach(([k, byProfile]) => { if (!PROFILE_NO_EX.includes(k)) Object.values(byProfile).forEach(([es, en]) => { EX[es] = en; }); });
   /* Palabras ambiguas o muy cortas: solo se traducen cuando son TODO el texto del nodo (nunca dentro de una frase). */
-  const ONLY = Object.assign(Object.create(null), { 'Iniciar enfoque': 'Start focus', 'Pausar': 'Pause', 'Continuar': 'Resume', 'Iniciar descanso': 'Start break', 'Continuar descanso': 'Resume break', 'Sí': 'Yes', 'Tarjeta': 'Card', dom: 'Sun', lun: 'Mon', mar: 'Tue', 'mié': 'Wed', jue: 'Thu', vie: 'Fri', 'sáb': 'Sat' });
+  const ONLY = Object.assign(Object.create(null), { 'Iniciar enfoque': 'Start focus', 'Pausar': 'Pause', 'Continuar': 'Resume', 'Iniciar descanso': 'Start break', 'Continuar descanso': 'Resume break', 'Sí': 'Yes', 'Tarjeta': 'Card', dom: 'Sun', lun: 'Mon', mar: 'Tue', 'mié': 'Wed', jue: 'Thu', vie: 'Fri', 'sáb': 'Sat',
+    /* R6: bienvenida (paso «Personalizar»). Van en ONLY (solo texto completo) porque son palabras sueltas: dentro de otra frase no deben traducirse. */
+    'Omitir': 'Skip', 'Atrás': 'Back', 'Tiempo de hoy': "Today's time", 'Algo corto': 'Something short', 'Un Pomodoro': 'One Pomodoro', 'Sesión larga': 'Long session' });
 
   const pl = (n, a, b) => (Number(n) === 1 ? a : b);
   const MON = { ene: 'Jan', feb: 'Feb', mar: 'Mar', abr: 'Apr', may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Aug', sep: 'Sep', sept: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dec' };
@@ -262,6 +279,21 @@
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp('^metas \\(ahora: (\\d+)\\)$', 'u'), (m, n) => `goals (now: ${n})`], // Fase 1: vista previa de importar
+    /* Etapa 4 · modo autodidacta (ETAPA4) */
+    [new RegExp('Hace (\\d+) días? que no tocas «([^»]*)»\\. Un mini quiz de 8 tarjetas te ayuda a retomarlo\\.', 'u'), (m, n, s) => `You haven't touched “${s}” in ${n} ${pl(n, 'day', 'days')}. An 8-card mini quiz helps you pick it back up.`],
+    [new RegExp('Esta semana \\(últimos 7 días\\) llevas (\\d+) de (\\d+) sesi(?:ón|ones)\\. Una sesión de hoy te acerca a tu ritmo\\.', 'u'), (m, a, b) => `This week (last 7 days) you have done ${a} of ${b} ${pl(b, 'session', 'sessions')}. One session today brings you closer to your rhythm.`],
+    [new RegExp('Ya cumpliste tu ritmo de (\\d+) sesi(?:ón|ones) esta semana\\. Una sesión más es opcional\\.', 'u'), (m, n) => `You already met your rhythm of ${n} ${pl(n, 'session', 'sessions')} this week. One more session is optional.`],
+    [new RegExp('Cumpliste tu ritmo de la semana: (\\d+) de (\\d+) sesi(?:ón|ones)\\. Una sesión más es opcional\\.', 'u'), (m, a, b) => `You met your rhythm for the week: ${a} of ${b} ${pl(b, 'session', 'sessions')}. One more session is optional.`],
+    [new RegExp('Te (?:falta|faltan) (\\d+) sesi(?:ón|ones) para llegar a tu ritmo de (\\d+) por semana\\. Se cuentan los últimos 7 días\\.', 'u'), (m, n, g) => `You are ${n} ${pl(n, 'session', 'sessions')} short of your rhythm of ${g} per week. The last 7 days are counted.`],
+    [new RegExp('^(\\d+) de (\\d+) sesi(?:ón|ones)$', 'u'), (m, a, b) => `${a} of ${b} ${pl(b, 'session', 'sessions')}`],
+    [new RegExp('^Tus metas se crearon con una versión más nueva de Learny \\(metas v(\\d+)\\): aquí solo se pueden ver y se conservan intactas\\. Actualiza la app\\.$', 'u'), (m, v) => `Your goals were created with a newer version of Learny (goals v${v}): here they can only be viewed and are kept intact. Update the app.`], // Fase 1
+    [new RegExp('^(\\d+) elementos? de tus metas se omiti(?:ó|eron) al cargar por pasar los límites\\. Hay una copia automática en Ajustes por si la necesitas\\.$', 'u'), (m, n) => `${n} ${pl(n, 'item', 'items')} of your goals ${pl(n, 'was', 'were')} skipped on load for exceeding the limits. There is an automatic backup in Settings in case you need it.`],
+    [new RegExp('^(\\d+) temas?$', 'u'), (m, n) => `${n} ${pl(n, 'topic', 'topics')}`],
+    [new RegExp('Esta semana: (\\d+) repasos?, (\\d+) min', 'u'), (m, a, b) => `This week: ${a} ${pl(a, 'review', 'reviews')}, ${b} min`],
+    [new RegExp('^Tamaño de texto: (.+)\\.$', 'u'), (m, x) => `Text size: ${T(x)}.`], // R12: aviso del tamaño elegido en la bienvenida
+    [new RegExp('^Listo, (.+?)\\. Puedes cambiar todo esto en Ajustes\\.$', 'u'), (m, n) => `Done, ${n}. You can change all of this in Settings.`], // R6: aviso al terminar la bienvenida con nombre
+    [new RegExp('^Filtro aplicado: (.+)\\.$', 'u'), (m, f) => `Filter applied: ${T(f)}.`], // R2: aviso del selector de tiempo de Hoy
     [new RegExp('^Mañana te tocan (\\d+) repasos?\\.$', 'u'), (m, n) => `Tomorrow you have ${n} ${pl(n, 'review', 'reviews')} due.`], // Lumi (v73)
     [new RegExp('^Dato curioso: (.+)$', 'u'), (m, f) => `Fun fact: ${T(f)}`], // Lumi (v74): el dato del día se traduce con su entrada de EX
     [new RegExp('^Faltan? (\\d+) días? para tu próximo examen\\.$', 'u'), (m, n) => `${n} ${pl(n, 'day', 'days')} left until your next exam.`],
@@ -419,6 +451,7 @@
     const b = btn(); if (!b) return;
     b.textContent = cur === 'en' ? 'ES' : 'EN';
     b.setAttribute('aria-label', cur === 'en' ? 'Cambiar a español' : 'Switch to English'); b.title = b.getAttribute('aria-label');
+    b.lang = cur === 'en' ? 'es' : 'en'; // R6: la etiqueta está en el idioma de destino; con lang el lector la pronuncia con la voz correcta
   }
   function restoreAll() {
     const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);

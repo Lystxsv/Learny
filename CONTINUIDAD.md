@@ -889,3 +889,54 @@ Solo CSS, al final de `style.css`; va en la misma versión que 3a (`style.css` e
 - **Dependencia:** la clase `w-edge` debe estar puesta en el campo de nombre y en «Atrás» desde `js/15-inicio.js`; comprobarlo al integrar.
 - **Pruebas:** los contrastes se midieron con los valores de cada tema; no consta prueba en navegador.
 - **Pendiente:** ver la bienvenida a ojo en los seis temas, 3c y 3d.
+
+
+---
+## Lector de pantalla · correcciones R1–R6 (`learny-v81` → `learny-v82`)
+Aplicadas a petición del usuario a partir del guion de la Etapa 3c (v2). Los riesgos salían de leer el código: siguen sin confirmarse con una persona y un lector real. Solo representación y foco: SM-2, datos, copias y eventos no cambian.
+- **R1 · `07-tarjetas.js`:** `revealCard(redraw)` mueve el foco a `#flashcard` después de `learny:reveal` (así «Tu respuesta» de extras.js ya está dentro) y solo cuando revela la persona (un redibujado pasa `true` y no lo mueve). Aplica también al modo examen. `cardCtl()` cuenta `#flashcard`, y `settleCardFocus()` devuelve el foco al botón de revelar cuando la tarjeta vuelve a la pregunta. **Pendiente de confirmar (C2):** que NVDA/VoiceOver lean el contenido de un div enfocado con tabindex -1; si no, hacer `#flashcard` un grupo con nombre o anunciar la respuesta por `#sr-live`.
+- **R2 · `06-hoy.js`:** el foco se restaura con `[data-action][data-mode]` / `[data-subject]` (antes solo `data-action`, que coincidía con el primer botón del grupo) y `ACTIONS.mode` anuncia «Filtro aplicado: …» / «Filtro quitado.» por `announce()`.
+- **R3 · `05-temporizador.js`:** `setTxt()` solo escribe si el texto cambió (reloj, perfil, nota y meta); se quitó el `aria-live` «polite» del contenedor `role="timer"` cuando está parado. **Efecto:** ya no se lee solo «25:00» al reiniciar; si hiciera falta, se anuncia por `#sr-live`.
+- **R4 y R5 · `15-inicio.js`:** el paso 2 enfoca `#modal-title` (en escritorio antes iba al campo de nombre; se actualizó la prueba de foco inicial) y un `keydown` bloquea Intro sobre radios y casillas. Intro en el campo de nombre sigue terminando la bienvenida (sigue siendo lo previsto: `enterkeyhint="done"`).
+- **R6 · `18-idioma.js`:** `ONLY` suma Omitir, Atrás, Tiempo de hoy, Algo corto, Un Pomodoro y Sesión larga (solo texto completo, para no traducir fragmentos de frases); `EX`/`RULES` suman el aviso «Listo. Puedes cambiar todo esto en Ajustes.» (con y sin nombre) y los avisos del selector de tiempo; el botón EN/ES lleva `lang` del idioma de destino.
+- **Archivos:** `js/05-temporizador.js`, `js/06-hoy.js`, `js/07-tarjetas.js`, `js/15-inicio.js`, `js/18-idioma.js`, `sw.js` (`learny-v82`), `README.md`, `tests/contraste-bienvenida.spec.js` (foco del paso 2), `tests/lector-pantalla.spec.js` (nuevo, 7 pruebas).
+- **Pruebas:** `node --check` de los cinco `.js`. Las pruebas Playwright están escritas pero NO ejecutadas.
+- **Siguen abiertos (se decidirán tras la prueba con persona):** R7 a R12.
+
+---
+## Lector de pantalla · correcciones R7–R12 (`learny-v82` → `learny-v83`)
+Aplicadas a petición del usuario a partir del guion de la Etapa 3c (v2). Siguen siendo hipótesis leídas del código: ninguna se ha confirmado con una persona y un lector real. Solo representación, foco y avisos: SM-2, datos, copias y eventos no cambian.
+- **R7 · `15-inicio.js`:** los tres botones de perfil llevan `aria-pressed` (true el elegido); CSS: borde de 2 px. Sin el perfil elegido (primera vez) ninguno está pulsado.
+- **R8 · `extras.js`:** cada misión lleva `<span class="sr-only">Completada: </span>` o `Pendiente: ` antes del texto; el icono sigue `aria-hidden`. Traducción en `EX`.
+- **R9 · `15-inicio.js`, `index.html`, `style.css`:** «Accesibilidad» pasa de `p.eyebrow` a `h3.eyebrow`. El botón `.modal-close` va ahora DESPUÉS de `#modal-body` en el DOM (es absoluto: no cambia de sitio). **Efecto en todas las ventanas:** el lector lee primero el contenido y el orden de tabulación ya no empieza por «Cerrar» (el foco inicial no cambia).
+- **R10 · `03-interfaz.js`, `index.html`:** cada `<dialog>` lleva `.modal-live` (polite) y `.modal-alert` (role=alert) fuera de `#modal-body`. `toast()` escribe ahí el mensaje mientras haya una ventana abierta y deja el aviso visual como `aria-hidden` (salvo si trae «Deshacer»); `announce()` hace lo mismo (antes escribía en `#sr-live`, inerte con una ventana abierta). Sin ventana abierta nada cambia.
+- **R11 · `09-tutor-ia.js`:** `settleResult()` enfoca el título del resultado (éxito o error) y quita `aria-live` del cuerpo para no leerlo dos veces.
+- **R12 · `15-inicio.js`, `18-idioma.js`:** `change` sobre tamaño, lectura fácil y animaciones llama a `announce()`; la ayuda dice «Los cambios se aplican al instante…». Traducciones en `EX` y una regla en `RULES` («Tamaño de texto: X.»).
+- **Archivos:** `js/03-interfaz.js`, `js/09-tutor-ia.js`, `js/15-inicio.js`, `js/18-idioma.js`, `extras.js`, `index.html`, `style.css`, `sw.js` (`learny-v83`, `CORE` sin cambios), `README.md`, `tests/lector-pantalla.spec.js` (+5 pruebas).
+- **Pruebas:** `node --check` de los cinco `.js`. Playwright escrito pero NO ejecutado en este entorno.
+- **Riesgos:** (1) el orden del botón de cierre afecta a todas las ventanas: comprobar el foco al cerrar y la tabulación en las seis temas; (2) el anuncio se traduce con el `MutationObserver` DESPUÉS de escribirse, como los demás avisos: puede oírse un instante en español con la interfaz en inglés; (3) un aviso con «Deshacer» dentro de una ventana sigue siendo visible para el lector (se anuncia el texto por la región viva y además puede leerse el aviso).
+
+---
+## Perfiles · Etapa 4 «Modo autodidacta» (`learny-v84`)
+Para `settings.profile === 'self'`: ritmo en lugar de fecha. Con cualquier otro perfil (examen, enseño, sin elegir) nada cambia. SM-2, Pomodoro, Feynman, estadísticas y el esquema de datos (`version: 4`) no cambian.
+- **Archivos:** `js/14b-autodidacta.js` (nuevo; entre `14-eventos.js` y `15-inicio.js`, porque `15-inicio.js` llama a `renderAll()` al arrancar), `js/06-hoy.js` (una línea: `actionCandidates()` → `actionCandidatesBase()`), `js/18-idioma.js` (frases y reglas marcadas `ETAPA4`), `index.html`, `sw.js` (módulo en `CORE` y caché subida), `tests/autodidacta.spec.js`.
+- **Ritmo:** `settings.weeklyGoal` (3 por defecto; se valida al leer, 1–14). Una sesión = bloque de enfoque completado (no abandonado) en los últimos 7 días (ventana móvil, no semana de calendario). Se cambia en Planificar → «Tu ritmo de esta semana» → «Cambiar ritmo». No está en `sanitizeSettings` (la clave se conserva tal cual; si llega fuera de rango se acota al leer).
+- **Hoy (`actionCandidates()`):** el nuevo envoltorio llama a la función original y, solo en `self`, quita «Añade la fecha de un examen», reescribe el motivo del bloque de enfoque con el ritmo («llevas N de M sesiones» / «ya cumpliste tu ritmo… una más es opcional») y añade «Retomar <tema>» (mini quiz) para el tema con ≥ 4 días sin tocarse (`SELF_STALE_DAYS`; si es el mismo que «tema más débil», no se duplica). Orden: repasos → plan → errores → crear/mazo → sesión del ritmo (si falta) → tema sin tocar → tema más débil → Feynman; con el ritmo cumplido la sesión pasa al final.
+- **Planificar:** tarjeta `#rhythm-card` (creada por JS, oculta salvo en `self`): 7 últimos días, «N de M sesiones», botones «Empezar una sesión» y «Cambiar ritmo».
+- **Reforzar:** tarjeta `#topic-progress-card` (ídem): por tema, repasos y minutos de los últimos 7 días, último contacto y estado (Retomar / Al día / Sin empezar); mini quiz en los temas por retomar. «Último contacto» = último repaso de una tarjeta del tema o última sesión con esa etiqueta.
+- **Idioma:** entradas `EX` y reglas `RULES` (marcadas `ETAPA4`) para todos los textos nuevos.
+- **No hecho (decisión):** «meta por tema» (el plan lo mencionaba): se sustituyó por «Progreso por tema» sin metas individuales; los números de Reforzar siguen diciendo «Exámenes (Fácil)» y `#exam-note` no cambió (falta una pasada de textos / parche a `08-analisis.js`); el saludo de Hoy no menciona el ritmo.
+- **Pruebas:** `node --check`; lógica del módulo verificada en Node con stubs; script de parche probado sobre carpetas de prueba (CRLF, ancla ausente/duplicada, doble aplicación). `tests/autodidacta.spec.js` (Playwright, `?demo`) escrita pero NO ejecutada. Suite esperada: las anteriores + 7.
+- **No probado:** navegador real, inglés a ojo, móvil, lector de pantalla, actualización PWA.
+
+
+---
+## Metas · Fase 1 «Capa de datos» (`learny-v84` → `learny-v85`)
+Solo datos: no hay interfaz, ni cambios en SM-2, Pomodoro, Feynman, estadísticas ni `SCHEMA` (sigue en 4). Diseño en `fase0-modelo-metas.md`.
+- **Archivo nuevo:** `js/01c-metas-datos.js` (antes de `01-base.js` en `index.html` y `CORE`; la nota de la Fase 0 §9 que decía «entre 01b y 02» se corrigió). `emptyLearning()` lo llama `defaults()` al cargar `01-base.js`; `uid`/`isDay` se resuelven al llamar.
+- **Parches:** `01-base.js` (`learning` en `defaults()` y `learningCount()` en `hasUserData()`), `02-datos.js` (`sanitizeLearning` en `hydrate`, justo tras `sanitizeSettings`; `'delete-goal'` en `ROUTINE`), `06-hoy.js` (`isNewUser()` mira las metas), `12-copias-e-importacion.js` (`validateBackup` exige objeto si `learning` existe; vista previa con «metas (ahora: N)»), `15-inicio.js` (avisos de arranque si `learningStatus.bad`, `.newer` u `.omitted`), `18-idioma.js` (textos de los avisos), `sw.js` (`CORE` + `learny-v85`), `README.md`.
+- **Comprobado en el código:** `adoptRemoteState` pasa por `hydrate` (otra pestaña sanea igual); `exportData`/`snapshot` copian `state` entero (las metas viajan); importar/restaurar una copia sin metas deja el contenedor vacío (decisión E).
+- **Pruebas ejecutadas:** `node tests/run-node.js` (20/20) y una prueba de humo en `vm` cargando 01c + 01-base + 01b + 02 con stubs (estado nuevo vacío, `hydrate` con basura, con metas y con versión más nueva, `ROUTINE`). `node --check` de todos los archivos; `CORE` == `<script>`.
+- **NO ejecutadas:** las pruebas Playwright (sin red para instalar Chromium en el entorno). `tests/metas-datos.spec.js` se corrigió: esperaba `window.state`, que no existe (`state` es `const` global, no propiedad de `window`), y el test de «recargar» usaba `?demo`, que vive en memoria y se reinicia al recargar. Ahora ese test va sin demo y se añadieron tres más (importar, `hydrate`, exportar→importar).
+- **Pendiente (a mano):** la comprobación de §2 de la Fase 0 (abrir en la v83 una copia con `"learning": {"v":1,"goals":[]}`, guardar y ver que la clave sigue en `learny.v3`); ejecutar `npx playwright test`; ver los tres avisos de arranque a ojo.
+- **Siguiente:** Fase 2 · interfaz de metas (`js/20-metas.js`, etapas y evidencias).

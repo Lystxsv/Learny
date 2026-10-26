@@ -352,7 +352,7 @@
   function renderMissions() {
     const rv = state.reviews.filter((r) => r.date === today()).length, pm = state.sessions.filter((s) => s.date === today() && !s.abandon).length, fy = state.feynman.includes(today());
     const m = [['Repasa 10 tarjetas', rv >= 10, `${Math.min(rv, 10)}/10`], ['Completa un Pomodoro', pm >= 1, `${Math.min(pm, 1)}/1`], ['Explica un tema con Feynman', fy, fy ? '1/1' : '0/1']];
-    $('#missions-list').innerHTML = m.map((x) => `<div class="task-row${x[1] ? ' done' : ''}"><span aria-hidden="true">${icon(x[1] ? 'check_circle' : 'radio_button_unchecked')}</span><span>${x[0]} <small>${x[2]}</small></span></div>`).join('');
+    $('#missions-list').innerHTML = m.map((x) => `<div class="task-row${x[1] ? ' done' : ''}"><span aria-hidden="true">${icon(x[1] ? 'check_circle' : 'radio_button_unchecked')}</span><span><span class="sr-only">${x[1] ? 'Completada: ' : 'Pendiente: '}</span>${x[0]} <small>${x[2]}</small></span></div>`).join('');
     $('#mission-count').textContent = `${m.filter((x) => x[1]).length}/3`;
   }
   function renderInsights() {

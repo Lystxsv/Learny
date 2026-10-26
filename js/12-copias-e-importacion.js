@@ -48,6 +48,7 @@ function validateBackup(data) {
   const bad = BACKUP_LISTS.filter((k) => k in data && !Array.isArray(data[k]));
   if (bad.length) return { ok: false, error: `Estos campos tienen un formato inválido: ${bad.join(', ')}.` };
   if ('settings' in data && (!data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings))) return { ok: false, error: 'Los ajustes de la copia no son válidos.' };
+  if ('learning' in data && data.learning != null && (typeof data.learning !== 'object' || Array.isArray(data.learning))) return { ok: false, error: 'Las metas de la copia no tienen un formato válido.' }; // Fase 1
   return { ok: true, cards: (data.cards || []).length, deadlines: (data.deadlines || []).length, sessions: (data.sessions || []).length };
 }
 
@@ -131,7 +132,7 @@ function importData(file) {
     const problems = brokenCards.length + badDeadlines.length + listLines.length;
     if (!(await importPreview({
       title: 'Reemplazar tus datos', intro: 'Esta copia <b>reemplazará</b> tus datos actuales.',
-      counts: [{ n: check.cards, label: `tarjetas (ahora: ${state.cards.length})` }, { n: check.deadlines, label: `fechas (ahora: ${state.deadlines.length})` }, { n: check.sessions, label: `sesiones (ahora: ${state.sessions.length})` }, ...(problems ? [{ n: problems, label: problems === 1 ? 'con error' : 'con errores', cls: 'err' }] : [])],
+      counts: [{ n: check.cards, label: `tarjetas (ahora: ${state.cards.length})` }, { n: check.deadlines, label: `fechas (ahora: ${state.deadlines.length})` }, { n: check.sessions, label: `sesiones (ahora: ${state.sessions.length})` }, { n: learningGoalsOf(data.learning), label: `metas (ahora: ${learningGoalsOf(state.learning)})` }, ...(problems ? [{ n: problems, label: problems === 1 ? 'con error' : 'con errores', cls: 'err' }] : [])],
       groups: [{ title: 'Revisar errores', lines: [...brokenCards, ...badDeadlines, ...listLines], cls: 'err' }], okLabel: 'Reemplazar mis datos', danger: true
     }))) return;
     if (!(await ensureBackup('import', 'Esta importación reemplaza todos tus datos.'))) { closeModal(); return; }

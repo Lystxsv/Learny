@@ -65,11 +65,11 @@ for (const theme of THEMES) {
   });
 }
 
-test('foco inicial: el título en el paso 1 y el campo de nombre en el paso 2 (en táctil, el título)', async ({ page }) => {
+test('foco inicial: el título en los dos pasos (R4)', async ({ page }) => {
   await openWelcome(page, 0);
   expect(await page.evaluate(() => document.activeElement.id)).toBe('modal-title');
   await page.locator('[data-profile="exam"]').click();
-  await expect(page.locator('input[name="v"]')).toBeFocused();
+  await expect(page.locator('#modal-title')).toBeFocused();
 });
 
 test('el diálogo tiene nombre accesible y todos los controles y grupos también', async ({ page }) => {

@@ -109,6 +109,7 @@ function hydrate(raw) {
   state.apiKey = typeof state.apiKey === 'string' ? state.apiKey : '';
   state.settings.proxyUrl = validProxy(state.settings.proxyUrl);
   sanitizeSettings(state.settings, base.settings);
+  state.learning = sanitizeLearning(state.learning); // Fase 1 (metas): nunca lanza ni rechaza el archivo; lo inválido se corrige u omite (learningStatus)
   if (!state.drafts || typeof state.drafts !== 'object' || Array.isArray(state.drafts)) state.drafts = {};
   ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'].forEach((k) => {
     if (!Array.isArray(state[k])) state[k] = [];
@@ -164,7 +165,7 @@ function readBackups() {
   const list = Array.isArray(p) ? p : (p && typeof p === 'object' ? [p] : []); // acepta el formato antiguo (una sola copia)
   return list.filter((b) => b && typeof b === 'object' && b.data && typeof b.data === 'object').slice(0, MAX_BACKUPS);
 }
-const ROUTINE = new Set(['delete-card', 'delete-deadline']); // copias de borrados puntuales (ya tienen «Deshacer»): nunca desplazan a las importantes (importar, migrar, restaurar, borrar todo)
+const ROUTINE = new Set(['delete-card', 'delete-deadline', 'delete-goal']); // copias de borrados puntuales (ya tienen «Deshacer»): nunca desplazan a las importantes (importar, migrar, restaurar, borrar todo)
 const isRoutine = (b) => ROUTINE.has(b.reason);
 function dropOneBackup(list) { // para liberar sitio: primero la copia rutinaria más vieja y, si no hay, la más vieja de todas
   const i = list.map(isRoutine).lastIndexOf(true);

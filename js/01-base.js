@@ -99,6 +99,7 @@ const defaults = () => ({
     recentTurns: [], statsPeriod: '30', dailyGoal: 2, notify: false, sound: true, name: '', proxyUrl: '', lastExport: '', backupNag: '',
     tutor: { subject: '', level: '', known: '', goal: '', style: 'uni', career: '', mode: 'socratic' }, lastRemind: '', lastRollover: '', welcomed: false, profile: ''
   },
+  learning: emptyLearning(), /* Fase 1 (metas): contenedor único con su propia versión; ver js/01c-metas-datos.js */
   notes: [], feynman: [], decks: [], planLog: [], sessions: [], cards: [], deadlines: [], reviews: [], topics: [], tasks: [], chats: [], exams: [], apiKey: '', drafts: {}
 });
 const state = defaults();
@@ -107,6 +108,7 @@ function hasUserData() {
   const s = state.settings || {}, t = s.tutor || {};
   return ['cards', 'sessions', 'deadlines', 'reviews', 'notes', 'feynman', 'decks', 'topics', 'tasks', 'planLog', 'chats', 'exams'].some((k) => Array.isArray(state[k]) && state[k].length > 0)
     || !!(s.name || t.subject || t.goal || t.level || t.known || t.career || s.proxyUrl || s.lastExport || state.apiKey)
+    || learningCount() > 0
     || (state.drafts && typeof state.drafts === 'object' && Object.keys(state.drafts).length > 0);
 }
 let exam = null;

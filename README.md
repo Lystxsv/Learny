@@ -6,12 +6,12 @@ un compañero de estudio opcional con ocho apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v81` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v85` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (27 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (29 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `package.json`, `playwright.config.js`, `tests/` | Pruebas automáticas (solo para quien desarrolla; la app no las necesita). Ver «Pruebas». |
 | `sw.js`, `manifest.json` | Modo sin conexión e instalación como app (PWA). |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Iconos de la app (ya subidos al repositorio). Son opcionales para `sw.js`, pero `manifest.json` los referencia. |
@@ -23,6 +23,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 
 | Archivo | Contenido |
 |---|---|
+| `js/01c-metas-datos.js` | Metas del modo autodidacta (v85, Fase 1 · solo datos): contenedor `state.learning` (con su propia versión `learning.v`), topes, `sanitizeLearning()` y cifras. Sin interfaz todavía. Va ANTES de `01-base.js`. |
 | `js/01-base.js` | Base: modo demo, constantes (incluida `MASCOT_AVATARS`), utilidades y el objeto `state`. |
 | `js/02-datos.js` | Datos: tarjetas, migraciones, validación (`sanitizeSettings`), copias automáticas, datos de la demo y carga inicial. |
 | `material-symbols.woff2` | Fuente de iconos (Material Symbols, subconjunto de 26 iconos) guardada en el repo: funciona sin conexión y no descarga nada. |
@@ -38,6 +39,7 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/12-copias-e-importacion.js` | Copias e importación: exportar, validar e importar copias, mazos y CSV/Anki. |
 | `js/13-ajustes.js` | Ajustes: estilos rápidos, ambientes, ventana de Ajustes (casilla de Lumi, selector de apariencia e idioma), recordatorios y contexto del tutor. |
 | `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny` (46 claves). |
+| `js/14b-autodidacta.js` | Modo autodidacta (v84): con `settings.profile === 'self'`, ritmo semanal en lugar de fecha de examen (Hoy, Planificar y Reforzar). Con otros perfiles no cambia nada. Va entre 14 y 15. |
 | `js/15-inicio.js` | Inicio: bienvenida, portada, banner de la demo y arranque. |
 | `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js`, `16-lumi-cc.js`, `16-lumi-alisa.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (`lumiBeeSvg()`), el controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
@@ -83,7 +85,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v81`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v85`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -132,6 +134,18 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v85 · Metas, Fase 1: capa de datos
+Nuevo contenedor `state.learning` (metas con etapas, recursos, dudas y bitácora) con saneado completo, topes y versión propia; no sube `SCHEMA` (sigue en 4). Se guarda, exporta, importa y sincroniza entre pestañas con el resto de los datos; la vista previa de importar muestra «metas (ahora: N)»; «Borrar todo» las borra; quien solo tiene una meta no es «usuario nuevo». Un contenedor de una versión más nueva se conserva intacto y de solo lectura. **Todavía no hay interfaz de metas** (Fase 2). Pruebas: `node tests/run-node.js` (rápidas, sin navegador) y `tests/metas-datos.spec.js`. Ver `CONTINUIDAD.md`.
+
+### v84 · Perfiles, etapa 4: modo autodidacta
+Para el perfil «Estudio por mi cuenta»: ritmo semanal (`settings.weeklyGoal`, 3 por defecto, 1–14; una sesión = un bloque de enfoque completado en los últimos 7 días) en lugar de fecha de examen. Hoy no ofrece «Añade la fecha de un examen» y propone «Retomar» un tema con 4 o más días sin tocar; Planificar muestra «Tu ritmo de esta semana» y Reforzar «Progreso por tema». Con los demás perfiles nada cambia. Pruebas en `tests/autodidacta.spec.js` (7). Ver `CONTINUIDAD.md`.
+
+### v83 · Lector de pantalla: correcciones R7–R12 del guion de la Etapa 3c
+Salen de leer el código (el guion aún no se ha ejecutado con una persona). R7: al volver con «Atrás» la opción elegida lleva `aria-pressed` y borde grueso. R8: cada misión dice «Completada»/«Pendiente» en texto oculto. R9: «Accesibilidad» es un `h3` y el botón de cierre va después del contenido en el DOM (sigue arriba a la derecha). R10: cada ventana lleva regiones vivas propias (`.modal-live`, `.modal-alert`); los avisos y `announce()` escriben ahí mientras haya una ventana abierta (la página queda inerte y `#sr-live` no se lee). R11: al llegar la respuesta de la IA el foco pasa al título del resultado. R12: tamaño de texto, lectura fácil y animaciones se anuncian al cambiarlos y el texto de ayuda ya no presupone ver la pantalla. Pruebas en `tests/lector-pantalla.spec.js`, escritas pero no ejecutadas.
+
+### v82 · Lector de pantalla: correcciones R1–R6 del guion de la Etapa 3c
+Salen de leer el código (el guion aún no se ha ejecutado con una persona): al revelar una tarjeta el foco pasa a la propia tarjeta para que se lea la respuesta (R1); el selector de tiempo de Hoy conserva el foco en el botón pulsado y anuncia el filtro (R2); el reloj y sus notas solo se reescriben si cambia el texto y `role="timer"` queda siempre en `aria-live="off"` (R3); el paso «Personalizar» de la bienvenida enfoca su título (R4) y no se cierra con Intro sobre un radio o una casilla (R5); en inglés se traducen Skip, Back, Today's time y las tres duraciones, y el botón EN/ES lleva `lang` (R6). Pruebas en `tests/lector-pantalla.spec.js`, escritas pero no ejecutadas.
 
 ### v81 · Perfiles, etapa 3: accesibilidad en la bienvenida
 En el paso «Personalizar» de la bienvenida hay un grupo «Accesibilidad» (tamaño de texto, lectura fácil y reducir animaciones) con vista previa en vivo; se guarda al pulsar «Terminar» y Omitir, × o Esc lo revierten. Los bordes de los controles de la bienvenida (opciones de perfil, tiempo, tamaño de texto, nombre y «Atrás») pasan a un contraste de al menos 3:1 en todos los temas (`--ui-edge`). Pruebas en `tests/accesibilidad-bienvenida.spec.js`, escritas pero no ejecutadas.

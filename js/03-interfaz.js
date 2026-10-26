@@ -63,7 +63,16 @@ const save = () => {
     return false; }
 };
 
-const announce = (msg) => { const el = $('#sr-live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
+/* R10/R12: con un <dialog> abierto todo lo demás de la página es inerte, así que #sr-live (fuera del diálogo) no se lee. Cada diálogo lleva sus propias regiones vivas
+   (.modal-live polite y .modal-alert role=alert, fuera de #modal-body para que no se borren al reemplazar el contenido); announce() y toast() escriben ahí mientras haya un diálogo abierto. */
+const openDialog = () => ($('#confirm-modal')?.open ? $('#confirm-modal') : $('#app-modal')?.open ? $('#app-modal') : null);
+function liveIn(dlg, msg, alert) {
+  const r = dlg?.querySelector(alert ? '.modal-alert' : '.modal-live'); if (!r) return false;
+  r.textContent = ''; clearTimeout(r.__t);
+  r.__t = setTimeout(() => { r.textContent = msg; r.__t = setTimeout(() => { r.textContent = ''; }, 6000); }, 40);
+  return true;
+}
+const announce = (msg) => { if (liveIn(openDialog(), msg, false)) return; const el = $('#sr-live'); if (!el) return; el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 30); };
 const failedRenders = new Set();
 function safe(fn, name) {
   try { return fn(); } catch (error) {
@@ -101,6 +110,8 @@ function toast(message, type = 'ok', action = null) {
   placeToast();
   const el = $('#toast'), isErr = type === 'error', now = Date.now();
   el.setAttribute('role', isErr ? 'alert' : 'status'); el.setAttribute('aria-live', isErr ? 'assertive' : 'polite'); // los errores se anuncian de inmediato
+  { const dlg = openDialog(); // R10: dentro de un diálogo el aviso visual se mueve de sitio y se rellena con retraso; el anuncio va por la región viva fija del diálogo
+    if (dlg && liveIn(dlg, message, isErr)) { el.removeAttribute('role'); el.setAttribute('aria-live', 'off'); if (action) el.removeAttribute('aria-hidden'); else el.setAttribute('aria-hidden', 'true'); } else el.removeAttribute('aria-hidden'); }
   toast.undo = action ? { action, until: now + 8000 } : null; // un aviso sin acción sustituye al anterior y su «Deshacer»
   undoRun = action ? action.run : null;
   el.className = `toast show ${type}`; // primero se hace visible y luego se escribe el texto: los lectores de pantalla solo anuncian cambios en regiones visibles

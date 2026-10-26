@@ -28,10 +28,17 @@ function welcomeFlow() {
     const d = { ...state.settings, fontSize: a.fs, font: fontFor(), reduceMotion: a.calm };
     sanitizeSettings(d, defaults().settings); applyAppearance(d);
   };
-  const onChange = (e) => { if (!e.target.closest('[name="fs"],[name="easy"],[name="calm"]')) return; read(); preview(); };
+  const onKey = (e) => { if (e.key === 'Enter' && !composing(e) && e.target.matches?.('input[type="radio"], input[type="checkbox"]')) e.preventDefault(); }; // R5: Intro sobre un radio o una casilla enviaba el formulario y cerraba la bienvenida
+  /* R12: cambiar tamaño, fuente o animaciones no tenía confirmación auditiva: ahora se anuncia (announce escribe en la región viva del diálogo abierto). */
+  const onChange = (e) => {
+    const t = e.target.closest('[name="fs"],[name="easy"],[name="calm"]'); if (!t) return; read(); preview();
+    if (t.name === 'fs') announce(`Tamaño de texto: ${SIZES.find((s) => s[0] === a.fs)?.[1] || ''}.`);
+    else if (t.name === 'easy') announce(a.easy ? 'Lectura fácil activada.' : 'Lectura fácil desactivada.');
+    else announce(a.calm ? 'Animaciones reducidas.' : 'Animaciones normales.');
+  };
   const end = (completed) => {
     if (ended) return; ended = true;
-    body.removeEventListener('click', onClick); body.removeEventListener('change', onChange);
+    body.removeEventListener('click', onClick); body.removeEventListener('change', onChange); body.removeEventListener('keydown', onKey);
     if (completed) {
       state.settings.name = a.name; if (a.minutes) state.settings.focus = a.minutes;
       state.settings.fontSize = a.fs; state.settings.font = fontFor(); state.settings.reduceMotion = a.calm;
@@ -54,7 +61,7 @@ function welcomeFlow() {
   function render() {
     if (step === 0) {
       modal(`<p class="eyebrow">Bienvenida</p><h2>¿Para qué usas Learny?</h2>
-        <div class="stuck-list">${PROFILES.map(([k, t, sub]) => `<button class="stuck-opt profile-opt" type="button" data-profile="${k}"><b>${esc(t)}</b><small>${esc(sub)}</small></button>`).join('')}</div>
+        <div class="stuck-list">${PROFILES.map(([k, t, sub]) => `<button class="stuck-opt profile-opt" type="button" data-profile="${k}" aria-pressed="${state.settings.profile === k}"><b>${esc(t)}</b><small>${esc(sub)}</small></button>`).join('')}</div>
         <p class="modal-tip">Lo puedes cambiar después en Ajustes.</p>
         <div class="actions welcome-actions"><button class="text-button" type="button" data-w="later">Decidir después</button></div>`,
       () => {}, () => end(false));
@@ -64,18 +71,19 @@ function welcomeFlow() {
     modal(`<p class="eyebrow">Personalizar · opcional</p><h2>¿Quieres ajustar algo más?</h2>
         <label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="done" value="${esc(a.name)}"></label>
         <fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
-        <p class="eyebrow">Accesibilidad</p>
+        <h3 class="eyebrow">Accesibilidad</h3>
         <p class="hint" id="w-fs"><b>Tamaño de texto</b></p>
         <fieldset class="welcome-times" aria-labelledby="w-fs">${SIZES.map(([v, t, sub]) => `<label class="welcome-time"><input type="radio" name="fs" value="${v}"${a.fs === v ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
         <label class="check"><input name="easy" type="checkbox"${a.easy ? ' checked' : ''}> Lectura fácil (OpenDyslexic si está instalada; si no, Verdana)</label>
         <label class="check"><input name="calm" type="checkbox"${a.calm ? ' checked' : ''}> Reducir animaciones</label>
         ${sysCalm ? '<p class="hint">Tu sistema ya pide reducir el movimiento: Learny lo respeta aunque no marques esto.</p>' : ''}
-        <p class="hint">Se ve al instante; se guarda al pulsar «Terminar».</p>
+        <p class="hint">Los cambios se aplican al instante y se guardan al pulsar «Terminar».</p>
         <p class="modal-tip">Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.</p>
         <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button><button class="outline-button" type="button" data-w="back">Atrás</button><button class="primary-button" type="submit">Terminar</button></div>`,
     () => { read(); end(true); }, () => end(false));
+    $('#modal-title')?.focus({ preventScroll: true }); // R4: el paso 2 reemplaza el contenido de un diálogo ya abierto; el foco va a su título para que se lea (antes iba al campo de nombre y el título no se oía)
   }
-  body.addEventListener('click', onClick); body.addEventListener('change', onChange);
+  body.addEventListener('click', onClick); body.addEventListener('change', onChange); body.addEventListener('keydown', onKey);
   render();
 }
 
@@ -136,6 +144,9 @@ if (loadProblem) {
 if (newerFrom) queueToast(newerKept
   ? `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos (hay además una copia intacta en learny.newer). Actualiza la app.`
   : `Estos datos son de una versión más nueva de Learny (v${newerFrom}) que esta (v${SCHEMA}). No los he modificado y esta versión no guardará cambios para no perder campos nuevos, pero NO pude guardar una copia aparte (sin espacio). Actualiza la app.`, 'error');
+if (learningStatus.bad) queueToast('Las metas guardadas no tenían un formato válido y se ignoraron. Si tenías metas, restaura una copia automática en Ajustes.', 'error'); // Fase 1
+if (learningStatus.newer) queueToast(`Tus metas se crearon con una versión más nueva de Learny (metas v${learningStatus.newerV}): aquí solo se pueden ver y se conservan intactas. Actualiza la app.`, 'error');
+if (learningStatus.omitted > 0) queueToast(`${plural(learningStatus.omitted, 'elemento de tus metas se omitió', 'elementos de tus metas se omitieron')} al cargar por pasar los límites. Hay una copia automática en Ajustes por si la necesitas.`, 'error');
 if (droppedCards) queueToast(`${plural(droppedCards, 'registro ilegible se omitió', 'registros ilegibles se omitieron')} al cargar tus tarjetas.`, 'error');
 if (migratedFrom) { if (migrationBackup) queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}. Guardé una copia previa: Ajustes → Restaurar copia automática.`);
   else queueToast(`Learny actualizó tus datos de la v${migratedFrom} a la v${SCHEMA}, pero NO pudo guardar una copia previa (sin espacio). Descarga una copia ahora en Ajustes.`, 'error'); }

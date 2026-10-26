@@ -542,8 +542,9 @@
 <datalist id="subject-list"></datalist>
 <dialog id="app-modal" class="modal" aria-label="Ventana de Learny">
   <form id="modal-form" class="modal-content">
-    <button class="modal-close" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button>
     <div id="modal-body"></div>
+    <div class="sr-only modal-live" aria-live="polite" aria-atomic="true"></div><div class="sr-only modal-alert" role="alert" aria-atomic="true"></div>
+    <button class="modal-close" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button><!-- R9: después del contenido en el DOM (el lector lee primero el diálogo); sigue arriba a la derecha porque es absoluto -->
   </form>
 </dialog>
 <dialog id="confirm-modal" class="modal confirm" aria-labelledby="confirm-title" aria-describedby="confirm-message">
@@ -554,12 +555,14 @@
       <button id="confirm-cancel" class="outline-button" value="cancel">Cancelar</button>
       <button id="confirm-ok" class="primary-button" value="ok">Confirmar</button>
     </div>
+    <div class="sr-only modal-live" aria-live="polite" aria-atomic="true"></div><div class="sr-only modal-alert" role="alert" aria-atomic="true"></div>
   </form>
 </dialog>
 <button id="mini-timer" class="mini-timer" type="button" hidden aria-label="Volver al temporizador"></button>
 <div id="sr-live" class="sr-only" aria-live="polite"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <!-- Partes de la app (antes script.js). El orden importa: comparten ámbito global. -->
+<script src="js/01c-metas-datos.js" defer></script>
 <script src="js/01-base.js" defer></script>
 <script src="js/01b-perfil-textos.js" defer></script>
 <script src="js/02-datos.js" defer></script>
@@ -575,6 +578,7 @@
 <script src="js/12-copias-e-importacion.js" defer></script>
 <script src="js/13-ajustes.js" defer></script>
 <script src="js/14-eventos.js" defer></script>
+<script src="js/14b-autodidacta.js" defer></script>
 <script src="js/15-inicio.js" defer></script>
 <script src="js/16-lumi-eevee.js" defer></script>
 <script src="js/16-lumi-walle.js" defer></script>

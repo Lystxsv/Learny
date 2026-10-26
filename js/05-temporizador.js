@@ -8,6 +8,8 @@
    Pomodoro
    ========================================================= */
 const timer = { mode: 'focus', running: false, endAt: 0, remaining: 0, total: 0, intention: '', label: '', id: null, started: false, runId: '', distractions: [] };
+/* R3: renderTimer corre cada 500 ms y en cada renderAll(). Solo se toca el DOM si el texto cambió (un nodo reescrito con el mismo texto puede volver a leerse en un lector de pantalla). */
+const setTxt = (el, v) => { if (el.__v !== v) { el.__v = v; el.textContent = v; } };
 const phaseSeconds = (mode) => (mode === 'focus' ? state.settings.focus : state.settings.rest) * 60;
 
 function resetTimer(mode = 'focus', persist = true) {
@@ -57,9 +59,8 @@ function emitTimerState() {
 function renderTimer() {
   const focusMode = timer.mode === 'focus', fresh = timer.remaining >= timer.total;
   const clock = $('#timer-clock');
-  clock.textContent = time(timer.remaining);
-  $('#timer-clock').parentElement.setAttribute('aria-live', timer.running ? 'off' : 'polite');
-  $('#pomodoro-profile').textContent = `${state.settings.focus}/${state.settings.rest} · ${focusMode ? 'Foco' : 'Descanso'}`;
+  setTxt(clock, time(timer.remaining)); // R3: el contenedor role="timer" se queda en aria-live="off" (index.html); los cambios de estado se anuncian por #sr-live
+  setTxt($('#pomodoro-profile'), `${state.settings.focus}/${state.settings.rest} · ${focusMode ? 'Foco' : 'Descanso'}`);
   /* El botón solo se reescribe cuando cambia su estado (renderTimer corre cada 500 ms): así el icono no parpadea ni se vuelve a traducir. */
   const pb = $('#pomodoro-button'), pbKey = timer.running ? 'pause' : focusMode ? (fresh ? 'start' : 'resume') : (fresh ? 'break' : 'resume-break');
   if (pb.dataset.state !== pbKey) {
@@ -67,14 +68,14 @@ function renderTimer() {
     pb.innerHTML = { pause: `${icon('pause')} Pausar`, start: `${icon('play_arrow')} Iniciar enfoque`, resume: `${icon('play_arrow')} Continuar`, break: `${icon('coffee')} Iniciar descanso`, 'resume-break': `${icon('play_arrow')} Continuar descanso` }[pbKey];
   }
   $('#pomodoro-skip').hidden = focusMode;
-  $('#timer-note').textContent = focusMode
+  setTxt($('#timer-note'), focusMode
     ? (timer.intention ? `Intención: ${timer.intention}${timer.label ? ` · ${timer.label}` : ''}` : '¿Qué resultado concreto quieres lograr?')
-    : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.';
+    : 'Descanso: toma agua, respira lento, estira y mira a lo lejos.');
   document.title = (DEMO ? 'Demostración · ' : '') + (timer.running ? `${time(timer.remaining)} · Learny` : 'Learny · Estudia con intención');
   applySessionMode(); renderDistractions();
   const goal = num(state.settings.dailyGoal, 1, 12, 2);
   const done = cached('doneToday', () => state.sessions.filter((s) => s.date === today() && !s.abandon).length);
-  $('#goal-progress').textContent = `Meta: ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de ${state.settings.focus} minutos · hoy ${done}/${goal}. Racha: ${calcStreak().streak} días.`;
+  setTxt($('#goal-progress'), `Meta: ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de ${state.settings.focus} minutos · hoy ${done}/${goal}. Racha: ${calcStreak().streak} días.`);
   $('#notify-hint').hidden = !(state.settings.notify && typeof Notification !== 'undefined' && Notification.permission === 'denied');
   const mini = $('#mini-timer');
   if (mini) {

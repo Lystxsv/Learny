@@ -148,6 +148,11 @@ let lastAi = null, lastFail = null;
 const closeButton = '<button class="primary-button" type="button" data-close-modal>Cerrar</button>';
 const aiActions = '<div class="actions"><button class="outline-button" type="button" data-ai-follow="direct">Explícamelo directamente</button><button class="outline-button" type="button" data-ai-follow="simple">Explicar más simple</button><button class="outline-button" type="button" data-ai-follow="exercise">Dame un ejercicio</button><button class="outline-button" type="button" data-ai-follow="cards">Crear tarjetas</button><button class="text-button" type="button" data-ai-follow="note">Guardar en notas</button></div>';
 
+/* R11: al llegar la respuesta se reemplaza todo el contenido del diálogo y el botón «Cancelar» (con el foco) desaparece: el foco pasa al título del resultado y se quita la región viva del cuerpo (si no, se leería dos veces). */
+function settleResult() {
+  const body = $('#modal-body'); body.removeAttribute('aria-live');
+  const h = body.querySelector('h2'); if (h) { h.id = 'modal-title'; h.tabIndex = -1; h.focus({ preventScroll: true }); }
+}
 async function gemini(prompt, title, fallback, onDone) {
   const showLocal = (note = '') => {
     const text = fallback?.() || localGuide(title);
@@ -166,6 +171,7 @@ async function gemini(prompt, title, fallback, onDone) {
     const text = await askGemini(prompt);
     lastAi = { prompt, title, text };
     if (mine()) $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`;
+    if (mine()) settleResult();
     try { onDone?.(text); } catch (e) { console.error(e); }
     return { text, fromAi: true };
   } catch (error) {
@@ -174,6 +180,7 @@ async function gemini(prompt, title, fallback, onDone) {
     const text = fallback?.() || localGuide(title);
     lastFail = { prompt, title, fallback, onDone };
     if (mine()) $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Tu pregunta se conserva. Puedes reintentar o usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}<div class="actions"><button class="primary-button" type="button" data-ai-retry>Reintentar</button><button class="outline-button" type="button" data-close-modal>Cerrar</button></div>`;
+    if (mine()) settleResult();
     toast(error.message, 'error');
     return { text, fromAi: false, failed: true };
   }

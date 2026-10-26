@@ -10,13 +10,13 @@ const norm = (v) => String(v || '').trim().toLowerCase();
 const errorCards = () => cached('errcards', () => state.cards.filter((c) => !c.archived && !c.corrupt && lastOf(c.history || [])?.rating === 'again'));
 const upcoming = () => state.deadlines.filter((d) => daysUntil(d.date) >= 0).sort((a, b) => a.date.localeCompare(b.date));
 const whenLabel = (date) => { const n = daysUntil(date); return n === 0 ? 'hoy' : n === 1 ? 'mañana' : n < 7 ? `el ${new Date(`${date}T12:00:00`).toLocaleDateString('es', { weekday: 'long' })}` : `el ${shortDate(date)}`; };
-const isNewUser = () => !state.cards.length && !state.deadlines.length && !state.sessions.length && !state.reviews.length && !state.notes.length && !state.feynman.length;
+const isNewUser = () => !state.cards.length && !state.deadlines.length && !state.sessions.length && !state.reviews.length && !state.notes.length && !state.feynman.length && !learningCount();
 /* Última actividad de estudio (sesiones no abandonadas y repasos, fechas reales y locales) y días desde entonces: la usan el saludo y Lumi (WELCOME). */
 const daysSinceActivity = () => { const act = [...state.sessions.filter((x) => !x.abandon).map((x) => x.date), ...state.reviews.map((x) => x.date)].filter((d) => isDay(d)).sort().pop(); return act ? -daysUntil(act) : 0; };
 const reveal = (target) => { const el = typeof target === 'string' ? $(target) : target; for (let d = el?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true; return el; };
 
 /* Devuelve las acciones posibles ordenadas por prioridad; cada una trae su motivo calculado con datos reales. */
-function actionCandidates() {
+function actionCandidatesBase() {
   const out = [], due = dueCards(), overdue = overdueCards().length, upc = upcoming(), fresh = isNewUser();
   const done = state.sessions.filter((s) => s.date === today() && !s.abandon).length, goal = num(state.settings.dailyGoal, 1, 12, 2);
   const weak = weakSubject(), hasCards = state.cards.some((c) => !c.archived);
@@ -67,7 +67,7 @@ const ACTIONS = {
   newpomo() { newUserPomo = true; applySessionMode(); $('#intention-input').focus(); },
   quick5() { showPage('practice'); $('#quick-five')?.click(); },
   subject(b) { if (b?.dataset.subject) startSubjectQuiz(b.dataset.subject); },
-  mode(b) { const m = b?.dataset.mode; homeMode = homeMode === m ? 'any' : m; renderTodayQueue(); },
+  mode(b) { const m = b?.dataset.mode; homeMode = homeMode === m ? 'any' : m; renderTodayQueue(); announce(homeMode === 'any' ? 'Filtro quitado.' : `Filtro aplicado: ${MODE_NAME[homeMode]}.`); }, // R2: el botón se recrea, así que el cambio se anuncia aparte
   stuck() { stuckHelp(); }
 };
 
@@ -181,6 +181,7 @@ function stuckHelp() {
   };
 }
 
+const cssAttr = (v) => (window.CSS && CSS.escape ? CSS.escape(String(v)) : String(v).replace(/["\\]/g, '\\$&')); // valor seguro dentro de un selector de atributo
 let lastQueueHtml = '';
 function renderTodayQueue() {
   renderGreeting(); applySessionMode();
@@ -208,7 +209,7 @@ function renderTodayQueue() {
       ${dateLink}${fresh ? '' : '<p class="hint">≈ Los tiempos son estimaciones.</p>'}
       <details class="more-inline" id="today-more-options"><summary>Más opciones</summary><div class="actions">${more}</div></details>`;
   if (html === lastQueueHtml) return; // sin cambios: no se redibuja (así no se pierde el foco ni se cierra «Más opciones»)
-  const box = $('#today-queue'), ae = document.activeElement, focusSel = ae && box.contains(ae) && ae.dataset.action ? `[data-action="${ae.dataset.action}"]` : '';
+  const box = $('#today-queue'), ae = document.activeElement, focusSel = ae && box.contains(ae) && ae.dataset.action ? `[data-action="${ae.dataset.action}"]${ae.dataset.mode ? `[data-mode="${cssAttr(ae.dataset.mode)}"]` : ''}${ae.dataset.subject ? `[data-subject="${cssAttr(ae.dataset.subject)}"]` : ''}` : ''; // R2: antes solo data-action, y los botones del selector de tiempo comparten «mode»: el foco volvía siempre al primero
   const open = $('#today-more-options')?.open;
   box.innerHTML = html; lastQueueHtml = html;
   if (open) $('#today-more-options').open = true;

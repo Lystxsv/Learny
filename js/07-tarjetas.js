@@ -52,10 +52,11 @@ function rateHints() {
   });
 }
 
-const cardCtl = () => { const ae = document.activeElement; return !!ae && (ae.id === 'reveal-card' || ae.id === 'exam-exit' || $('#rating-row').contains(ae)); };
+const cardCtl = () => { const ae = document.activeElement; return !!ae && (ae.id === 'reveal-card' || ae.id === 'exam-exit' || ae.id === 'flashcard' || $('#rating-row').contains(ae)); };
 function settleCardFocus(had) { // si el botón que tenía el foco se oculta, el foco pasa al siguiente control útil
   if (!had) return;
   const ae = document.activeElement;
+  if (ae && ae.id === 'flashcard' && !$('#reveal-card').hidden) { $('#reveal-card').focus({ preventScroll: true }); return; } // R1: la tarjeta volvió a la pregunta (tras calificar): el foco vuelve al botón de revelar
   if (ae && ae !== document.body && shown(ae)) return;
   (!$('#rating-row').hidden ? $('#rating-row button') : !$('#reveal-card').hidden ? $('#reveal-card') : $('#flashcard')).focus({ preventScroll: true });
 }
@@ -86,12 +87,16 @@ function renderCardBody() {
     $('#flashcard').innerHTML = '<div><b>Esta tarjeta no se pudo cargar.</b><br><span>Le falta la pregunta o la respuesta. Edítala para repararla, pospónla o elimínala.</span></div>';
     $('#reveal-card').hidden = true; return;
   }
-  if (wasRevealed && prev && prev.id === activeCard.id) { revealCard(); return; } // un redibujado (p. ej. fin de Pomodoro) no oculta la respuesta
+  if (wasRevealed && prev && prev.id === activeCard.id) { revealCard(true); return; } // un redibujado (p. ej. fin de Pomodoro) no oculta la respuesta
   $('#flashcard').innerHTML = `<div><small>${esc(activeCard.subject)}</small><br>${esc(activeCard.question)}</div>`;
 }
 
-function revealCard() {
-  if (exam) { exam.revealed = true; renderExam(); document.dispatchEvent(new Event('learny:reveal')); return; }
+/* R1: al revelar, el foco pasa a la propia tarjeta (#flashcard, tabindex -1) para que el lector de pantalla lea la respuesta; antes pasaba al primer botón de calificar y la respuesta no se anunciaba.
+   Se hace DESPUÉS de learny:reveal (extras.js añade «Tu respuesta» a la tarjeta) y solo cuando revela la persona: un redibujado (redraw === true) no mueve el foco. */
+const focusAnswer = () => $('#flashcard').focus({ preventScroll: true });
+function revealCard(redraw) {
+  const user = redraw !== true; // el onclick del botón pasa el evento: solo `true` exacto significa «redibujado»
+  if (exam) { exam.revealed = true; renderExam(); document.dispatchEvent(new Event('learny:reveal')); if (user) focusAnswer(); return; }
   if (!activeCard || revealed || activeCard.corrupt) return;
   const had = cardCtl();
   revealed = true;
@@ -99,6 +104,7 @@ function revealCard() {
   $('#reveal-card').hidden = true; $('#rating-row').hidden = false; rateHints();
   settleCardFocus(had);
   document.dispatchEvent(new Event('learny:reveal'));
+  if (user) focusAnswer();
 }
 
 function rateCard(rating) {
