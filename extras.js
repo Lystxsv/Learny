@@ -215,10 +215,10 @@
   $('#recovery-plan').onclick = () => {
     const s = clean($('#recovery-subject').value, 60), m = clean($('#recovery-miss').value, 600);
     if (!s || !m) return toast('Indica la materia y qué falló.', 'error');
-    const d = { id: uid(), title: `Recuperación: ${s}`, subject: s, date: addDays(today(), 7), difficulty: 4, dailyMinutes: 40 };
+    const d = { id: uid(), title: `${L.ptxt('recoveryName')}: ${s}`, subject: s, date: addDays(today(), 7), difficulty: 4, dailyMinutes: 40 };
     state.deadlines.push(d); L.rebuildTasks(d, false);
-    state.tasks.filter((t) => t.deadlineId === d.id).forEach((t) => { t.title = `Fallos (${m.slice(0, 70)}): ${t.title}`; });
-    save(); L.renderAll(); $('#recovery-miss').value = ''; toast('Plan de recuperación creado para 7 días.');
+    state.tasks.filter((t) => t.deadlineId === d.id).forEach((t) => { const w = L.ptxt('missMany'); t.title = `${w[0].toUpperCase()}${w.slice(1)} (${m.slice(0, 70)}): ${t.title}`; });
+    save(); L.renderAll(); $('#recovery-miss').value = ''; toast(L.ptxt('recoveryToast'));
   };
 
 

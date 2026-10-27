@@ -53,7 +53,7 @@ function welcomeFlow() {
   };
   function onClick(e) {
     const b = e.target.closest('[data-profile],[data-w]'); if (!b) return;
-    if (b.dataset.profile) { state.settings.profile = b.dataset.profile; save(); step = 1; render(); }
+    if (b.dataset.profile) { state.settings.profile = b.dataset.profile; save(); applyProfileTexts(); step = 1; render(); }
     else if (b.dataset.w === 'later') end(false);
     else if (b.dataset.w === 'skip') end(false);
     else if (b.dataset.w === 'back') { read(); step = 0; render(); }

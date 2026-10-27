@@ -166,7 +166,7 @@ function stuckHelp() {
   if (live.length) list.push(opt('short', 'Una sesión breve de 5 minutos', 'Un repaso corto; puedes salir del examen cuando quieras.'));
   list.push(opt('feynman', 'Explicar una idea con tus palabras', 'Método Feynman: solo una idea, sin nota.'));
   if (!live.length) { list.push(opt('create', 'Crear una tarjeta pequeña', 'Una pregunta y una respuesta; tarda un minuto.')); list.push(opt('deck', 'Probar un mazo de ejemplo', 'Tarjetas ya hechas para ver cómo funciona el repaso.')); }
-  modal(`<h2>Hoy me cuesta arrancar</h2>
+  modal(`<h2>${esc(ptxt('stuck'))}</h2>
       <p>Es normal. No hace falta hacer mucho: elige una cosa pequeña, o ninguna.</p>
       <div class="stuck-list">${list.join('')}</div>
       <p class="modal-tip">Cerrar esta ventana no cambia nada: tu plan y tus datos siguen igual.</p>
@@ -194,7 +194,7 @@ function renderTodayQueue() {
   const picker = fresh ? '' : `<div class="mode-picker" role="group" aria-label="¿Cuánto tiempo tienes?">${Object.entries(MODE_NAME).map(([m, l]) => `<button class="seg-btn" type="button" data-action="mode" data-mode="${m}" aria-pressed="${mode === m}">${esc(l)}</button>`).join('')}</div>`;
   const subjHtml = subs.length ? `<p class="eyebrow">Elige un tema</p><h2 class="next-title">¿Qué materia quieres trabajar?</h2><div class="subject-chips">${subs.map((s) => `<button class="topic-chip" type="button" data-action="subject" data-subject="${esc(s.name)}">${esc(s.name)} <small>· ${plural(s.due, 'para hoy', 'para hoy')}</small></button>`).join('')}</div><p class="why">Empieza un mini quiz de 8 tarjetas de la materia, con tus errores primero.</p>` : '';
   const dateBtn = !fresh && next && a?.id !== 'plan' ? `<button class="text-button" type="button" data-action="plan">Próxima fecha: ${esc(next.title)} · ${esc(whenLabel(next.date))}</button>` : '';
-  const dateLink = `<p class="quick-links">${dateBtn}<button class="text-button" type="button" data-action="stuck">Hoy me cuesta arrancar</button></p>`;
+  const dateLink = `<p class="quick-links">${dateBtn}<button class="text-button" type="button" data-action="stuck">${esc(ptxt('stuck'))}</button></p>`;
   const altHtml = (c) => `<li class="alt"><div class="alt-text"><b>${esc(c.title)}</b> <span class="tag">≈ ${c.minutes} min</span><p class="why">${esc(c.why)}</p></div><button class="outline-button" type="button" data-action="${esc(c.id)}" aria-label="${esc(`${c.cta}: ${c.title}`)}">${esc(c.cta)}</button></li>`;
   const more = fresh
     ? '<button class="outline-button" type="button" data-action="newpomo">Probar un Pomodoro sin tarjetas</button>'

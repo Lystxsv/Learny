@@ -263,6 +263,22 @@
     'Las abejas se comunican entre sí con una especie de baile.': 'Bees communicate with each other through a kind of dance.', 'Hacer pausas cortas ayuda a mantener la atención durante más tiempo.': 'Taking short breaks helps you keep your attention for longer.',
     'Dormir bien antes de un examen suele ayudar más que estudiar toda la noche.': 'Sleeping well before an exam usually helps more than studying all night.', 'El agua cubre aproximadamente el 71 % de la superficie de la Tierra.': 'Water covers about 71% of the Earth\'s surface.'
   });
+  /* ---- Pro · Bloque 2: quiz y simulacro (21-quiz.js) ---- */
+  Object.assign(EX, {
+    'Quiz y examen simulado': 'Quiz and mock exam', 'Ponte a prueba con preguntas hechas desde tus tarjetas: opción múltiple, verdadero/falso y respuesta corta.': 'Test yourself with questions made from your cards: multiple choice, true/false and short answer.',
+    'Preguntas': 'Questions', 'Tipo de pregunta': 'Question type', 'Mezcla': 'Mix', 'Opción múltiple': 'Multiple choice', 'Verdadero o falso': 'True or false', 'Respuesta corta': 'Short answer', 'Simulacro cronometrado': 'Timed mock exam',
+    'Necesitas al menos 4 tarjetas para armar un quiz.': 'You need at least 4 cards to build a quiz.',
+    'Las preguntas salen de tus tarjetas. La respuesta corta se corrige por coincidencia de palabras y puedes cambiar el resultado. Un quiz no cambia tu calendario de repaso.': 'Questions come from your cards. Short answers are graded by word matching and you can change the result. A quiz does not change your review schedule.',
+    'Últimos resultados': 'Latest results', 'Todas las materias': 'All subjects', 'Resultado del simulacro': 'Mock exam result', 'Resultado del quiz': 'Quiz result',
+    'Simulacro: verás las respuestas al final.': 'Mock exam: you will see the answers at the end.', 'No lo sé': "I don't know", 'Terminar ahora': 'Finish now', 'Entregar ya': 'Submit now',
+    'Verdadero o falso: ¿esta respuesta es la correcta para la pregunta?': 'True or false: is this answer the correct one for the question?', 'Respuesta propuesta': 'Proposed answer', 'Respuesta propuesta:': 'Proposed answer:',
+    'Escribe tu respuesta': 'Write your answer', 'Tiempo restante': 'Time left', 'Correcto.': 'Correct.', 'Incorrecto.': 'Incorrect.', 'Sin respuesta': 'No answer', 'Respuesta correcta:': 'Correct answer:', 'Era verdadero.': 'It was true.', 'Era falso.': 'It was false.',
+    'Corregida por ti': 'Graded by you', 'Contarla como incorrecta': 'Count it as incorrect', 'Contarla como correcta': 'Count it as correct', 'Repetir quiz': 'Repeat quiz',
+    'Es práctica, no una medida de dominio: son preguntas generadas desde tus tarjetas. No cambió tu calendario de repaso.': 'This is practice, not a measure of mastery: the questions are generated from your cards. It did not change your review schedule.',
+    'Queda 1 minuto.': '1 minute left.', 'Quedan 10 segundos.': '10 seconds left.', 'Se acabó el tiempo. Se entregó el simulacro.': 'Time is up. The mock exam was submitted.',
+    'Termina o sal del examen de tarjetas antes de empezar un quiz.': 'Finish or leave the card exam before starting a quiz.', 'Cierra la ventana abierta antes de empezar un quiz.': 'Close the open window before starting a quiz.',
+    'No hay suficientes tarjetas para este tipo de pregunta. Prueba con «Mezcla» o crea más tarjetas.': 'There are not enough cards for this question type. Try “Mix” or create more cards.'
+  });
   /* Perfiles · Etapa 2: las frases que cambian según settings.profile viven en js/01b-perfil-textos.js (una sola tabla [español, inglés] por variante); aquí solo se vuelcan al diccionario.
      Las de PROFILE_NO_EX (palabras sueltas o que se guardan en los datos) no entran al diccionario global: se traducen donde una regla lo pide (NOUN con cifra y las dos frases de «más fallos»). */
   const PT = typeof PROFILE_TEXT !== 'undefined' ? PROFILE_TEXT : {};
@@ -272,6 +288,7 @@
     /* R6: bienvenida (paso «Personalizar»). Van en ONLY (solo texto completo) porque son palabras sueltas: dentro de otra frase no deben traducirse. */
     'Omitir': 'Skip', 'Atrás': 'Back', 'Tiempo de hoy': "Today's time", 'Algo corto': 'Something short', 'Un Pomodoro': 'One Pomodoro', 'Sesión larga': 'Long session' });
 
+  Object.assign(ONLY, { 'Siguiente': 'Next', 'Responder': 'Answer', 'Entregar': 'Submit', 'Verdadero': 'True', 'Falso': 'False', 'Correcta': 'Correct', 'Incorrecta': 'Incorrect', 'Quiz': 'Quiz' }); // Pro · Bloque 2: palabras sueltas (solo texto completo)
   const pl = (n, a, b) => (Number(n) === 1 ? a : b);
   const MON = { ene: 'Jan', feb: 'Feb', mar: 'Mar', abr: 'Apr', may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Aug', sep: 'Sep', sept: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dec' };
   const MON_RE = 'ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic';
@@ -289,6 +306,11 @@
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp('^Pregunta (\\d+) de (\\d+)$', 'u'), (m, a, b) => `Question ${a} of ${b}`], // Pro · Bloque 2
+    [new RegExp('^(\\d+) de (\\d+) aciertos \\((\\d+) %\\)$', 'u'), (m, a, b, p) => `${a} of ${b} correct (${p} %)`],
+    [new RegExp('^Revisar respuestas \\((\\d+)\\)$', 'u'), (m, n) => `Review answers (${n})`],
+    [new RegExp('^Repasar las falladas \\((\\d+)\\)$', 'u'), (m, n) => `Review the failed ones (${n})`],
+    [new RegExp('^Coincidencia de palabras: (\\d+) %$', 'u'), (m, n) => `Word match: ${n} %`],
     [new RegExp('^Exportadas (\\d+) tarjetas? a (.+)\\.$', 'u'), (m, n, d) => `Exported ${n} ${pl(n, 'card', 'cards')} to ${d}.`], // Pro · Bloque 1
     [new RegExp('^metas \\(ahora: (\\d+)\\)$', 'u'), (m, n) => `goals (now: ${n})`], // Fase 1: vista previa de importar
     /* Etapa 4 · modo autodidacta (ETAPA4) */

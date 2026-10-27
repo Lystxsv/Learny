@@ -961,3 +961,11 @@ Bloques previstos: **1** base Pro + exportar/imprimir (hecho) · **2** quizzes y
 - **No probado:** navegador real, lector de pantalla con el temporizador del simulacro, inglés a ojo, móvil, PWA v86 → v87.
 - **Límites:** la respuesta corta es coincidencia de palabras, no comprensión; con menos de 4 tarjetas utilizables no hay quiz; las respuestas largas (> 200 caracteres) solo salen como respuesta corta.
 - **Siguiente:** Bloque 3 · flashcards con IA desde PDF y fotos (necesita Gemini con archivos).
+
+---
+## Correcciones tras la revisión (`learny-v87` → `learny-v88`)
+- `index.html` no cargaba `js/21-quiz.js`: añadido tras `20-pro.js`.
+- `js/18-idioma.js`: traducciones del quiz (`EX`, `ONLY`, `RULES`).
+- Textos por perfil: `applyProfileTexts` se llama desde `applyAppearance` y al elegir perfil; `ptxt` en `window.Learny`, en el botón/ventana «Hoy me cuesta arrancar» (06-hoy) y en el plan de recuperación (extras.js: título, prefijo de tareas y aviso). Los demás textos de `08-analisis.js` no cambian por perfil (decisión de la Etapa 2).
+- README y `sw.js` (`learny-v88`) al día. `tests/perfil-textos.spec.js` añadido.
+- Pendiente: `fase0-modelo-metas.md` no estaba entre los archivos; `run-node.js` de la raíz es copia de `tests/run-node.js` (borrar a mano). Pruebas Playwright NO ejecutadas aquí.

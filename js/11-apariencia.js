@@ -50,6 +50,7 @@ function applyAppearance(s = state.settings) {
   });
   try { window.LumiCompanion?.sync(s); } catch (e) { console.error('Learny · Lumi', e); }
   try { window.LearnyI18n?.sync(s); } catch (e) { console.error('Learny · idioma', e); } // idioma de la interfaz (también en la vista previa de Ajustes) // la mascota sigue la preferencia (también en la vista previa de Ajustes)
+  try { applyProfileTexts(s); } catch (e) { console.error('Learny · textos por perfil', e); } // Etapa 2: textos según el perfil (después del idioma)
 }
 try { // el tema Automático sigue al sistema
   const mq = window.matchMedia('(prefers-color-scheme: dark)'), onScheme = () => { if (liveSettings?.theme === 'auto') applyAppearance(liveSettings); };

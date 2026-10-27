@@ -6,12 +6,12 @@ un compañero de estudio opcional con ocho apariencias (abeja pixelada, Eevee, W
 La interfaz está en inglés por defecto y se puede cambiar a español. Todo se guarda en el navegador de cada persona;
 no hay cuentas ni servidor.
 
-Versión actual del service worker: `learny-v86` · esquema de datos: `version: 4`.
+Versión actual del service worker: `learny-v88` · esquema de datos: `version: 4`.
 
 ## Archivos
 | Archivo | Para qué sirve |
 |---|---|
-| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (29 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
+| `index.html`, `style.css`, `motion.css`, `extras.js` y la carpeta `js/` (31 archivos) | La app completa (no necesita instalación ni compilación). `js/` reemplaza al antiguo `script.js`; ver «Estructura del código». |
 | `package.json`, `playwright.config.js`, `tests/` | Pruebas automáticas (solo para quien desarrolla; la app no las necesita). Ver «Pruebas». |
 | `sw.js`, `manifest.json` | Modo sin conexión e instalación como app (PWA). |
 | `icon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png` | Iconos de la app (ya subidos al repositorio). Son opcionales para `sw.js`, pero `manifest.json` los referencia. |
@@ -38,18 +38,21 @@ El antiguo `script.js` está dividido en archivos dentro de `js/`, en el mismo o
 | `js/11-apariencia.js` | Apariencia: temas (incluido Cromo), acentos con contraste y preferencias; avisa a Lumi y al idioma con `sync`. |
 | `js/12-copias-e-importacion.js` | Copias e importación: exportar, validar e importar copias, mazos y CSV/Anki. |
 | `js/13-ajustes.js` | Ajustes: estilos rápidos, ambientes, ventana de Ajustes (casilla de Lumi, selector de apariencia e idioma), recordatorios y contexto del tutor. |
-| `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny` (46 claves). |
+| `js/14-eventos.js` | Eventos: `renderAll`, manejadores, service worker y la API `window.Learny` (47 claves). |
 | `js/14b-autodidacta.js` | Modo autodidacta (v84): con `settings.profile === 'self'`, ritmo semanal en lugar de fecha de examen (Hoy, Planificar y Reforzar). Con otros perfiles no cambia nada. Va entre 14 y 15. |
 | `js/15-inicio.js` | Inicio: bienvenida, portada, banner de la demo y arranque. |
 | `js/16-lumi-eevee.js`, `16-lumi-walle.js`, `16-lumi-daniel.js`, `16-lumi-yor.js`, `16-lumi-gato.js`, `16-lumi-cc.js`, `16-lumi-alisa.js` | Solo el arte (SVG en pixel art) de cada apariencia de Lumi. Se cargan **antes** de `16-lumi.js`. |
 | `js/16-lumi.js` | Lumi: la abeja pixelada (`lumiBeeSvg()`), el controlador `LumiCompanion`, estados, mensajes y reglas de frecuencia. |
 | `motion.css` y `js/17-movimiento.js` | Movimiento de la interfaz (no de Lumi): tokens de duración, botones, modales, avisos; flashcards, listas (escalonado y borrado continuo), fundido cruzado entre páginas, velo al calificar y barras con la Web Animations API. Con movimiento reducido solo quedan fundidos de opacidad de 80–100 ms (sin desplazamientos ni escalas). |
 | `js/18-idioma.js` | Idioma: inglés por defecto y español opcional (`settings.lang`). Diccionario es→en + reglas, traducción del DOM con `MutationObserver`, guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido. Botón EN/ES en la barra superior y selector en Ajustes → Apariencia. |
+| `js/19-copia-archivo.js` | Copia automática a un archivo (Chrome/Edge de escritorio). |
+| `js/20-pro.js` | Base Pro (`isPro()`, `requirePro()`) y exportar/imprimir (Anki, CSV, papel). Sin cobro: «Activar Pro» solo marca el navegador. |
+| `js/21-quiz.js` | Quiz y simulacro (Pro) desde tus tarjetas, sin IA. Va DESPUÉS de `20-pro.js`. |
 
 Reglas para tocarlos:
 - **El orden de los `<script>` en `index.html` importa.** Lo que se ejecuta al cargar solo puede usar nombres definidos en archivos anteriores; lo demás (manejadores, funciones) se resuelve cuando se usa.
 - **Comparten el ámbito global** (no hay `import`/`export`): un nombre de nivel superior (`const`, `let` o `function`) no se puede repetir entre archivos, y las variables compartidas (`exam`, `currentPage`, `rev`…) son las mismas en todos.
-- `extras.js` no ve esos nombres: solo usa la API `window.Learny` (46 claves), que se crea en `js/14-eventos.js`.
+- `extras.js` no ve esos nombres: solo usa la API `window.Learny` (47 claves), que se crea en `js/14-eventos.js`.
 - Si añades, quitas o renombras un archivo de `js/`, cámbialo también en la lista `CORE` de `sw.js` y sube `CACHE`. La lista debe ser igual que los `<script>` de `index.html`.
 - `sw.js` trata `extras.js` y `manifest.json` como **imprescindibles**: si falta uno en el servidor, `cache.addAll` falla y el service worker no se instala. Sube siempre todos los archivos.
 - Si ya tenías `script.js` publicado, bórralo del repositorio: ya no se usa. Lo mismo con cualquier copia con sufijo «(2)» de un archivo de `js/`: ninguna se referencia.
@@ -85,7 +88,7 @@ Abre `index.html` con doble clic. (El modo sin conexión/PWA solo se activa serv
 1. Crea un repositorio público en GitHub y sube **todos los archivos** (incluidos `js/`, `extras.js`, `manifest.json`, los iconos y `icon.svg`).
 2. Settings → Pages → "Deploy from a branch" → rama `main`, carpeta `/ (root)` → Save.
 3. En 1 o 2 minutos estará en `https://TU-USUARIO.github.io/NOMBRE-DEL-REPO/`.
-4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v86`).
+4. Al publicar una versión nueva, sube también `sw.js` (cambia `CACHE` si modificas archivos; ahora es `learny-v88`).
 
 ## IA (opcional)
 Hay dos formas; sin ninguna, Learny funciona con su guía local.
@@ -134,6 +137,15 @@ npx playwright test
 - Los comentarios de cabecera de `js/01` a `js/15` dicen «parte N de 15» y los de `js/16` «de 16»; es solo texto.
 
 ## Novedades
+
+### v88 · Correcciones
+`21-quiz.js` se carga en `index.html`; el quiz tiene traducción al inglés; los textos por perfil (v78) se aplican de verdad (`applyProfileTexts` desde `applyAppearance` y al elegir perfil, `ptxt` en Hoy y en el plan de recuperación, `ptxt` en `window.Learny`); README al día. Nueva prueba `tests/perfil-textos.spec.js`.
+
+### v87 · Pro, Bloque 2: quiz y simulacro
+Opción múltiple, verdadero/falso y respuesta corta generados desde tus tarjetas; simulacro de 60 s por pregunta. No cambia SM-2 ni `state`. Pruebas en `tests/quiz.spec.js`.
+
+### v86 · Pro, Bloque 1
+Base Pro (`learny.pro`) y exportar/imprimir tarjetas.
 
 ### v85 · Metas, Fase 1: capa de datos
 Nuevo contenedor `state.learning` (metas con etapas, recursos, dudas y bitácora) con saneado completo, topes y versión propia; no sube `SCHEMA` (sigue en 4). Se guarda, exporta, importa y sincroniza entre pestañas con el resto de los datos; la vista previa de importar muestra «metas (ahora: N)»; «Borrar todo» las borra; quien solo tiene una meta no es «usuario nuevo». Un contenedor de una versión más nueva se conserva intacto y de solo lectura. **Todavía no hay interfaz de metas** (Fase 2). Pruebas: `node tests/run-node.js` (rápidas, sin navegador) y `tests/metas-datos.spec.js`. Ver `CONTINUIDAD.md`.
