@@ -969,3 +969,12 @@ Bloques previstos: **1** base Pro + exportar/imprimir (hecho) · **2** quizzes y
 - Textos por perfil: `applyProfileTexts` se llama desde `applyAppearance` y al elegir perfil; `ptxt` en `window.Learny`, en el botón/ventana «Hoy me cuesta arrancar» (06-hoy) y en el plan de recuperación (extras.js: título, prefijo de tareas y aviso). Los demás textos de `08-analisis.js` no cambian por perfil (decisión de la Etapa 2).
 - README y `sw.js` (`learny-v88`) al día. `tests/perfil-textos.spec.js` añadido.
 - Pendiente: `fase0-modelo-metas.md` no estaba entre los archivos; `run-node.js` de la raíz es copia de `tests/run-node.js` (borrar a mano). Pruebas Playwright NO ejecutadas aquí.
+
+---
+## Metas · Fase 2 «Interfaz de metas» (`learny-v88` → `learny-v89`)
+- **Archivo nuevo:** `js/22-metas.js` (después de `21-quiz.js`; el 20 lo ocupa `20-pro.js`). Tarjeta «Mis metas» en Planificar, **solo con `settings.profile === 'self'`**; con otros perfiles queda oculta y nada cambia.
+- **Qué hace:** crear/editar/eliminar metas (solo «¿qué quieres aprender?» es obligatoria; plantilla manual de 4 etapas opcional); ruta de etapas que se añaden, suben, bajan, dividen y saltan; «Esto ya lo sé» (comprobarlo o continuar); autoevaluación por 5 niveles; evidencias de texto o enlace http(s) (máx. 5 por etapa); comprobación por actividad que exige al menos una evidencia. Autoevaluación (`level`) y comprobación (`checked`/`checkedHow:'practice'`) son campos distintos; no hay botón único de «dominado». Quitar la última evidencia quita la comprobación.
+- **Seguridad:** todo cambio pasa por `learningReadOnly()` y `learningRoom()`; eliminar una meta guarda `snapshot('delete-goal')` y se puede deshacer (también etapas y comprobación). El texto del usuario va en `translate="no"`. SM-2, Pomodoro, Feynman, estadísticas y `SCHEMA` no cambian.
+- **Archivos tocados:** `js/22-metas.js` (nuevo), `index.html` (`<script>`), `sw.js` (`CORE` + `learny-v89`), `js/18-idioma.js` (bloque `EX`/`NOUN` de metas y una regla), `tests/metas-ui.spec.js` (8 pruebas).
+- **Pruebas:** `node --check` de los cuatro `.js`. Las pruebas Playwright están escritas pero NO ejecutadas (sin red). Ejecutar: `npx playwright test tests/metas-ui.spec.js`.
+- **No hecho (siguientes fases):** Pomodoro/Feynman/tarjetas ligados a una etapa y biblioteca de recursos (Fase 3), bitácora, dudas y Hoy basado en metas (Fase 4), submetas en la interfaz (el dato las admite), vínculo meta↔materias (`subjects`), textos en inglés a ojo, móvil, lector de pantalla.

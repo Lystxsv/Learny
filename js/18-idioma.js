@@ -300,12 +300,54 @@
     'ideas de tema': 'topic ideas', 'idea de tema': 'topic idea', materias: 'subjects', materia: 'subject', válidas: 'valid', válida: 'valid', 'posibles duplicadas': 'possible duplicates', 'posible duplicada': 'possible duplicate', nuevas: 'new', nueva: 'new', Pomodoros: 'Pomodoros', Pomodoro: 'Pomodoro' };
   ['missOne', 'missMany'].forEach((k) => Object.values(PT[k] || {}).forEach(([es, en]) => { if (!(es in NOUN)) NOUN[es] = en; })); // «4 tropiezos» → «4 slip-ups» (lo que ya estaba, como «errores», no se pisa)
   const MISS_MANY = Object.values(PT.missMany || { exam: ['fallos', 'mistakes'] }), MISS_EN = Object.fromEntries(MISS_MANY), MISS_RE = MISS_MANY.map((x) => x[0]).join('|');
+  /* ---- Metas · interfaz (22-metas.js) ---- */
+  Object.assign(EX, {
+    'Mis metas': 'My goals', 'Lo que quieres aprender, dividido en etapas que tú puedes cambiar. Sin fecha obligatoria.': 'What you want to learn, split into stages you can change. No mandatory date.', '+ Nueva meta': '+ New goal',
+    'Aún no tienes metas. Crea una con lo que quieras aprender.': 'You have no goals yet. Create one with whatever you want to learn.', 'Aún sin etapas': 'No stages yet', 'con una actividad': 'by an activity', 'Fecha objetivo:': 'Target date:',
+    'Estas metas se crearon con una versión más nueva de Learny: aquí solo se pueden ver.': 'These goals were created with a newer version of Learny: here they can only be viewed.',
+    'Activa': 'Active', 'En pausa': 'Paused', 'Terminada': 'Done', 'Archivada': 'Archived', 'Por hacer': 'To do', 'En curso': 'In progress', 'Hecha': 'Done', 'Saltada': 'Skipped', 'Ya la sabía': 'Already known',
+    'Sin marcar': 'Not marked', 'Lo estoy explorando': "I'm exploring it", 'Con ayuda': 'With help', 'Sin ayuda': 'Without help', 'Lo apliqué en otra situación': 'I applied it in another situation', 'Necesito repasarlo': 'I need to review it',
+    'Entender lo básico': 'Understand the basics', 'Practicar con ayuda': 'Practice with help', 'Practicar sin ayuda': 'Practice without help', 'Aplicarlo en algo real': 'Apply it to something real',
+    'Editar meta': 'Edit goal', 'Nueva meta': 'New goal', '¿Qué quieres aprender?': 'What do you want to learn?', '¿Para qué? (opcional)': 'What for? (optional)', '¿Dónde estás ahora? (opcional)': 'Where are you now? (optional)', '¿Qué resultado esperas? (opcional)': 'What result do you expect? (optional)',
+    'Minutos por semana (opcional)': 'Minutes per week (optional)', 'Fecha objetivo (opcional)': 'Target date (optional)', 'Estado': 'Status', 'Ruta inicial': 'Starting path', 'Empezar sin etapas': 'Start with no stages', 'Plantilla de 4 etapas (editable)': '4-stage template (editable)',
+    'Solo la primera pregunta es obligatoria. No hay cuenta regresiva: la fecha es solo una referencia.': 'Only the first question is required. There is no countdown: the date is only a reference.',
+    'Escribe qué quieres aprender.': 'Write what you want to learn.', 'Meta actualizada.': 'Goal updated.', 'Meta creada.': 'Goal created.', 'Esa meta ya no existe (otra pestaña la cambió).': 'That goal no longer exists (another tab changed it).',
+    'Meta ·': 'Goal ·', 'Resultado esperado:': 'Expected result:', 'Para qué:': 'What for:', 'Dónde estoy:': 'Where I am:', 'Tiempo por semana:': 'Time per week:',
+    'Aún no hay etapas. Añade la primera o usa la plantilla.': 'There are no stages yet. Add the first one or use the template.', 'Marcar una etapa como hecha no es lo mismo que comprobarla.': 'Marking a stage as done is not the same as checking it.',
+    'Abrir etapa': 'Open stage', 'Subir': 'Move up', 'Bajar': 'Move down', 'Dividir': 'Split', 'Saltar': 'Skip', 'Reactivar': 'Reactivate', 'Comprobada': 'Checked',
+    '+ Añadir etapa': '+ Add stage', 'Eliminar meta': 'Delete goal', 'Eliminar etapa': 'Delete stage', 'Editar etapa': 'Edit stage', 'Nueva etapa': 'New stage', 'Título': 'Title', 'Qué aprender': 'What to learn', 'Qué aprender:': 'What to learn:', 'Práctica': 'Practice', 'Práctica:': 'Practice:',
+    'Cómo lo comprobarás': 'How you will check it', 'Cómo lo comprobarás:': 'How you will check it:', 'El título de la etapa no puede quedar en blanco.': 'The stage title cannot be blank.', 'Etapa añadida.': 'Stage added.',
+    'Mi autoevaluación:': 'My self-assessment:', 'Mi autoevaluación': 'My self-assessment', 'Comprobación por una actividad:': 'Check by an activity:', 'Todavía no.': 'Not yet.', 'Evidencias': 'Evidence',
+    'Aún no hay evidencias. Una nota o un enlace a lo que hiciste.': 'There is no evidence yet. A note or a link to what you did.', '+ Añadir evidencia': '+ Add evidence', 'Añadir evidencia': 'Add evidence', 'Quitar comprobación': 'Remove check',
+    'Comprobar con mi evidencia': 'Check with my evidence', 'Cambiar mi autoevaluación': 'Change my self-assessment', 'Marcar como pendiente': 'Mark as pending', 'Marcar como hecha': 'Mark as done', 'Esto ya lo sé': 'I already know this',
+    'Volver a la meta': 'Back to the goal', 'Cómo sientes esta etapa ahora. Es tu opinión: no cuenta como comprobación.': 'How you feel about this stage now. It is your opinion: it does not count as a check.',
+    'Una nota sobre lo que hiciste o un enlace a ello.': 'A note about what you did or a link to it.', 'Para comprobar lo que ya sabes, muestra algo que lo demuestre.': 'To check what you already know, show something that proves it.',
+    'Qué hiciste o qué lo demuestra': 'What you did or what proves it', 'Enlace (opcional, https://…)': 'Link (optional, https://…)', 'El enlace debe empezar por http:// o https://.': 'The link must start with http:// or https://.', 'Escribe una nota o pega un enlace.': 'Write a note or paste a link.',
+    'Evidencia guardada.': 'Evidence saved.', 'Evidencia guardada y etapa comprobada.': 'Evidence saved and stage checked.', 'Evidencia quitada.': 'Evidence removed.', 'Etapa comprobada con tu evidencia.': 'Stage checked with your evidence.',
+    'Puedes comprobarlo con una actividad o seguir adelante sin comprobarlo. En los dos casos la etapa queda como «Ya la sabía».': 'You can check it with an activity or move on without checking. Either way the stage is marked “Already known”.',
+    'Comprobarlo ahora': 'Check it now', 'Añade una evidencia que lo demuestre.': 'Add evidence that proves it.', 'Continuar sin comprobar': 'Continue without checking', 'Queda marcada como ya sabida, sin comprobación.': 'It is marked as already known, without a check.',
+    'Etapa movida hacia arriba.': 'Stage moved up.', 'Etapa movida hacia abajo.': 'Stage moved down.', 'Etapa dividida: la segunda parte está debajo. Edítala para darle su contenido.': 'Stage split: the second part is below. Edit it to give it content.',
+    'Etapa eliminada.': 'Stage deleted.', 'Meta eliminada.': 'Goal deleted.', 'Eliminar': 'Delete', 'Guardar cambios': 'Save changes'
+  });
+  Object.assign(EX, { // Metas · Fase 3a: tarjetas ligadas a una etapa
+    'Tarjetas de esta etapa': 'Cards for this stage', 'Esta etapa aún no tiene una materia de tarjetas. Vincula una para repasar y comprobar con ellas.': 'This stage has no card subject yet. Link one to review and check with its cards.',
+    'Vincular materia': 'Link subject', 'Cambiar materia': 'Change subject', 'Quitar vínculo': 'Remove link', 'Vincular': 'Link', 'Materia vinculada:': 'Linked subject:', 'Vincular materia de tarjetas': 'Link a card subject',
+    'Las tarjetas de esa materia serán las de esta etapa. Una materia puede servir a varias etapas.': 'The cards of that subject will be this stage\'s cards. One subject can serve several stages.',
+    'Si la materia aún no existe, se usará al crear la primera tarjeta desde la etapa.': 'If the subject does not exist yet, it will be used when you create the first card from the stage.',
+    'Repasar las de hoy': "Review today's cards", 'Practicar errores primero': 'Practice mistakes first', '+ Crear tarjeta': '+ Create card', 'Comprobar con tarjetas': 'Check with cards',
+    'Para comprobar con tarjetas: al menos 3, todas repasadas y ninguna marcada «No lo sabía» la última vez.': 'To check with cards: at least 3, all reviewed and none marked “Didn\'t know it” last time.',
+    'Escribe la materia de tus tarjetas.': 'Write the subject of your cards.', 'Materia vinculada.': 'Subject linked.', 'Vínculo quitado.': 'Link removed.', 'No hay tarjetas de esa materia por repasar hoy.': 'There are no cards of that subject to review today.',
+    'Aún no se cumplen las condiciones para comprobar con tarjetas.': 'The conditions to check with cards are not met yet.', 'Etapa comprobada con tus tarjetas.': 'Stage checked with your cards.', 'con tus tarjetas': 'with your cards'
+  });
+  Object.assign(NOUN, { etapas: 'stages', etapa: 'stage', hechas: 'done', hecha: 'done', comprobadas: 'checked', comprobada: 'checked' });
   const NOUN_KEYS = Object.keys(NOUN).sort((a, b) => b.length - a.length).join('|');
   const W = '(?![\\p{L}\\p{N}])';
   const T = (x) => tr(x, false);
 
   /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
   const RULES = [
+    [new RegExp('^Tarjetas: (\\d+) · (\\d+) por repasar hoy · (\\d+) de (\\d+) repasadas · (\\d+) recordadas$', 'u'), (m, t, d, sn, t2, k) => `Cards: ${t} · ${d} due today · ${sn} of ${t2} reviewed · ${k} remembered`], // Metas · Fase 3a
+    [new RegExp('^Una meta admite hasta (\\d+) materias\\.$', 'u'), (m, n) => `A goal allows up to ${n} subjects.`],
     [new RegExp('^Pregunta (\\d+) de (\\d+)$', 'u'), (m, a, b) => `Question ${a} of ${b}`], // Pro · Bloque 2
     [new RegExp('^(\\d+) de (\\d+) aciertos \\((\\d+) %\\)$', 'u'), (m, a, b, p) => `${a} of ${b} correct (${p} %)`],
     [new RegExp('^Revisar respuestas \\((\\d+)\\)$', 'u'), (m, n) => `Review answers (${n})`],
@@ -313,6 +355,7 @@
     [new RegExp('^Coincidencia de palabras: (\\d+) %$', 'u'), (m, n) => `Word match: ${n} %`],
     [new RegExp('^Exportadas (\\d+) tarjetas? a (.+)\\.$', 'u'), (m, n, d) => `Exported ${n} ${pl(n, 'card', 'cards')} to ${d}.`], // Pro · Bloque 1
     [new RegExp('^metas \\(ahora: (\\d+)\\)$', 'u'), (m, n) => `goals (now: ${n})`], // Fase 1: vista previa de importar
+    [new RegExp('^Cada etapa admite hasta (\\d+) evidencias\\. Quita alguna para añadir otra\\.$', 'u'), (m, n) => `Each stage allows up to ${n} pieces of evidence. Remove one to add another.`],
     /* Etapa 4 · modo autodidacta (ETAPA4) */
     [new RegExp('Hace (\\d+) días? que no tocas «([^»]*)»\\. Un mini quiz de 8 tarjetas te ayuda a retomarlo\\.', 'u'), (m, n, s) => `You haven't touched “${s}” in ${n} ${pl(n, 'day', 'days')}. An 8-card mini quiz helps you pick it back up.`],
     [new RegExp('Esta semana \\(últimos 7 días\\) llevas (\\d+) de (\\d+) sesi(?:ón|ones)\\. Una sesión de hoy te acerca a tu ritmo\\.', 'u'), (m, a, b) => `This week (last 7 days) you have done ${a} of ${b} ${pl(b, 'session', 'sessions')}. One session today brings you closer to your rhythm.`],
