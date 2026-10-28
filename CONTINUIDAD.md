@@ -978,3 +978,28 @@ Bloques previstos: **1** base Pro + exportar/imprimir (hecho) · **2** quizzes y
 - **Archivos tocados:** `js/22-metas.js` (nuevo), `index.html` (`<script>`), `sw.js` (`CORE` + `learny-v89`), `js/18-idioma.js` (bloque `EX`/`NOUN` de metas y una regla), `tests/metas-ui.spec.js` (8 pruebas).
 - **Pruebas:** `node --check` de los cuatro `.js`. Las pruebas Playwright están escritas pero NO ejecutadas (sin red). Ejecutar: `npx playwright test tests/metas-ui.spec.js`.
 - **No hecho (siguientes fases):** Pomodoro/Feynman/tarjetas ligados a una etapa y biblioteca de recursos (Fase 3), bitácora, dudas y Hoy basado en metas (Fase 4), submetas en la interfaz (el dato las admite), vínculo meta↔materias (`subjects`), textos en inglés a ojo, móvil, lector de pantalla.
+
+---
+## Metas · Fase 3a «Tarjetas ligadas a una etapa» (`learny-v89` → `learny-v90`)
+Nota reconstruida a partir del código (`js/22-metas.js`, `js/18-idioma.js`, `tests/metas-ui.spec.js`) y del README; la versión original no se escribió en su momento.
+- **Qué hace:** cada etapa puede vincularse a UNA materia de tarjetas (`stage.subject`; `sanitizeLearning` ya lo validaba contra `goal.subjects`, así que no cambia el esquema). La etapa muestra «Tarjetas: N · X por repasar hoy · Y de N repasadas · Z recordadas» (`cardInfo()`; «recordada» = su último repaso no fue «No lo sabía»; es autoevaluación, no prueba de dominio).
+- **Acciones desde la etapa:** vincular o cambiar la materia (`cardLinkForm`; si la materia no está en `goal.subjects` se añade, con tope `LEARN_LIMITS.subjects`), quitar el vínculo (no borra tarjetas), «Repasar las de hoy» (examen solo con las vencidas de esa materia), «Practicar errores primero» (`startSubjectQuiz`) y «+ Crear tarjeta» (`cardForm(null, { subject })`).
+- **Comprobar con tarjetas** (`cardCheck`, `checkedHow: 'cards'`): exige ≥ 3 tarjetas, todas repasadas y ninguna con «No lo sabía» en el último repaso. Deja una evidencia automática de texto y se puede deshacer. Respeta el tope de 5 evidencias por etapa.
+- **No cambia:** SM-2, Pomodoro, Feynman, estadísticas, `SCHEMA`. Textos en inglés en `18-idioma.js` (bloque «Fase 3a» y una regla para la línea de cifras).
+- **Pruebas:** `tests/metas-ui.spec.js` (5 pruebas nuevas de 3a, Playwright, `?demo`); escritas, no ejecutadas en este entorno.
+- **Siguiente (sin hacer):** Pomodoro y Feynman ligados a una etapa, biblioteca de recursos, bitácora, dudas, Hoy basado en metas, submetas en la interfaz.
+
+---
+## v91 · sin notas
+`sw.js` estaba en `learny-v91` sin entrada en este archivo ni en el README. Contenido del cambio desconocido: si lo recuerdas, añádelo aquí.
+
+---
+## Limpieza y documentación (`learny-v91` → `learny-v92`)
+Sin cambios de lógica ni de datos.
+- **`window.Learny` = 48 claves** (el README y notas anteriores decían 47). Recontado contra el objeto de `js/14-eventos.js`: `ptxt`, `applyProfileTexts`, `stripBullet`, `noProto`, `isDemo`, `reveal`, `pullFromStorage`, `validDeadlineDate`, `MAX_PLAN_DAYS`, `isExam`, `endExam`, `state`, `save`, `toast`, `modal`, `closeModal`, `today`, `addDays`, `uid`, `clean`, `esc`, `fmt`, `plural`, `daysUntil`, `dueCards`, `startExam`, `cardForm`, `normalizeCard`, `suggestCards`, `reviewCards`, `askGemini`, `gemini`, `rebuildTasks`, `addDeadline`, `renderAll`, `hasAi`, `cancelAi`, `showPage`, `subjectStats`, `overdueCards`, `weakSubject`, `startSubjectQuiz`, `calcStreak`, `announce`, `debounce`, `currentPage`, `timerStarted`, `timerRunning`. Las menciones «47 claves» de notas anteriores (p. ej. Perfiles · Etapa 2) son históricas.
+- **`js/18-idioma.js`:** 7 claves duplicadas en `EX` eliminadas (`Solo 5 minutos`, `Fecha`, `Dificultad (1-5)`, `Todas las materias`, `Práctica`, `Eliminar`, `Guardar cambios`); todas tenían el mismo valor que su otra aparición, así que el diccionario resultante es idéntico (955 entradas antes y después, comprobado con un script).
+- **`firebase/firestore.rules`** (nuevo): `firebase.json` lo referenciaba y no existía. Contenido: denegar todo, porque Learny aún no usa Firestore. Sustituirlo en el Bloque 3. (`.gitignore` no lo mencionaba: no hay nada que cambiar allí.)
+- **`style.css`:** comentarios de Alisa Kujou al día (115×179 celdas en rejilla 200×200; cajas 128 / 90 / 64 px; miniatura 64 px; viewBox 200 y sprite desplazado (42, 10)). Sin cambio de reglas.
+- **`sw.js`:** `CACHE = 'learny-v92'` (cambian `18-idioma.js` y `style.css`).
+- **Observación sobre Firebase (sin tocar):** `js/firebase/firebase-auth.js` y `js/23-cuenta.js` están en el proyecto pero no se cargan (ni `index.html` ni `CORE` de `sw.js`), y `index.html` no tiene `#account-button`; `23-cuenta.js` termina en la primera línea (`if (!btn) return`). Integrarlos exige: `<button id="account-button">` en la barra superior, `<script type="module" src="js/firebase/firebase-auth.js">` tras `firebase-init.js`, `<script src="js/23-cuenta.js" defer>` tras `22-metas.js`, y ambas rutas en `CORE`. Además `firebase-config.js` conserva los `REEMPLAZAR`.
+- **Pruebas:** `node --check js/18-idioma.js`; comparación de los diccionarios antes y después. No se ejecutó Playwright.

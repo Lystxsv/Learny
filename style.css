@@ -1195,9 +1195,9 @@ body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-en
 body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-tail { animation: idle-wag 4s ease-in-out infinite; }
 
 /* ===== Lumi · avatar Alisa Kujou (bloque 1) =====
-   Octava apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'alisa'). El arte es el SVG de js/16-lumi-alisa.js (pixel art, 62×96 celdas en una rejilla 100×100), trazado de la imagen aportada.
+   Octava apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'alisa'). El arte es el SVG de js/16-lumi-alisa.js (pixel art de alta resolución, 115×179 celdas en una rejilla 200×200), trazado de la imagen aportada.
    Conserva sus colores en todos los temas (tiene contorno oscuro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--al-rim).
-   Caja propia: 100 px (1 px por celda) en escritorio, 70 px en móvil y 50 px en sesión de enfoque; miniatura del selector 70 px. */
+   Caja propia: 128 px (≈0,64 px por celda) en escritorio, 90 px en móvil y 64 px en sesión de enfoque; miniatura del selector 64 px (regla v79). */
 .lumi .lumi-svg--alisa { display: none; }
 .lumi[data-avatar="alisa"] .lumi-svg--alisa { display: block; }
 .lumi[data-avatar="alisa"] .lumi-svg--bee { display: none; }
@@ -1213,7 +1213,7 @@ body.session-study .lumi[data-avatar="alisa"] { --lumi-size: 64px; }
 body .lumi.lumi-thumb[data-avatar="alisa"] { --lumi-size: 70px; }
 
 /* ===== Lumi · poses de Alisa Kujou (bloque 2) =====
-   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 100; el sprite está desplazado (19, 2)); un ciclo de ≤ 400 ms que el controlador limpia con temporizador.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 200; el sprite está desplazado (42, 10)); un ciclo de ≤ 400 ms que el controlador limpia con temporizador.
    Movimiento reducido (sistema y Learny), pestaña oculta y desactivación de Lumi los cubren las reglas generales sobre .lumi *; FOCUS anula toda animación. Sin cambios de textos, frecuencias ni condiciones.
    Los ojos van dentro de la cabeza; el lazo, el ahoge y el brazo son grupos aparte (movimientos pequeños, ≤ 12°). */
 .alisa-head { transform-origin: 107px 110px; }    /* cuello */

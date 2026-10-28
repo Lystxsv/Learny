@@ -96,7 +96,7 @@
     'O elige otra opción': 'Or pick another option', 'O prueba otra cosa': 'Or try something else', 'Próxima fecha:': 'Next date:',
     '≈ Los tiempos son estimaciones.': '≈ Times are estimates.', 'Más opciones': 'More options', 'Empezar sesión inteligente': 'Start smart session', 'Explicar un tema (Feynman)': 'Explain a topic (Feynman)',
     'Probar un Pomodoro sin tarjetas': 'Try a Pomodoro without cards', 'Elige un mazo de ejemplo y púlsalo para añadir sus tarjetas.': 'Pick a sample deck and click it to add its cards.',
-    'Solo 5 minutos': 'Just 5 minutes', 'Ahora mismo no hay nada que encaje con': 'Right now nothing fits', 'Te muestro lo recomendado:': "Here's what's recommended:",
+    'Ahora mismo no hay nada que encaje con': 'Right now nothing fits', 'Te muestro lo recomendado:': "Here's what's recommended:",
     'Es normal. No hace falta hacer mucho: elige una cosa pequeña, o ninguna.': "That's normal. You don't need to do much: pick one small thing, or none.",
     'Cerrar esta ventana no cambia nada: tu plan y tus datos siguen igual.': 'Closing this window changes nothing: your plan and data stay the same.', 'Ahora no': 'Not now',
     'Hacer una pregunta': 'Ask a question', 'Escribe una duda, por pequeña que sea. Funciona también sin internet (guía local).': 'Write a doubt, however small. It also works offline (local guide).',
@@ -180,7 +180,7 @@
     'Replanificar desde hoy': 'Replan from today', 'Replanificar': 'Replan', 'Pasada': 'Past', 'dificultad': 'difficulty', 'min/día': 'min/day', 'fases:': 'phases:', 'comprensión': 'understanding', 'práctica': 'practice', 'repaso': 'review', 'simulacro': 'mock exam', 'revisión': 'final review',
     'Comprensión': 'Understanding', 'Práctica': 'Practice', 'Repaso': 'Review', 'Simulacro': 'Mock exam', 'Revisión final': 'Final review', 'Ya no cabe a este ritmo': 'No longer fits at this pace',
     'Todavía no hubo cambios. Si te atrasas, aquí verás qué tareas movió o descartó Learny y por qué.': 'No changes yet. If you fall behind, here you will see which tasks Learny moved or discarded and why.',
-    'Entendido': 'Got it', 'Crear plan': 'Create plan', 'Examen': 'Exam', 'Fecha': 'Date', 'Dificultad (1-5)': 'Difficulty (1-5)',
+    'Entendido': 'Got it', 'Crear plan': 'Create plan', 'Examen': 'Exam',
     /* ---- Reforzar ---- */
     'Análisis personal': 'Personal analysis', 'Qué reforzar mañana.': 'What to reinforce tomorrow.', 'Periodo': 'Period', 'Últimos 7 días': 'Last 7 days', 'Últimos 30 días': 'Last 30 days', 'Todo el historial': 'Entire history',
     'Recuerdo declarado': 'Self-reported recall', 'Repasos sin fallar': 'Reviews without failing', 'Exámenes (Fácil)': 'Exams (Easy)', 'Exámenes': 'Exams', 'Constancia': 'Consistency', 'Tiempo registrado': 'Time logged',
@@ -269,7 +269,7 @@
     'Preguntas': 'Questions', 'Tipo de pregunta': 'Question type', 'Mezcla': 'Mix', 'Opción múltiple': 'Multiple choice', 'Verdadero o falso': 'True or false', 'Respuesta corta': 'Short answer', 'Simulacro cronometrado': 'Timed mock exam',
     'Necesitas al menos 4 tarjetas para armar un quiz.': 'You need at least 4 cards to build a quiz.',
     'Las preguntas salen de tus tarjetas. La respuesta corta se corrige por coincidencia de palabras y puedes cambiar el resultado. Un quiz no cambia tu calendario de repaso.': 'Questions come from your cards. Short answers are graded by word matching and you can change the result. A quiz does not change your review schedule.',
-    'Últimos resultados': 'Latest results', 'Todas las materias': 'All subjects', 'Resultado del simulacro': 'Mock exam result', 'Resultado del quiz': 'Quiz result',
+    'Últimos resultados': 'Latest results', 'Resultado del simulacro': 'Mock exam result', 'Resultado del quiz': 'Quiz result',
     'Simulacro: verás las respuestas al final.': 'Mock exam: you will see the answers at the end.', 'No lo sé': "I don't know", 'Terminar ahora': 'Finish now', 'Entregar ya': 'Submit now',
     'Verdadero o falso: ¿esta respuesta es la correcta para la pregunta?': 'True or false: is this answer the correct one for the question?', 'Respuesta propuesta': 'Proposed answer', 'Respuesta propuesta:': 'Proposed answer:',
     'Escribe tu respuesta': 'Write your answer', 'Tiempo restante': 'Time left', 'Correcto.': 'Correct.', 'Incorrecto.': 'Incorrect.', 'Sin respuesta': 'No answer', 'Respuesta correcta:': 'Correct answer:', 'Era verdadero.': 'It was true.', 'Era falso.': 'It was false.',
@@ -315,7 +315,7 @@
     'Meta ·': 'Goal ·', 'Resultado esperado:': 'Expected result:', 'Para qué:': 'What for:', 'Dónde estoy:': 'Where I am:', 'Tiempo por semana:': 'Time per week:',
     'Aún no hay etapas. Añade la primera o usa la plantilla.': 'There are no stages yet. Add the first one or use the template.', 'Marcar una etapa como hecha no es lo mismo que comprobarla.': 'Marking a stage as done is not the same as checking it.',
     'Abrir etapa': 'Open stage', 'Subir': 'Move up', 'Bajar': 'Move down', 'Dividir': 'Split', 'Saltar': 'Skip', 'Reactivar': 'Reactivate', 'Comprobada': 'Checked',
-    '+ Añadir etapa': '+ Add stage', 'Eliminar meta': 'Delete goal', 'Eliminar etapa': 'Delete stage', 'Editar etapa': 'Edit stage', 'Nueva etapa': 'New stage', 'Título': 'Title', 'Qué aprender': 'What to learn', 'Qué aprender:': 'What to learn:', 'Práctica': 'Practice', 'Práctica:': 'Practice:',
+    '+ Añadir etapa': '+ Add stage', 'Eliminar meta': 'Delete goal', 'Eliminar etapa': 'Delete stage', 'Editar etapa': 'Edit stage', 'Nueva etapa': 'New stage', 'Título': 'Title', 'Qué aprender': 'What to learn', 'Qué aprender:': 'What to learn:', 'Práctica:': 'Practice:',
     'Cómo lo comprobarás': 'How you will check it', 'Cómo lo comprobarás:': 'How you will check it:', 'El título de la etapa no puede quedar en blanco.': 'The stage title cannot be blank.', 'Etapa añadida.': 'Stage added.',
     'Mi autoevaluación:': 'My self-assessment:', 'Mi autoevaluación': 'My self-assessment', 'Comprobación por una actividad:': 'Check by an activity:', 'Todavía no.': 'Not yet.', 'Evidencias': 'Evidence',
     'Aún no hay evidencias. Una nota o un enlace a lo que hiciste.': 'There is no evidence yet. A note or a link to what you did.', '+ Añadir evidencia': '+ Add evidence', 'Añadir evidencia': 'Add evidence', 'Quitar comprobación': 'Remove check',
@@ -327,7 +327,7 @@
     'Puedes comprobarlo con una actividad o seguir adelante sin comprobarlo. En los dos casos la etapa queda como «Ya la sabía».': 'You can check it with an activity or move on without checking. Either way the stage is marked “Already known”.',
     'Comprobarlo ahora': 'Check it now', 'Añade una evidencia que lo demuestre.': 'Add evidence that proves it.', 'Continuar sin comprobar': 'Continue without checking', 'Queda marcada como ya sabida, sin comprobación.': 'It is marked as already known, without a check.',
     'Etapa movida hacia arriba.': 'Stage moved up.', 'Etapa movida hacia abajo.': 'Stage moved down.', 'Etapa dividida: la segunda parte está debajo. Edítala para darle su contenido.': 'Stage split: the second part is below. Edit it to give it content.',
-    'Etapa eliminada.': 'Stage deleted.', 'Meta eliminada.': 'Goal deleted.', 'Eliminar': 'Delete', 'Guardar cambios': 'Save changes'
+    'Etapa eliminada.': 'Stage deleted.', 'Meta eliminada.': 'Goal deleted.'
   });
   Object.assign(EX, { // Metas · Fase 3a: tarjetas ligadas a una etapa
     'Tarjetas de esta etapa': 'Cards for this stage', 'Esta etapa aún no tiene una materia de tarjetas. Vincula una para repasar y comprobar con ellas.': 'This stage has no card subject yet. Link one to review and check with its cards.',
@@ -340,6 +340,44 @@
     'Aún no se cumplen las condiciones para comprobar con tarjetas.': 'The conditions to check with cards are not met yet.', 'Etapa comprobada con tus tarjetas.': 'Stage checked with your cards.', 'con tus tarjetas': 'with your cards'
   });
   Object.assign(NOUN, { etapas: 'stages', etapa: 'stage', hechas: 'done', hecha: 'done', comprobadas: 'checked', comprobada: 'checked' });
+  Object.assign(EX, { // Firebase · Bloque 2: cuentas (23-cuenta.js y firebase-auth.js)
+    "Iniciar sesión": "Sign in",
+    "Crear una cuenta": "Create an account",
+    "Crear cuenta": "Create account",
+    "Olvidé mi contraseña": "I forgot my password",
+    "Ya tengo una cuenta": "I already have an account",
+    "Volver a iniciar sesión": "Back to sign in",
+    "Correo electrónico": "Email",
+    "Contraseña": "Password",
+    "Contraseña (mínimo 8 caracteres)": "Password (at least 8 characters)",
+    "Repite la contraseña": "Repeat the password",
+    "Recuperar contraseña": "Recover password",
+    "Enviar enlace": "Send link",
+    "Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva.": "Enter your email and we'll send you a link to choose a new password.",
+    "Tu cuenta es opcional: Learny gratis sigue funcionando sin ella.": "Your account is optional: free Learny keeps working without it.",
+    "Tu cuenta": "Your account",
+    "Cerrar sesión": "Sign out",
+    "Tus tarjetas y demás datos siguen guardados en este navegador. Aún no se sincronizan con la nube.": "Your cards and other data are still stored in this browser. They are not synced to the cloud yet.",
+    "Inicia sesión para entrar en esta sección.": "Sign in to enter this section.",
+    "Sesión iniciada.": "Signed in.",
+    "Cuenta creada. Ya iniciaste sesión.": "Account created. You are now signed in.",
+    "Sesión cerrada.": "Signed out.",
+    "Si existe una cuenta con ese correo, te enviamos un enlace para cambiar la contraseña. Revisa también el correo no deseado.": "If an account exists with that email, we sent you a link to change the password. Also check your spam folder.",
+    "Las contraseñas no coinciden.": "The passwords do not match.",
+    "Escribe tu correo electrónico.": "Enter your email.",
+    "Escribe tu contraseña.": "Enter your password.",
+    "La contraseña es demasiado débil. Usa al menos 8 caracteres.": "The password is too weak. Use at least 8 characters.",
+    "El correo no es válido. Revisa que esté bien escrito.": "The email is not valid. Check that it is spelled correctly.",
+    "Correo o contraseña incorrectos.": "Incorrect email or password.",
+    "Ya existe una cuenta con ese correo. Prueba a iniciar sesión.": "An account with that email already exists. Try signing in.",
+    "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.": "Too many attempts. Wait a few minutes and try again.",
+    "No hay conexión con el servicio. Revisa tu internet e inténtalo de nuevo.": "Could not reach the service. Check your internet and try again.",
+    "Esta cuenta está deshabilitada.": "This account is disabled.",
+    "El inicio de sesión con correo no está activado en este proyecto.": "Email sign-in is not enabled in this project.",
+    "No se pudo completar la operación. Inténtalo de nuevo.": "The operation could not be completed. Try again.",
+    "Las cuentas no están disponibles ahora mismo.": "Accounts are not available right now."
+  });
+  Object.assign(ONLY, { 'Entrar': 'Sign in', 'Cuenta': 'Account' });
   const NOUN_KEYS = Object.keys(NOUN).sort((a, b) => b.length - a.length).join('|');
   const W = '(?![\\p{L}\\p{N}])';
   const T = (x) => tr(x, false);
