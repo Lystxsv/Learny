@@ -1,15 +1,32 @@
 rules_version = '2';
-
-// Learny · reglas de Firestore.
-// Hoy Learny NO usa Firestore: los datos viven solo en el navegador y la sesión (Auth) no necesita Firestore.
-// Por eso la regla es «denegar todo»: si alguien consulta la base con la configuración pública del proyecto, no obtiene nada.
-// Cuando llegue el Bloque 3 (sincronización), sustituye este archivo por reglas por usuario, p. ej.:
-//   match /users/{uid}/{document=**} { allow read, write: if request.auth != null && request.auth.uid == uid; }
-// y valida tipos y tamaños en `write`. Despliegue: firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    /* users/{uid}: cada persona solo toca su propio documento. */
+    match /users/{uid} {
+      /* Leer: solo el dueño. */
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      /* Crear: solo el dueño y SOLO con los valores iniciales de siempre (plan gratis, Pro inactivo y sin datos de pago).
+         Así nadie puede crearse un documento ya Pro desde el navegador. */
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'createdAt', 'plan', 'proStatus', 'proSince', 'proExpiresAt', 'paymentProvider', 'customerId', 'subscriptionId'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.plan == 'free'
+        && request.resource.data.proStatus == 'inactive'
+        && request.resource.data.proSince == null
+        && request.resource.data.proExpiresAt == null
+        && request.resource.data.paymentProvider == null
+        && request.resource.data.customerId == null
+        && request.resource.data.subscriptionId == null;
+
+      /* Actualizar y borrar: por ahora nadie desde el navegador. El Bloque 4 abre la edición de datos básicos (nombre, preferencias) sin tocar los campos de Pro.
+         El servidor (Cloud Functions / Admin SDK) no pasa por estas reglas. */
+      allow update, delete: if false;
     }
+
+    /* Todo lo demás, cerrado. */
+    match /{document=**} { allow read, write: if false; }
   }
 }

@@ -40,6 +40,7 @@ if (!base.ready) {
   });
 } else {
   const A = await import(`${SDK}/firebase-auth.js`), auth = base.auth;
+  A.useDeviceLanguage(auth); // los correos de Firebase (recuperar contraseña) salen en el idioma del navegador
   let ready, resolved = false; const whenReady = new Promise((r) => { ready = r; });
   const settle = (u) => { current = u; if (!resolved) { resolved = true; ready(view(u)); } };
   A.onAuthStateChanged(auth, (u) => {

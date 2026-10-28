@@ -1280,3 +1280,7 @@ button.outline-button.w-edge { border-color: var(--ui-edge); }
 /* ===== v83 · Lector de pantalla R7–R12 ===== */
 button.stuck-opt.profile-opt[aria-pressed="true"] { border: 2px solid var(--accent); padding: calc(var(--s2) - 1px); } /* R7: al volver con «Atrás» se ve (y se oye, aria-pressed) cuál se eligió; el grosor lo distingue sin depender del color */
 .modal-content h3.eyebrow { margin: 0; } /* R9: «Accesibilidad» es un encabezado real (tecla H) con el mismo aspecto de antes */
+
+/* Cuentas (Bloque 2): botón «Entrar» / «Cuenta» de la barra superior */
+.account-button { font-weight: 700; padding-inline: var(--s2); }
+@media (max-width: 420px) { .topbar-tools .account-button { padding-inline: .4rem; font-size: 14px; } }

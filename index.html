@@ -36,7 +36,7 @@
       <div class="landing-copy">
         <p class="eyebrow">Para estudiar con calma y constancia</p>
         <h1 id="landing-title" tabindex="-1">Estudia con intención, un paso a la vez</h1>
-        <p class="lead">Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Sin cuenta ni registro: tus datos se quedan en este navegador.</p>
+        <p class="lead">Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Cuenta opcional: tus datos se quedan en este navegador.</p>
         <div class="actions landing-cta">
           <button id="landing-start" class="primary-button big" type="button" data-landing="start">Probar Learny</button>
           <button class="outline-button" type="button" data-landing="tour">Ver el recorrido</button>
@@ -75,7 +75,7 @@
     <section class="landing-section landing-trust" aria-labelledby="landing-trust-title">
       <h2 id="landing-trust-title">Tus datos, contigo</h2>
       <ul>
-        <li>No hay cuenta ni registro.</li>
+        <li>La cuenta es opcional; Learny funciona sin ella.</li>
         <li>Todo se guarda solo en este navegador; en Ajustes puedes descargar una copia.</li>
         <li>La IA es opcional: solo se usa internet si añades tu propia clave o tu proxy.</li>
       </ul>
@@ -135,6 +135,7 @@
       <div class="topbar-tools">
         <span id="save-status" class="save-status"></span>
         <button class="icon-button" data-page="guide" aria-label="Guía de uso"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span></button>
+        <button id="account-button" class="icon-button account-button" type="button" hidden>Entrar</button>
         <button id="lang-toggle" class="icon-button lang-toggle" type="button" translate="no"></button>
         <button id="font-down" class="icon-button" aria-label="Reducir tamaño de texto">A−</button>
         <button id="font-up" class="icon-button" aria-label="Aumentar tamaño de texto">A+</button>
@@ -595,6 +596,7 @@
 <script src="js/21-quiz.js" defer></script>
 <script src="js/22-metas.js" defer></script>
 <script src="extras.js" defer></script>
-<script type="module" src="js/firebase/firebase-init.js"></script>
+<script src="js/23-cuenta.js" defer></script>
+<script type="module" src="js/firebase/firebase-profile.js"></script>
 </body>
 </html>

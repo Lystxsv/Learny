@@ -60,8 +60,9 @@
     try {
       if (mode === 'reset') { await acc().resetPassword(email); toast('Si existe una cuenta con ese correo, te enviamos un enlace para cambiar la contraseña. Revisa también el correo no deseado.'); busy = false; dialog('login', { email }); return; }
       const u = mode === 'register' ? await acc().signUp(email, pw) : await acc().signIn(email, pw);
-      busy = false; closeModal(); toast(mode === 'register' ? 'Cuenta creada. Ya iniciaste sesión.' : 'Sesión iniciada.');
-      settle(u); paint();
+      busy = false; settle(u); closeModal(); // primero se avisa de que hay sesión y luego se cierra la ventana
+      toast(mode === 'register' ? 'Cuenta creada. Ya iniciaste sesión.' : 'Sesión iniciada.');
+      paint();
     } catch (e) { toast(e.message, 'error'); busy = false; if (go) { go.disabled = false; go.removeAttribute('aria-busy'); } }
   }
 

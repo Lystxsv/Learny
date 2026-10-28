@@ -1,4 +1,4 @@
-const CACHE = 'learny-v92';
+const CACHE = 'learny-v94';
 // Imprescindibles: si falta uno, la instalación falla. Los iconos son opcionales y no bloquean el modo sin conexión.
 const CORE = [
   './', './index.html', './style.css', './motion.css', './extras.js', './manifest.json', './material-symbols.woff2',
@@ -35,8 +35,11 @@ const CORE = [
   './js/20-pro.js',
   './js/21-quiz.js',
   './js/22-metas.js',
+  './js/23-cuenta.js',
   './js/firebase/firebase-config.js',
-  './js/firebase/firebase-init.js'
+  './js/firebase/firebase-init.js',
+  './js/firebase/firebase-auth.js',
+  './js/firebase/firebase-profile.js'
 ];
 const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 const NETWORK_TIMEOUT = 4000;
