@@ -99,7 +99,7 @@ test('eliminar una meta se puede deshacer', async ({ page }) => {
   await page.evaluate(() => { state.learning.goals.push({ id: 'g1', parentId: '', title: 'M', why: '', current: '', outcome: '', weeklyMin: 0, targetDate: '', subjects: [], status: 'active', created: '', stages: [] }); renderAll(); window.LearnyGoals.open('g1'); });
   await modalBtn(page, 'delgoal').click();
   await page.click('#confirm-ok');
-  expect(await page.evaluate(() => state.learning.goals.length)).toBe(0);
+  await expect.poll(() => page.evaluate(() => state.learning.goals.length)).toBe(0); // la confirmación se resuelve con el evento «close», asíncrono
   await page.click('.toast-action');
   expect(await page.evaluate(() => state.learning.goals.length)).toBe(1);
 });

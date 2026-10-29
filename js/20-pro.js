@@ -1,7 +1,7 @@
 /* Learny · parte 20 · Pro (Bloque 1: base Pro + Exportar e imprimir)
    Catálogo de funciones Pro y puerta única isPro()/requirePro(). Lo que ya era gratis (SM-2, Pomodoro, tutor socrático, plan inverso, importar, copias) NO se bloquea.
-   El plan se guarda en su propia clave (learny.pro): no es parte de `state`, no viaja en copias, no cambia SCHEMA ni sanitizeSettings. En la demo vive en memoria.
-   Todavía no hay cobro ni cuenta: «Activar Pro» solo marca este navegador (modo de pruebas). Cuando exista licencia real, solo cambia isPro().
+   Bloque 6 (Firebase): fuera de la demo, el plan es SOLO el de la cuenta (LearnyCloud.profile, leído de Firestore): isUserPro() / isPro(). El navegador no puede activar Pro; la clave local learny.pro ya no cuenta y se borra al arrancar.
+   En la demostración (?demo) se conserva el interruptor en memoria («Activar Pro en este navegador») para poder enseñar las funciones y para las pruebas. El cobro y la activación por el servidor son el Bloque 7: mientras tanto, para probar Pro se edita users/{uid} desde Firebase Console (plan 'pro', proStatus 'active').
    Bloque 1: Exportar a Anki (.txt) y CSV, e imprimir tarjetas u hoja de preguntas (con respuestas al final) desde Biblioteca.
    Bloque 2 (v87): el quiz y el simulacro (21-quiz.js) ya están disponibles (quiz: ready).
    Se carga con <script defer> después de 19-copia-archivo.js (comparte el ámbito global; no hay import/export). */
@@ -19,23 +19,46 @@ const PRO_FEATURES = Object.freeze([
   { id: 'audio', title: 'Audio-resumen', ready: false },
   { id: 'groups', title: 'Grupos de estudio', ready: false }
 ]);
-const isPro = () => store.get(PRO_KEY) === '1';
-function setPro(on) { if (on) store.set(PRO_KEY, '1'); else store.del(PRO_KEY); renderProCard(); document.dispatchEvent(new Event('learny:pro')); }
-/* Puerta única: las funciones Pro se ejecutan con requirePro(id, run). Sin Pro se muestra qué incluye y, al activarlo, se ejecuta lo que se había pedido. */
+if (!DEMO) store.del(PRO_KEY); // clave de la etapa de pruebas: ya no se usa
+const cloud = () => window.LearnyCloud || {};
+/* ¿La cuenta con sesión es Pro? Con lo ya cargado de Firestore (plan 'pro', estado 'active' y sin vencer). Sin sesión, sin perfil cargado o ante un error: nunca. */
+const isUserPro = () => { const pr = cloud().profile; return !!(pr && pr.available && pr.isProSync()); };
+/* Misma comprobación pero pidiéndola de nuevo a Firestore (para acciones que importan; la seguridad real de funciones costosas irá en el servidor, Bloque 7). */
+const isUserProVerified = async () => { const pr = cloud().profile; try { return !!(pr && pr.available && await pr.isPro()); } catch { return false; } };
+const isPro = () => (DEMO ? store.get(PRO_KEY) === '1' : isUserPro());
+function setPro(on) { if (!DEMO) return; if (on) store.set(PRO_KEY, '1'); else store.del(PRO_KEY); renderProCard(); document.dispatchEvent(new Event('learny:pro')); }
+/* Puerta única: las funciones Pro se ejecutan con requirePro(id, run). Sin Pro se muestra qué falta (iniciar sesión, plan gratis…) y, si al volver ya es Pro, se ejecuta lo que se había pedido. */
 function requirePro(id, run) { if (isPro()) return run(); proModal(id, run); }
+/* Pie de las tarjetas Pro (Biblioteca y Practicar). attr = data-pro-x o data-quiz-x. */
+const proHint = (attr) => {
+  if (isPro()) return DEMO ? `Plan Pro activo en este navegador. <button class="text-button" type="button" ${attr}="off">Volver al plan gratis</button>` : 'Plan Pro activo en tu cuenta.';
+  return `Función Pro. <button class="text-button" type="button" ${attr}="plans">Ver qué incluye Pro</button>`;
+};
 
 function proModal(featureId, run) {
   const rows = PRO_FEATURES.map((f) => `<li><b>${esc(f.title)}</b> <span class="tag">${f.ready ? 'Disponible' : 'Próximamente'}</span></li>`).join('');
+  const acct = cloud().account, pr = cloud().profile;
+  let note, action = '';
+  if (DEMO) { note = 'En la demostración, Pro se activa solo en este navegador.'; action = '<button class="primary-button" type="button" data-pro-on>Activar Pro en este navegador</button>'; }
+  else if (!acct || !acct.available) note = 'Las cuentas no están disponibles ahora mismo, así que no se puede comprobar tu plan.';
+  else if (!acct.user()) { note = 'Pro va ligado a tu cuenta: inicia sesión para comprobar tu plan.'; action = '<button class="primary-button" type="button" data-pro-login>Iniciar sesión</button>'; }
+  else { note = pr && pr.available && pr.status() === 'ready' ? 'Tu plan es Gratis y el cobro todavía no está disponible.' : 'No se pudo comprobar tu plan ahora mismo. Inténtalo de nuevo desde «Learny Pro».'; action = '<button class="primary-button" type="button" data-pro-plan>Ver mi plan</button>'; }
   modal(`<h2>Learny Pro</h2>${featureId ? '<p>Esta función es Pro.</p>' : ''}
       <p>Learny Pro reúne las herramientas para preparar y llevar tu material más lejos. Se irán sumando por bloques.</p>
       <ul class="closure-list">${rows}</ul>
-      <p class="modal-tip">Todo lo que ya usas (repaso SM-2, Pomodoro, tutor socrático, plan inverso, importar y copias) sigue siendo gratis. Todavía no hay cobro ni cuenta: Pro se activa solo en este navegador mientras se prueba.</p>
-      <div class="actions"><button class="outline-button" type="button" data-close-modal>Ahora no</button><button class="primary-button" type="button" data-pro-on>Activar Pro en este navegador</button></div>`,
+      <p class="modal-tip">Todo lo que ya usas (repaso SM-2, Pomodoro, tutor socrático, plan inverso, importar y copias) sigue siendo gratis.</p>
+      <p class="modal-tip">${note}</p>
+      <div class="actions"><button class="outline-button" type="button" data-close-modal>Ahora no</button>${action}</div>`,
     undefined, () => { $('#modal-body').onclick = null; });
-  $('#modal-body').onclick = (e) => {
-    if (!e.target.closest('[data-pro-on]')) return;
-    $('#modal-body').onclick = null; setPro(true); closeModal(); toast('Pro activado en este navegador.');
-    if (run) run();
+  $('#modal-body').onclick = async (e) => {
+    if (e.target.closest('[data-pro-on]')) { $('#modal-body').onclick = null; setPro(true); closeModal(); toast('Pro activado en este navegador.'); if (run) run(); return; }
+    if (e.target.closest('[data-pro-plan]')) { $('#modal-body').onclick = null; closeModal(); showPage('pro'); return; }
+    if (e.target.closest('[data-pro-login]')) {
+      $('#modal-body').onclick = null; closeModal();
+      const u = await window.LearnyAccount?.requireAuth({ note: 'Inicia sesión para usar las funciones Pro.' });
+      if (!u) return;
+      if (await isUserProVerified()) { if (run) run(); } else proModal(featureId, run);
+    }
   };
 }
 
@@ -88,7 +111,7 @@ function renderProCard() {
   const html = `<div class="card-head"><div><h2>Exportar e imprimir <span class="tag">Pro</span></h2><p class="lead">Lleva tus tarjetas a Anki, a una hoja de cálculo o al papel.</p></div><span class="tag">${plural(n, 'tarjeta', 'tarjetas')}</span></div>
     <label class="field">Qué exportar<select id="pro-scope"><option value="">Todas las materias</option>${subs.map((s) => `<option value="${esc(s)}"${s === proScope ? ' selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
     <div class="actions"><button class="outline-button" type="button" data-pro-x="anki"${off}>Anki (.txt)</button><button class="outline-button" type="button" data-pro-x="csv"${off}>CSV</button><button class="outline-button" type="button" data-pro-x="print-cards"${off}>Imprimir tarjetas</button><button class="outline-button" type="button" data-pro-x="print-quiz"${off}>Imprimir hoja de preguntas</button></div>
-    <p class="hint">${isPro() ? 'Plan Pro activo en este navegador. <button class="text-button" type="button" data-pro-x="off">Volver al plan gratis</button>' : 'Función Pro. <button class="text-button" type="button" data-pro-x="plans">Ver qué incluye Pro</button>'}</p>`;
+    <p class="hint">${proHint('data-pro-x')}</p>`;
   if (html !== lastProHtml) { proCard.innerHTML = html; lastProHtml = html; }
 }
 if (proCard) {
@@ -101,4 +124,5 @@ if (proCard) {
   };
 }
 document.addEventListener('learny:render', () => { try { renderProCard(); } catch (e) { console.error('Learny · Pro', e); } });
+document.addEventListener('learny:profile', () => { try { renderProCard(); document.dispatchEvent(new Event('learny:pro')); } catch (e) { console.error('Learny · Pro', e); } }); // el plan de la cuenta cambió: se repintan las tarjetas Pro
 document.addEventListener('learny:page', () => { try { renderProCard(); } catch (e) { console.error('Learny · Pro', e); } });

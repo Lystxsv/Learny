@@ -111,6 +111,8 @@
       <p class="nav-label">Organizar</p>
       <button class="nav-button" data-page="planner"><span class="material-symbols-outlined" aria-hidden="true" translate="no">calendar_month</span> Planificar</button>
       <button class="nav-button" data-page="analysis"><span class="material-symbols-outlined" aria-hidden="true" translate="no">bar_chart</span> Reforzar</button>
+      <p class="nav-label" data-for="pro" hidden>Cuenta</p>
+      <button class="nav-button" data-page="pro" hidden><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Learny Pro</button>
       <p class="nav-label">Ayuda</p>
       <button class="nav-button" data-page="guide"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span> Guía de uso</button>
     </nav>
@@ -255,6 +257,19 @@
         <div id="library-list" class="library-list"></div>
       </article>
 
+
+      <details class="card" id="share-more">
+        <summary>Compartir con alumnos o con tu profesor <small>mazos con nombre y versión, e informes de resultados</small></summary>
+        <p class="lead">Un profesor comparte un mazo como archivo; el alumno lo importa y, cuando quiera, descarga un informe con sus resultados en ese mazo para devolvérselo. Todo se hace con archivos: no hay cuentas ni servidor.</p>
+        <div class="actions">
+          <button id="lib-share" class="outline-button" type="button">Compartir mazo</button>
+          <button id="lib-import" class="outline-button" type="button">Importar mazo o informe</button><input id="lib-file" type="file" accept="application/json,.json" hidden aria-label="Archivo de mazo o informe a importar">
+          <button id="lib-report" class="outline-button" type="button">Informe para mi profesor</button>
+        </div>
+        <h3 class="alts-head">Mazos recibidos</h3>
+        <div id="lib-received"></div>
+        <p id="lib-sync" class="hint" aria-live="polite" hidden></p>
+      </details>
 
       <details class="card" id="decks-more">
         <summary>Mazos iniciales y mazos propios <small>añade tarjetas de ejemplo o crea tu mazo</small></summary>
@@ -433,6 +448,19 @@
           <li>Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.</li>
         </ul>
       </details>
+      <article class="card spaced" id="class-card" hidden>
+        <div class="card-head"><div><h2>Resultados de tus alumnos</h2><p class="lead">Informes que tus alumnos te envían desde su Learny. Solo ves las tarjetas de tu mazo: repasos y fallos, sin sus notas ni otras materias.</p></div><span id="class-count" class="tag"></span></div>
+        <div class="actions tight">
+          <button id="class-import" class="outline-button" type="button">Importar informe de alumno</button><input id="class-file" type="file" accept="application/json,.json" multiple hidden aria-label="Informes de alumnos a importar">
+          <button id="class-export" class="outline-button" type="button">Exportar resumen (CSV)</button>
+        </div>
+        <label class="field inline" id="class-deck-wrap" hidden>Mazo<select id="class-deck" translate="no"></select></label>
+        <p id="class-summary" class="lead"></p>
+        <div id="class-list"></div>
+        <h3 class="alts-head">Tarjetas que más se fallan en la clase</h3>
+        <div id="class-hard"></div>
+        <p id="class-sync" class="hint" aria-live="polite" hidden></p>
+      </article>
       <article class="card spaced" id="retention-card">
         <div class="card-head"><div><h2>Retención real frente al objetivo</h2><p class="lead">De las tarjetas que ya habías visto, cuántas recordaste al volver. Distinto de «Recuerdo declarado».</p></div><span id="retention-real-tag" class="tag"></span></div>
         <div id="retention-real"></div>
@@ -481,6 +509,13 @@
     </section>
 
     <!-- ===== GUÍA ===== -->
+    <section class="page" id="pro">
+      <div class="page-heading"><p class="eyebrow">Learny Pro</p><h1>Tu plan y lo que incluye Pro.</h1>
+        <p class="lead">Esta sección pide iniciar sesión. Learny gratis sigue funcionando sin cuenta.</p></div>
+      <article class="card" id="pro-account-card"></article>
+      <article class="card" id="pro-features-card"></article>
+    </section>
+
     <section class="page" id="guide">
       <div class="page-heading"><p class="eyebrow">Guía de uso</p><h1>Cómo sacarle partido a Learny.</h1>
         <p class="lead">Cinco minutos de lectura. Todo funciona sin cuenta y tus datos se quedan en este navegador.</p></div>
@@ -513,6 +548,8 @@
         <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
         <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i data-ptxt="recoveryTitle">Informe de examen</i> convierte tus <span data-ptxt="missMany">fallos</span> en <span data-ptxt="recoveryPlan">un plan de recuperación</span> de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
       </div>
+      <article class="card spaced"><h2>Compartir con alumnos y con tu profesor</h2>
+        <p class="lead">Un profesor elige en <i>Biblioteca → Compartir con alumnos o con tu profesor → Compartir mazo</i> las materias que quiere enviar, les pone nombre, autor, descripción y versión, y descarga un archivo (sin progreso, notas ni clave). El alumno lo abre con <i>Importar mazo o informe</i> y ve una vista previa. Cuando quiera, el alumno pulsa <i>Informe para mi profesor</i>: se descarga un archivo con, por cada tarjeta de ese mazo, cuántas veces la repasó y cuántas falló. El profesor lo importa con <i>Importar informe de alumno</i> en <i>Reforzar → Resultados de tus alumnos</i> y ve quién ha repasado, el porcentaje sin fallar y las tarjetas que más se fallan en la clase. Para actualizar un mazo, conserva el nombre y el autor y sube la versión. Todo se hace con archivos: no hay cuentas ni servidor.</p></article>
       <article class="card spaced"><h2>Apariencia y tipografía</h2>
         <p class="lead">En <i>Ajustes</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
       <article class="card spaced"><h2>Atajos de teclado</h2>
@@ -577,6 +614,7 @@
 <script src="js/10-revision-ia-y-temas.js" defer></script>
 <script src="js/11-apariencia.js" defer></script>
 <script src="js/12-copias-e-importacion.js" defer></script>
+<script src="js/12b-profesor.js" defer></script>
 <script src="js/13-ajustes.js" defer></script>
 <script src="js/14-eventos.js" defer></script>
 <script src="js/14b-autodidacta.js" defer></script>
@@ -597,6 +635,7 @@
 <script src="js/22-metas.js" defer></script>
 <script src="extras.js" defer></script>
 <script src="js/23-cuenta.js" defer></script>
-<script type="module" src="js/firebase/firebase-profile.js"></script>
+<script src="js/24-clase-nube.js" defer></script>
+<script type="module" src="js/firebase/firebase-teaching.js"></script>
 </body>
 </html>

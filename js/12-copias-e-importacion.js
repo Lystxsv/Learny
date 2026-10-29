@@ -17,17 +17,11 @@ function exportData(auto = false) {
   if (!auto) toast('Copia descargada (sin clave API).');
 }
 
-function exportDeck() {
-  if (DEMO) return toast('En la demostración no se comparten mazos.', 'error'); // Etapa 7
-  const deck = state.cards.filter((c) => !c.corrupt).map(({ subject, question, answer }) => ({ subject, question, answer }));
-  if (!deck.length && !state.decks.length) return toast('No hay tarjetas para compartir.', 'error');
-  download(`learny-mazo-${today()}.json`, JSON.stringify({ type: 'learny-deck', cards: deck, decks: state.decks }, null, 2), 'application/json');
-  toast('Mazo exportado sin progreso personal.');
-}
+function exportDeck() { shareDeckForm(); } // Etapa 6a: el mazo lleva nombre, autor, descripción y versión (js/12b-profesor.js)
 
 const MAX_DECK_CARDS = 500; // tope de tarjetas por mazo propio (el mismo que aplica hydrate)
 const BUILTIN_DECK_NAMES = ['Cálculo básico', 'Método científico', 'Programación']; // mazos iniciales de extras.js (DECKS): un mazo propio con ese nombre los taparía; mantener igual que allí
-const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'];
+const BACKUP_LISTS = ['cards', 'sessions', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog', 'received', 'reports'];
 function validateBackup(data) {
   if (data?.type === 'learny-deck') {
     if (!Array.isArray(data.cards)) return { ok: false, error: 'El mazo no contiene una lista de tarjetas.' };
@@ -83,13 +77,13 @@ function analyzeCards(records) {
   return A;
 }
 
-const previewCards = (title, total, A, { extra = [], over = 0, note = '' } = {}) => {
+const previewCards = (title, total, A, { extra = [], over = 0, note = '', allow = false } = {}) => {
   const errN = A.errors.length + over;
   return importPreview({
     title, intro: `Se leyeron <b>${total}</b> ${total === 1 ? 'registro' : 'registros'} del archivo.${note ? ` ${esc(note)}` : ''}`,
     counts: [{ n: A.fresh.length, label: A.fresh.length === 1 ? 'nueva' : 'nuevas', cls: 'ok' }, { n: A.dups.length, label: A.dups.length === 1 ? 'posible duplicada' : 'posibles duplicadas' }, { n: errN, label: errN === 1 ? 'con error' : 'con errores', cls: errN ? 'err' : '' }, ...extra],
     groups: [{ title: 'Revisar errores', lines: [...A.errors, ...(over ? [`${plural(over, 'registro', 'registros')} después del límite de 5 000 no se leerán`] : [])], cls: 'err' }, { title: 'Ver duplicadas', lines: A.dups }],
-    okLabel: `Importar ${plural(A.fresh.length, 'válida', 'válidas')}`, canImport: A.fresh.length > 0 || extra.some((x) => x.n > 0)
+    okLabel: !A.fresh.length && allow ? 'Registrar mazo' : `Importar ${plural(A.fresh.length, 'válida', 'válidas')}`, canImport: A.fresh.length > 0 || extra.some((x) => x.n > 0) || allow
   });
 };
 
@@ -104,6 +98,7 @@ function importData(file) {
   if (file.size > 15 * 1024 * 1024) return toast('El archivo es demasiado grande para ser una copia de Learny.', 'error');
   file.text().then(async (text) => {
     let data; try { data = JSON.parse(text, noProto); } catch { throw new Error('El archivo no es un JSON válido.'); }
+    if (data && data.type === 'learny-report') { importReport(data); return; } // Etapa 6a: informe de un alumno
     const check = validateBackup(data);
     if (!check.ok) throw new Error(check.error);
     if (check.deck) {
@@ -113,10 +108,12 @@ function importData(file) {
       const A = analyzeCards(records), all = check.decks || [];
       const newDecks = all.filter((d) => !state.decks.some((x) => x.name === d.name) && !BUILTIN_DECK_NAMES.includes(d.name)); // JS-011: sin nombres que ya existen
       const skipped = check.dupDecks + (all.length - newDecks.length);
-      const notes = [skipped ? `${plural(skipped, 'mazo propio se omite', 'mazos propios se omiten')} porque su nombre ya existe o está repetido en el archivo.` : '', check.cutCards ? `${plural(check.cutCards, 'tarjeta', 'tarjetas')} de mazos propios pasan del límite de ${MAX_DECK_CARDS} por mazo y no se leerán.` : ''].filter(Boolean).join(' ');
-      if (!(await previewCards('Importar mazo', records.length, A, { note: notes, extra: newDecks.length ? [{ n: newDecks.length, label: newDecks.length === 1 ? 'mazo propio nuevo' : 'mazos propios nuevos' }] : [] }))) return;
+      const meta = deckMeta(data), known = meta.id ? state.received.find((r) => r.deckId === meta.id) : null;
+      const head = meta.name ? `«${meta.name}»${meta.author ? ` · ${meta.author}` : ''} · v${meta.version}.${meta.description ? ` ${meta.description}` : ''}${known && known.version > meta.version ? ` Ya tienes una versión más nueva (v${known.version}).` : ''}` : '';
+      const notes = [head, skipped ? `${plural(skipped, 'mazo propio se omite', 'mazos propios se omiten')} porque su nombre ya existe o está repetido en el archivo.` : '', check.cutCards ? `${plural(check.cutCards, 'tarjeta', 'tarjetas')} de mazos propios pasan del límite de ${MAX_DECK_CARDS} por mazo y no se leerán.` : ''].filter(Boolean).join(' ');
+      if (!(await previewCards('Importar mazo', records.length, A, { note: notes, allow: !!meta.id && !(known && known.version >= meta.version), extra: newDecks.length ? [{ n: newDecks.length, label: newDecks.length === 1 ? 'mazo propio nuevo' : 'mazos propios nuevos' }] : [] }))) return;
       const backed = snapshot('import'); // solo añade tarjetas: no se bloquea si no cabe la copia, pero se dice
-      A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); newDecks.forEach((d) => state.decks.push(d));
+      A.fresh.forEach((c) => state.cards.push(normalizeCard({ ...c, nextReview: today() }))); newDecks.forEach((d) => state.decks.push(d)); registerReceived(meta, check.deck);
       save(); closeModal(); renderAll(); toast(`Mazo importado: ${plural(A.fresh.length, 'tarjeta nueva', 'tarjetas nuevas')}.${backed ? '' : ' No hubo espacio para la copia automática previa.'}`, backed ? 'ok' : 'error');
       return;
     }

@@ -12,7 +12,7 @@ async function openWelcome(page, step) {
   if (step === 1) { await page.locator('[data-profile="self"]').click(); await expect(page.locator('[name="fs"]')).toHaveCount(3); }
   await settle(page);
 }
-const settle = (page) => page.waitForFunction(() => { const d = document.querySelector('#app-modal'); return d.open && d.getAnimations().every((a) => a.playState !== 'running'); });
+const settle = (page) => page.waitForFunction(() => { const d = document.querySelector('#app-modal'); return d.open && d.getAnimations({ subtree: true }).every((a) => a.playState !== 'running'); });
 const setTheme = async (page, t) => { await page.evaluate((x) => { state.settings.theme = x; applyAppearance(); }, t); await settle(page); };
 
 /* Funciones de medición que viven en la página (usan los colores calculados reales). */
@@ -29,7 +29,7 @@ async function textFailures(page) {
   return page.evaluate(([src]) => {
     const { parse, ratio, effBg, visible } = new Function(`return (${src})()`)();
     const out = [], tw = document.createTreeWalker(document.querySelector('#modal-body'), NodeFilter.SHOW_TEXT);
-    for (let n = tw.nextNode(); n; n = n.nextNode()) {
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
       const t = n.data.trim(); if (!t || !/\p{L}/u.test(t)) continue;
       const el = n.parentElement; if (!visible(el)) continue;
       const bg = effBg(el); if (!bg) continue;
@@ -98,14 +98,14 @@ test('orden de tabulación del paso 2 y anillo de foco visible en cada parada, e
         const el = document.activeElement; if (!el.closest('#app-modal')) return { label: 'FUERA DEL DIÁLOGO', ok: false };
         const label = el.name || el.dataset.w || el.getAttribute('aria-label') || el.type || el.tagName;
         const t = el.matches('.welcome-time input') ? el.nextElementSibling : el, cs = getComputedStyle(t);
-        const w = parseFloat(cs.outlineWidth), ring = parse(cs.outlineColor), bg = effBg(t);
+        const w = parseFloat(cs.outlineWidth), ring = parse(cs.outlineColor), bg = effBg(parseFloat(cs.outlineOffset) > 0 ? t.parentElement : t); // con separación, el anillo se ve contra el fondo de fuera, no contra el propio botón
         const ok = cs.outlineStyle !== 'none' && w >= 2 && (!bg || ratio(ring, bg) >= 3);
         return { label, ok, why: `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}` };
       }, [MEASURE.toString()]);
       seen.push(r.label); if (!r.ok) bad.push(`${theme} · ${r.label}: ${r.why}`);
       await page.keyboard.press('Tab');
     }
-    expect(seen.slice(0, 9), theme).toEqual(['v', 't', 'fs', 'easy', 'calm', 'skip', 'back', 'submit', 'Cerrar']);
+    expect(seen.slice(0, 9), theme).toEqual(['v', 't', 'fs', 'easy', 'calm', 'skip', 'back', 'submit', 'Close']);
     expect(bad).toEqual([]);
   }
 });

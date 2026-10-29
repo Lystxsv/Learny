@@ -48,7 +48,7 @@ function renderAnalysis() {
   $('#time-stat').textContent = `${mins} min`;
   $('#time-note').textContent = `de ${plural(state.sessions.filter((x) => !x.abandon && inPeriod(x.date)).length, 'bloque', 'bloques')} · tiempo en sesión, no aprendizaje`;
   $('#overdue-stat').textContent = overdueCards().length;
-  safe(renderForecast, 'previsión de repasos'); safe(renderRetention, 'retención real'); safe(renderLeeches, 'tarjetas difíciles');
+  safe(renderForecast, 'previsión de repasos'); safe(renderRetention, 'retención real'); safe(renderLeeches, 'tarjetas difíciles'); safe(renderClass, 'resultados de alumnos');
 
   const days = [], names = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   for (let i = 6; i >= 0; i--) {

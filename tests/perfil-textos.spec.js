@@ -37,7 +37,7 @@ test('window.Learny expone ptxt', async ({ page }) => {
 });
 test('el plan de recuperación usa el prefijo del perfil', async ({ page }) => {
   await setProfile(page, 'teach');
-  await page.evaluate(() => showPage('planner'));
+  await page.evaluate(() => { showPage('planner'); document.getElementById('recovery-more').open = true; }); // el informe de examen es un <details> cerrado
   await page.fill('#recovery-subject', 'Álgebra'); await page.fill('#recovery-miss', 'Factorizar');
   await page.click('#recovery-plan');
   const t = await page.evaluate(() => state.deadlines.at(-1).title);

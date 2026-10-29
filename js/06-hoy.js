@@ -46,6 +46,10 @@ function actionCandidatesBase() {
   if (weak) out.push({ id: 'weak', title: `Mini quiz de ${weak.name}`, minutes: 5, cta: 'Empezar quiz', why: `${weak.pct}% sin fallar (${weak.ok} de ${weak.total} repasos): es tu materia con más fallos. El quiz empieza por tus errores.` });
   if (!hasCards) out.push({ id: 'create', title: 'Crea tu primera tarjeta', minutes: 3, cta: 'Crear tarjeta', why: 'Aún no tienes tarjetas. Con ellas Learny agenda tus repasos por ti; la primera tarda un minuto.' });
   if (!hasCards) out.push({ id: 'deck', title: 'Probar con un mazo de ejemplo', minutes: 2, cta: 'Ver mazos', why: 'Añade unas pocas tarjetas ya hechas para ver cómo funciona el repaso sin escribir nada.' });
+  if (state.settings.profile === 'teach' && hasCards) { // Etapa 6a: el profesor ve primero lo suyo (resultados de la clase, o preparar un mazo para compartir)
+    if (state.reports.length) out.push({ id: 'class', title: 'Mira cómo van tus alumnos', minutes: 5, cta: 'Ver resultados', why: 'Ya importaste informes de tus alumnos. Revisa quién ha repasado y qué tarjetas se fallan más en la clase.' });
+    else out.push({ id: 'share', title: 'Prepara un mazo para tus alumnos', minutes: 5, cta: 'Compartir mazo', why: 'Tus tarjetas se pueden compartir como un archivo con nombre, descripción y versión; tus alumnos lo importan sin crear cuenta ni registro.' });
+  }
   if (!fresh) out.push({ id: 'focus', title: 'Haz un bloque de enfoque', minutes: state.settings.focus, cta: 'Ir al Pomodoro', why: `${due.length ? '' : 'No tienes repasos pendientes. '}Hoy llevas ${done} de ${goal} ${goal === 1 ? 'bloque' : 'bloques'} de tu meta; escribe un resultado concreto y empieza.` });
   if (!upc.length) out.push({ id: 'deadline', title: 'Añade la fecha de un examen', minutes: 3, cta: 'Planificar', why: 'No tienes ninguna fecha próxima. Con una fecha, Learny reparte tareas diarias hasta el examen.' });
   if (!fresh) out.push({ id: 'feynman', title: 'Explícalo con tus palabras (Feynman)', minutes: 10, cta: 'Explicar un tema', why: `${weak ? `Explicar «${weak.name}», tu materia con más fallos,` : 'Explicar un tema de hoy'} revela lo que todavía no entiendes.` });
@@ -62,6 +66,8 @@ const ACTIONS = {
   deck() { showPage('library'); reveal('#topic-library'); toast('Elige un mazo de ejemplo y púlsalo para añadir sus tarjetas.'); $('#topic-library .topic-chip')?.focus(); },
   focus() { showPage('study'); (timer.started ? $('#pomodoro-button') : $('#intention-input')).focus(); },
   deadline() { showPage('planner'); addDeadline(); },
+  share() { shareDeckForm(); },
+  class() { showPage('analysis'); const c = reveal('#class-card'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'start' }); c.querySelector('h2')?.setAttribute('tabindex', '-1'); c.querySelector('h2')?.focus({ preventScroll: true }); } },
   feynman() { showPage('practice'); $('#feynman-topic').value ||= weakSubject()?.name || ''; $('#feynman-topic').focus(); },
   smart() { document.dispatchEvent(new Event('learny:smart')); },
   newpomo() { newUserPomo = true; applySessionMode(); $('#intention-input').focus(); },

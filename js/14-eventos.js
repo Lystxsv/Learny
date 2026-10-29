@@ -28,6 +28,7 @@ $('#flashcard').onclick = (e) => {
   if (k === 'create') cardForm();
   else if (k === 'ai') document.dispatchEvent(new Event('learny:gen-cards'));
   else if (k === 'deck') { showPage('library'); toast('Elige un mazo de ejemplo en «Biblioteca de temas».'); }
+  else if (k === 'more-new') { const pool = heldNewCards().slice(0, 5); if (pool.length) startExam(pool, 5); } // salta el límite diario a petición
   else if (k === 'advance') { const next = state.cards.filter((c) => !c.archived && !c.corrupt && c.lastReviewed !== today()).sort((a, b) => a.nextReview.localeCompare(b.nextReview)).slice(0, 5); if (!next.length) return toast('Ya repasaste hoy todas tus tarjetas. ¡Buen trabajo!'); startExam(next, 5); }
 };
 $('#weak-topics').onclick = (e) => { const n = e.target.dataset.quizSubject; if (n) startSubjectQuiz(n); };
@@ -102,6 +103,8 @@ $('#today-tasks').onchange = (e) => {
   save(); renderAll();
   offerUndo(task.done ? 'Tarea completada.' : 'Tarea reabierta.', () => { task.done = was; save(); renderAll(); });
 };
+$('#today-tasks').onclick = (e) => { const id = e.target.closest('[data-task-go]')?.dataset.taskGo; if (id) taskGo(id); }; // v71: «Empezar» de una tarea concreta
+$('#leech-list').onclick = (e) => { const id = e.target.closest('[data-leech-open]')?.dataset.leechOpen; if (id) leechHelp(id); }; // v71: «Reescribir o dividir» una tarjeta difícil
 
 $('#search-engine').value = state.settings.engine;
 $('#search-engine').onchange = (e) => { state.settings.engine = e.target.value; save(); };

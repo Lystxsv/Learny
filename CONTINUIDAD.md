@@ -932,14 +932,14 @@ Para `settings.profile === 'self'`: ritmo en lugar de fecha. Con cualquier otro 
 
 ---
 ## Metas · Fase 1 «Capa de datos» (`learny-v84` → `learny-v85`)
-Solo datos: no hay interfaz, ni cambios en SM-2, Pomodoro, Feynman, estadísticas ni `SCHEMA` (sigue en 4). Diseño en `fase0-modelo-metas.md`.
+Solo datos: no hay interfaz, ni cambios en SM-2, Pomodoro, Feynman, estadísticas ni `SCHEMA` (sigue en 4). Diseño en `docs/fase0-modelo-metas.md`.
 - **Archivo nuevo:** `js/01c-metas-datos.js` (antes de `01-base.js` en `index.html` y `CORE`; la nota de la Fase 0 §9 que decía «entre 01b y 02» se corrigió). `emptyLearning()` lo llama `defaults()` al cargar `01-base.js`; `uid`/`isDay` se resuelven al llamar.
 - **Parches:** `01-base.js` (`learning` en `defaults()` y `learningCount()` en `hasUserData()`), `02-datos.js` (`sanitizeLearning` en `hydrate`, justo tras `sanitizeSettings`; `'delete-goal'` en `ROUTINE`), `06-hoy.js` (`isNewUser()` mira las metas), `12-copias-e-importacion.js` (`validateBackup` exige objeto si `learning` existe; vista previa con «metas (ahora: N)»), `15-inicio.js` (avisos de arranque si `learningStatus.bad`, `.newer` u `.omitted`), `18-idioma.js` (textos de los avisos), `sw.js` (`CORE` + `learny-v85`), `README.md`.
 - **Comprobado en el código:** `adoptRemoteState` pasa por `hydrate` (otra pestaña sanea igual); `exportData`/`snapshot` copian `state` entero (las metas viajan); importar/restaurar una copia sin metas deja el contenedor vacío (decisión E).
 - **Pruebas ejecutadas:** `node tests/run-node.js` (20/20) y una prueba de humo en `vm` cargando 01c + 01-base + 01b + 02 con stubs (estado nuevo vacío, `hydrate` con basura, con metas y con versión más nueva, `ROUTINE`). `node --check` de todos los archivos; `CORE` == `<script>`.
 - **NO ejecutadas:** las pruebas Playwright (sin red para instalar Chromium en el entorno). `tests/metas-datos.spec.js` se corrigió: esperaba `window.state`, que no existe (`state` es `const` global, no propiedad de `window`), y el test de «recargar» usaba `?demo`, que vive en memoria y se reinicia al recargar. Ahora ese test va sin demo y se añadieron tres más (importar, `hydrate`, exportar→importar).
 - **Pendiente (a mano):** la comprobación de §2 de la Fase 0 (abrir en la v83 una copia con `"learning": {"v":1,"goals":[]}`, guardar y ver que la clave sigue en `learny.v3`); ejecutar `npx playwright test`; ver los tres avisos de arranque a ojo.
-- **Siguiente:** Fase 2 · interfaz de metas (`js/20-metas.js`, etapas y evidencias).
+- **Siguiente:** Fase 2 · interfaz de metas (previsto como `js/20-metas.js`; quedó en `js/22-metas.js`; etapas y evidencias).
 
 ---
 ## Pro · Plan por bloques y Bloque 1 «Base Pro + Exportar e imprimir» (`learny-v85` → `learny-v86`)
@@ -1003,3 +1003,86 @@ Sin cambios de lógica ni de datos.
 - **`sw.js`:** `CACHE = 'learny-v92'` (cambian `18-idioma.js` y `style.css`).
 - **Observación sobre Firebase (sin tocar):** `js/firebase/firebase-auth.js` y `js/23-cuenta.js` están en el proyecto pero no se cargan (ni `index.html` ni `CORE` de `sw.js`), y `index.html` no tiene `#account-button`; `23-cuenta.js` termina en la primera línea (`if (!btn) return`). Integrarlos exige: `<button id="account-button">` en la barra superior, `<script type="module" src="js/firebase/firebase-auth.js">` tras `firebase-init.js`, `<script src="js/23-cuenta.js" defer>` tras `22-metas.js`, y ambas rutas en `CORE`. Además `firebase-config.js` conserva los `REEMPLAZAR`.
 - **Pruebas:** `node --check js/18-idioma.js`; comparación de los diccionarios antes y después. No se ejecutó Playwright.
+
+---
+## v93–v94 · Cuentas integradas y reorganización de archivos (`learny-v94`)
+- **Cuentas:** `js/23-cuenta.js`, `js/firebase/firebase-auth.js` y `js/firebase/firebase-profile.js` quedan cargados en `index.html` y en `CORE` de `sw.js`; botón `#account-button` en la barra superior.
+- **Reorganización:** los archivos de Firebase estaban sueltos y no coincidían con las rutas de `sw.js`, `index.html` y `firebase.json`. Ahora: `js/firebase/{firebase-config,firebase-init,firebase-auth,firebase-profile}.js` y `firebase/{firestore.rules,firestore.indexes.json}`. Sin cambios de contenido.
+- **Docs:** `docs/fase0-modelo-metas.md` (antes fuera del proyecto). README al día (v94, cuentas integradas).
+- **Config:** `js/firebase/firebase-config.js` rellenado con el proyecto `learny-c6666`. **Pendiente:** activar métodos en Authentication y dominios autorizados; sincronización en Firestore (Bloque 3).
+
+---
+## Firebase · Bloque 3 «Perfil en Firestore» (`learny-v94` → `learny-v95`)
+- **Ya existían (v94):** `js/firebase/firebase-profile.js` (lee/crea `users/{uid}`) y `firebase/firestore.rules` (lectura solo del dueño; creación solo con plan `free`, Pro inactivo y campos de pago `null`; update/delete cerrados).
+- **Nuevo:** `js/23-cuenta.js` muestra el plan en «Tu cuenta» (`#acc-plan`, aria-live): cargando, error con «Reintentar» (`data-acc="retry"` → `profile.refresh()`), Gratis o Pro (con «vence el …»). Se actualiza solo con el evento `learny:profile`. Un Pro vencido o un error nunca se muestran como Pro. Textos en inglés en `18-idioma.js` (EX + una regla para «vence el»).
+- **Pruebas:** `tests/cuenta-perfil.spec.js` (6, pasan; `LearnyCloud` simulado, no toca la nube). Las reglas NO se probaron con el emulador (no hay red en este entorno): probarlas a mano en Firebase Console → Reglas → «Simulador de reglas».
+- **Regresión:** en el resto de `tests/` hay fallos que ya estaban antes de este bloque (`quiz.spec.js:27` y `:94`, `metas-ui.spec.js:97`, `perfil-textos.spec.js:38`) y uno intermitente (`accesibilidad-bienvenida.spec.js:65`); fallan igual con el ZIP anterior.
+- **Pendiente del usuario:** crear la base de datos, publicar reglas, activar Correo/contraseña y dominios autorizados (README → «Publicar las reglas de Firestore»).
+- **Siguiente:** Bloque 4 (editar datos básicos sin tocar campos de Pro; habrá que abrir `update` en las reglas solo para esos campos).
+
+---
+## Firebase · Bloque 4 «Editar nombre» (`learny-v95` → `learny-v96`)
+- **Reglas (`firebase/firestore.rules`):** `update` abierto SOLO si `diff(resource.data).affectedKeys().hasOnly(['displayName','updatedAt'])`, `displayName` es texto de ≤ 40 y `updatedAt == request.time`. `create` no cambia (no admite `displayName`); `delete` sigue cerrado. **Hay que republicar las reglas.**
+- **`js/firebase/firebase-profile.js`:** `profile.update({ displayName })` (limpia caracteres de control, recorta y limita a 40; solo con perfil cargado; envía únicamente `displayName` y `updatedAt: serverTimestamp()`); `clean()` expone `displayName`. API inerte sin Firebase.
+- **`js/23-cuenta.js`:** «Tu cuenta» muestra el nombre y un campo «Nombre (opcional)» con «Guardar nombre» (solo si el perfil está cargado). «Cerrar sesión» pasa a botón secundario. Textos en inglés en `18-idioma.js`.
+- **Pruebas:** `tests/cuenta-perfil.spec.js` (11, pasan; nube simulada). **Reglas sin probar con emulador** (sin red aquí). Casos para el «Simulador de reglas» de Firebase Console (documento `users/UID` con plan free, autenticado como UID): ✔ update `{displayName:'Ana', updatedAt: request.time}`; ✘ update con `plan:'pro'`; ✘ con `proStatus:'active'`; ✘ con `displayName` de 41 caracteres o número; ✘ sin `updatedAt`; ✘ otro usuario; ✘ delete.
+- **No incluido:** preferencias (idioma, tema…) en la nube: tienen sentido junto con la sincronización de datos. Siguiente previsto: Bloque 5 (sección Learny Pro protegida con `LearnyAccount.protectPage`).
+- Fallos previos (no de este bloque): `quiz.spec.js:27` y `:94`, `metas-ui.spec.js:97`, `perfil-textos.spec.js:38`; intermitente `accesibilidad-bienvenida.spec.js:65`.
+
+---
+## Firebase · Bloque 5 «Sección Learny Pro protegida» (`learny-v96` → `learny-v97`)
+- **`index.html`:** `<section class="page" id="pro">` (tarjetas `#pro-account-card` y `#pro-features-card`) y botón de barra lateral `data-page="pro"` con etiqueta «Learny Pro» (ambos `hidden` hasta que haya cuentas). No se tocó la barra inferior móvil (la sección se alcanza desde la barra lateral o por `#pro`).
+- **`js/23-cuenta.js`:** `PRIVATE` arranca con `'pro'` (usa el `guard()` del Bloque 2). `renderProPage()` pinta el plan con `planHtml()` (mismo del Bloque 3) y el catálogo `PRO_FEATURES` de `20-pro.js`; se repinta con `learny:profile`, `learny:page` y `learny:account`. `paint()` muestra u oculta el botón según `avail()`.
+- **`js/15-inicio.js`:** `#pro` admitido como enlace directo. **`js/18-idioma.js`:** textos nuevos en `EX`.
+- **No cambia:** `isPro()` y `requirePro()` de `20-pro.js` siguen usando `learny.pro` local («Activar Pro en este navegador»); la página Pro NO lo toca. Reconciliar ambos es el Bloque 6 (`isUserPro()` desde `profile.isProSync()`).
+- **Pruebas:** `tests/cuenta-perfil.spec.js` ahora 16 (pasan; nube simulada). Smoke en Chromium sin errores; caché de 49 archivos.
+- **Fallos previos, idénticos con el ZIP anterior:** `autodidacta.spec.js` (53, 71, 86), `contraste-bienvenida.spec.js` (6 temas + orden de tabulación), `lector-pantalla.spec.js:123`, `quiz.spec.js:27/:94`, `metas-ui.spec.js:97`, `perfil-textos.spec.js:38`; intermitente `accesibilidad-bienvenida.spec.js:65`.
+- **Siguiente:** Bloque 6 (`isUserPro()` desde el plan de la cuenta y que `requirePro` lo use) y Bloque 7 (servidor que activa Pro tras el pago).
+
+---
+## Firebase · Bloque 6 «isPro() desde la cuenta» (`learny-v97` → `learny-v98`)
+Decisión del usuario: Learny aún no tiene usuarios, así que el modo de pruebas local se retira fuera de la demo.
+- **`js/20-pro.js`:** `isUserPro()` (con `profile.isProSync()`), `isUserProVerified()` (con `profile.isPro()`, vuelve a leer Firestore) e `isPro()` = demo ? marca en memoria : `isUserPro()`. `setPro()` no hace nada fuera de la demo. Al arrancar, fuera de la demo se borra `learny.pro`. `proHint(attr)` unifica el pie de las tarjetas Pro (Biblioteca y Practicar). `proModal` según el caso: demo (activar local), cuentas no disponibles, sin sesión («Iniciar sesión» → `LearnyAccount.requireAuth`, y si al volver es Pro ejecuta lo pedido), plan Gratis o sin poder comprobar («Ver mi plan» → página Pro). Escucha `learny:profile` para repintar las tarjetas y emitir `learny:pro`.
+- **`js/21-quiz.js`:** usa `proHint`. **`js/18-idioma.js`:** textos nuevos (EX). La clave larga antigua «… Todavía no hay cobro ni cuenta: Pro se activa solo en este navegador…» ya no se usa.
+- **Pruebas:** `tests/cuenta-perfil.spec.js` ahora 22 (pasan, dos corridas). Las de este bloque arrancan SIN `?demo` y esperan a que los módulos de Firebase terminen (sin red fallan solos; si no, pisarían la cuenta simulada). `quiz.spec.js` sigue usando `setPro(true)` en demo y no cambia.
+- **Seguridad:** `isUserPro()` es solo comodidad de interfaz. Cualquier función Pro que cueste dinero (IA con archivos, etc.) debe comprobarse en el servidor (Bloque 7+); el cliente puede manipularse.
+- **Fallos previos sin cambios:** `quiz.spec.js:27/:94`, `metas-ui.spec.js:97`, `perfil-textos.spec.js:38`, `autodidacta.spec.js` (53, 71, 86), `contraste-bienvenida.spec.js`, `lector-pantalla.spec.js:123`; intermitente `accesibilidad-bienvenida.spec.js:65`.
+- **Siguiente:** Bloque 7 (cobro y activación por el servidor: Cloud Functions + webhook del proveedor de pagos, que escribe `plan`/`proStatus` con el Admin SDK).
+
+---
+## Corrección de pruebas y cableado perdido (`learny-v98` → `learny-v99`)
+Suite completa: 167 pruebas pasan (antes 20 fallaban).
+- **Código que faltaba (regresiones reales):** `settings.newPerDay` (valor 20 y validación 0–200 en `01-base.js`/`02-datos.js`, más campo «Tarjetas nuevas por día» en Ajustes → Estudio y avisos); manejador de `data-empty="more-new"` en `14-eventos.js`; clics de `data-task-go` (`#today-tasks` → `taskGo`) y `data-leech-open` (`#leech-list` → `leechHelp`), que se dibujaban pero nadie escuchaba.
+- **Bug de la IA (R11):** en `js/09-tutor-ia.js`, `mine()` se evaluaba otra vez tras reemplazar el contenido y daba siempre falso, así que `settleResult()` nunca movía el foco ni ponía `#modal-title`. Ahora se llama dentro del mismo `if`.
+- **Bienvenida:** el campo de nombre y «Atrás» no llevaban la clase `w-edge` (borde con contraste ≥ 3:1, regla v81).
+- **Pruebas corregidas (eran del test, no de la app):** esperaban español con la app ya en inglés (`fase8`, `autodidacta`, `contraste-bienvenida`); el evento `close` del diálogo es asíncrono (`quiz:94`, `accesibilidad-bienvenida:65`, `metas-ui:97` → `expect.poll`); `perfil-textos:38` no abría el `<details>` del informe; `quiz:27` usaba respuestas que no cumplen la regla documentada (≥ 60 % de palabras clave, o ≥ 2 y ninguna de más); `contraste-bienvenida` tenía `n.nextNode()` en lugar de `tw.nextNode()` (nunca medía), esperaba la animación solo del diálogo (no de sus hijos) y medía el anillo de foco contra el propio botón pese a tener `outline-offset`.
+- **Cómo correr las pruebas sin `npm install`:** si no hay red, `@playwright/test` puede resolverse desde un Playwright global.
+
+---
+## Perfiles · Etapa 6a «Modo profesor sin servidor» aplicada sobre la v99 (`learny-v99` → `learny-v100`)
+El paquete «files profe» venía de la v84; se fusionó a mano con la v99 actual (no se sobrescribió ningún archivo: solo se añadieron sus bloques).
+- **Nuevo:** `js/12b-profesor.js` (en `index.html` y `CORE`, tras `12-copias-e-importacion.js`), `tests/profesor.spec.js` (11 pruebas).
+- **Añadido en:** `js/01-base.js` (`received`, `reports` en `defaults()` y `hasUserData`), `js/02-datos.js` (`normalizeReport`, validación en `hydrate`, `uniqueIds`), `js/06-hoy.js` (candidatas `share`/`class` del perfil `teach`; van en `actionCandidatesBase`), `js/07-tarjetas.js` y `js/08-analisis.js` (ganchos de render), `js/12-copias-e-importacion.js` (`exportDeck` → `shareDeckForm`, `importData` reconoce `learny-report`, `registerReceived`, `allow` en `previewCards`, `BACKUP_LISTS`), `js/18-idioma.js` (textos EX, plurales, reglas y la tarjeta de la guía en inglés), `index.html` (`#share-more`, `#class-card`, tarjeta de la guía), `sw.js` (`learny-v100`).
+- **No se tomó de «files profe»** (eran de la v84 y ya están superados): cuentas y Pro, metas (`learning`), `newPerDay`, `ptxt('stuck')`, `ROUTINE` con `delete-goal`, la lista de scripts completa y los textos de portada («Cuenta opcional»).
+- **Pruebas:** suite completa 177 pasan, 0 fallan (167 anteriores + 11 de profesor − 1 que cambió de nombre; Chromium sin red a gstatic). Humo sin errores de página.
+- **Pendiente (heredado de la nota original):** móvil real, lector de pantalla del panel y de los modales nuevos, importar con el selector real de archivos. La 6b (con servidor) no se toca: si más adelante se quiere sincronizar clases con la cuenta, `state.received`/`state.reports` son los datos a subir.
+
+---
+## Perfiles · Etapa 6a en la nube (`learny-v100` → `learny-v101`)
+Opcional y con sesión: refleja `state.reports` y `state.received` en Firestore.
+- **Nuevos:** `js/firebase/firebase-teaching.js` (módulo ES: `LearnyCloud.teaching.list/put/remove`, valida el id y traduce errores; `index.html` carga ahora este módulo, que importa `firebase-profile.js`), `js/24-clase-nube.js` (script clásico tras `23-cuenta.js`; fusión y subida; `window.LearnyClassCloud.sync()/status()`), `tests/clase-nube.spec.js` (8, nube simulada en memoria).
+- **Cambiados:** `js/02-datos.js` (`cleanReceived`/`cleanReports`, antes en línea dentro de `hydrate`; ahora también validan lo que llega de la nube), `js/12b-profesor.js` (evento `learny:class-removed` al quitar informe o mazo recibido), `firebase/firestore.rules` (subcolecciones `reports` y `received`), `index.html` (`#class-sync`, `#lib-sync`), `sw.js` (`CORE` + `learny-v101`), `js/18-idioma.js`.
+- **Decisiones:** id en la nube = `deckKey(deckId|alumno)` para informes (igual en todos los navegadores, sin duplicados) y `deckId` para mazos. La comparación usa texto canónico (claves ordenadas) porque Firestore devuelve los campos en otro orden. Subir no borra; solo los borrados explícitos se reflejan. Tras un error: 1 minuto de espera o «Reintentar». Sin Pro: está abierto a toda cuenta (si se quiere, `requirePro('groups', …)` es el sitio para cerrarlo).
+- **Dos fallos reales cazados por las pruebas:** (1) deshacer un borrado no volvía a subir el informe porque la firma «barata» quedaba igual que antes: ahora el borrado reinicia `cheap`; (2) tras un error se reintentaba en cada render.
+- **Reglas SIN probar con emulador** (sin red). Casos para el «Simulador de reglas» (autenticado como UID): ✔ crear `users/UID/reports/abc` con `{deckName,student,date:'2026-01-01',cards:[]}`; ✘ el mismo con otro UID; ✘ con un campo extra (`plan`); ✘ con `cards` de 201 elementos; ✘ con `student` de 41 caracteres; ✘ id con espacios o más de 40 caracteres. En `received`: ✔ `{deckId:'abc',name:'X',version:1,keys:[]}` en `received/abc`; ✘ si `deckId` ≠ id del documento; ✘ `keys` con más de 1000. Cuidado: `data['keys']` se lee con corchetes porque `keys` también es un método de los mapas.
+- **Pendiente:** móvil real; comprobar en producción que los campos de las reglas coinciden con lo que escribe `toDoc`; decidir si esto va tras Pro; aviso de privacidad más visible si hay alumnos menores de edad.
+
+## Revisión del inglés · Bloques 0 y 1 (`learny-v101` → `learny-v102`)
+Parte de `docs/revision-ingles.md` y `docs/revision-ingles-parte2.md` (7 bloques: 0 prueba de cobertura, 1 Hoy/plan/Planificar, 2 Reforzar, 3 ventanas/avisos/tutor/IA, 4 importar/exportar/copias, 5 datos dañados/temporizador/metas/cuenta/quiz, 6 hoja imprimible y estilo, 7 contenido en español). Orden acordado: 0 → 6 y el 7 al final.
+- **Bloque 0 · prueba de cobertura:** `tests/cobertura-ingles.spec.js` abre `?demo` en inglés, recorre 23 escenas (6 pantallas, 10 ventanas o estados del plan y 7 avisos) y falla si queda texto en español o mezclado (palabras que no existen en inglés, `¿¡ñ` y vocales con tilde). `tests/cobertura-pendientes.json` lista lo que todavía falta, con el bloque que lo arregla: **si sale texto nuevo en español, falla; si algo de la lista ya sale traducido, también falla** (hay que quitarlo), así la lista solo baja. Al empezar cada bloque: añadir las escenas del bloque a `ESCENAS` y regenerar con `COBERTURA_ESCRIBIR=1 npx playwright test tests/cobertura-ingles.spec.js`; los nuevos quedan con bloque `?` y se asignan a mano. Se permite «Español» (botón de idioma) y el título de la demo «Parcial de Biología» hasta el bloque 7.
+- **Bloque 1 · Hoy, plan y Planificar** (`js/18-idioma.js`): ~25 frases. Los títulos de las tareas se guardan en español al crear el plan (`rebuildTasks`), por eso se traducen al dibujar con reglas en `RULES`, no al guardar. Reglas nuevas al principio de `RULES`; el ayudante `full(regex, fn)` tolera y conserva los espacios del borde del nodo de texto (p. ej. «…por repasar. » antes del botón «Empezar»). Cubre: títulos por fase (también con la cola «→ N Pomodoros + …» del Estudio inteligente y el prefijo «Recuperar:»), «Hoy toca la fase de…», detalle de cada tarea (`taskDetail`), bloque de hoy (`extras.js`), alerta de examen cerca y de «ya no cabe», mensaje de carga (`loadMessage`), plan reajustado, historial de cambios, Replanificar, plan de emergencia, resultado del Estudio inteligente, errores de fecha/nombre/informe y el motivo «N son de «X», que es…» de Hoy. Voz neutra o pasiva en los avisos del plan («Plan adjusted: 2 overdue tasks moved to today…»), sin «moví»/«I moved».
+- **Cambio en español:** `js/04-planificador.js`, el aviso de Replanificar ahora termina «harían falta ≈ N min/día» (antes sin unidad).
+- **Resultado:** quedan 34 pendientes en la lista, ninguno del bloque 1: 33 de Reforzar (bloque 2) y 1 tarjeta de ejemplo de Práctica (bloque 7). Antes del bloque 1 había ~40 entradas del plan en inglés a medias. Suite completa: 210 pruebas, todas pasan (incluidas las 4 de `fase8.spec.js`, que antes fallaban).
+- **Límite conocido:** el nombre de materia o de examen que escribe la persona se copia tal cual dentro de las frases traducidas («Today, create 6 Biología cards…»). Es dato del usuario y no se traduce.
+- **Pendiente de decisión del usuario (no bloquea el 1):** nombre de «Reforzar» en inglés (bloque 6), «sin fallar» (bloque 2), voz de los avisos de datos dañados (bloque 5) y qué hacer con las tarjetas de ejemplo (bloque 7).
+

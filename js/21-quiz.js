@@ -121,7 +121,7 @@ body.session-practice #quiz-card{display:none}`;
       ${ok ? '' : '<p class="hint">Necesitas al menos 4 tarjetas para armar un quiz.</p>'}
       <p class="hint">Las preguntas salen de tus tarjetas. La respuesta corta se corrige por coincidencia de palabras y puedes cambiar el resultado. Un quiz no cambia tu calendario de repaso.</p>
       ${hist.length ? `<h3 class="alts-head">Últimos resultados</h3><ul class="closure-list">${hist.map((h) => `<li><span class="tag">${h.mode === 'exam' ? 'Simulacro' : 'Quiz'}</span> <span>${h.subject ? T(h.subject) : 'Todas las materias'}</span> <span translate="no">${esc(h.date)}</span> <b>${h.ok} de ${h.n} aciertos (${Math.round((h.ok * 100) / h.n)} %)</b></li>`).join('')}</ul>` : ''}
-      <p class="hint">${isPro() ? 'Plan Pro activo en este navegador. <button class="text-button" type="button" data-quiz-x="off">Volver al plan gratis</button>' : 'Función Pro. <button class="text-button" type="button" data-quiz-x="plans">Ver qué incluye Pro</button>'}</p>`;
+      <p class="hint">${proHint('data-quiz-x')}</p>`;
     if (html === lastHtml) return;
     const ae = document.activeElement, fsel = ae && card.contains(ae) ? (ae.id ? `#${ae.id}` : ae.dataset.quizGo ? `[data-quiz-go="${ae.dataset.quizGo}"]` : '') : '';
     card.innerHTML = html; lastHtml = html;

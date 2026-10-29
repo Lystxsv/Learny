@@ -69,7 +69,7 @@ function welcomeFlow() {
     }
     const sysCalm = !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     modal(`<p class="eyebrow">Personalizar · opcional</p><h2>¿Quieres ajustar algo más?</h2>
-        <label>Tu nombre<input name="v" maxlength="30" autocomplete="given-name" enterkeyhint="done" value="${esc(a.name)}"></label>
+        <label>Tu nombre<input class="w-edge" name="v" maxlength="30" autocomplete="given-name" enterkeyhint="done" value="${esc(a.name)}"></label>
         <fieldset class="welcome-times"><legend class="sr-only">Tiempo de hoy</legend>${TIMES.map(([m, t, sub]) => `<label class="welcome-time"><input type="radio" name="t" value="${m}"${a.minutes === m ? ' checked' : ''}><span><b>${esc(t)}</b><small>${esc(sub)}</small></span></label>`).join('')}</fieldset>
         <h3 class="eyebrow">Accesibilidad</h3>
         <p class="hint" id="w-fs"><b>Tamaño de texto</b></p>
@@ -79,7 +79,7 @@ function welcomeFlow() {
         ${sysCalm ? '<p class="hint">Tu sistema ya pide reducir el movimiento: Learny lo respeta aunque no marques esto.</p>' : ''}
         <p class="hint">Los cambios se aplican al instante y se guardan al pulsar «Terminar».</p>
         <p class="modal-tip">Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.</p>
-        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button><button class="outline-button" type="button" data-w="back">Atrás</button><button class="primary-button" type="submit">Terminar</button></div>`,
+        <div class="actions welcome-actions"><button class="text-button" type="button" data-w="skip">Omitir</button><button class="outline-button w-edge" type="button" data-w="back">Atrás</button><button class="primary-button" type="submit">Terminar</button></div>`,
     () => { read(); end(true); }, () => end(false));
     $('#modal-title')?.focus({ preventScroll: true }); // R4: el paso 2 reemplaza el contenido de un diálogo ya abierto; el foco va a su título para que se lea (antes iba al campo de nombre y el título no se oía)
   }
@@ -129,7 +129,7 @@ if (DEMO) {
 const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
 applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer);
 renderAll(); maybeRemind(); backupNag();
-{ const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); }
+{ const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide', 'pro'].includes(hash)) showPage(hash); }
 // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
 if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.hash.slice(1)) showLanding();
 // Avisos de arranque en cola: ninguno pisa a otro (lo más grave primero)

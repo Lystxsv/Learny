@@ -4,6 +4,7 @@ const { test, expect } = require('@playwright/test');
 test.beforeEach(async ({ page }) => {
   await page.goto('/?demo');
   await page.waitForFunction(() => typeof dueSplit === 'function' && typeof isLeech === 'function' && typeof retentionReal === 'function');
+  await page.evaluate(() => { state.settings.lang = 'es'; applyAppearance(); }); // la interfaz arranca en inglés; estas pruebas comprueban los textos en español
 });
 
 const addNew = (page, n) => page.evaluate((k) => { for (let i = 0; i < k; i++) state.cards.push(normalizeCard({ subject: 'Prueba', question: `N${i}`, answer: `R${i}`, nextReview: today() })); rev++; }, n);

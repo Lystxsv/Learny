@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const boot = async (page, profile) => {
   await page.goto('/?demo');
   await page.waitForFunction(() => typeof actionCandidates === 'function' && typeof rhythmInfo === 'function');
-  await page.evaluate((p) => { state.settings.profile = p; state.settings.welcomed = true; save(); renderAll(); }, profile);
+  await page.evaluate((p) => { state.settings.profile = p; state.settings.lang = 'es'; state.settings.welcomed = true; save(); applyAppearance(); renderAll(); }, profile);
 };
 const ids = (page) => page.evaluate(() => actionCandidates().map((c) => c.id));
 
@@ -87,10 +87,10 @@ test('en inglés los textos nuevos se traducen', async ({ page }) => {
   await boot(page, 'self');
   const t = await page.evaluate(() => { state.settings.lang = 'en'; LearnyI18n.sync(state.settings); return [
     LearnyI18n.t('Esta semana (últimos 7 días) llevas 1 de 3 sesiones. Una sesión de hoy te acerca a tu ritmo.'),
-    LearnyI18n.t('Hace 5 días que no tocas «Química». Un mini quiz de 8 tarjetas te ayuda a retomarlo.'),
+    LearnyI18n.t('Hace 5 días que no tocas «Topología». Un mini quiz de 8 tarjetas te ayuda a retomarlo.'),
     LearnyI18n.t('2 de 3 sesiones'), LearnyI18n.t('Esta semana: 3 repasos, 20 min · último contacto hace 4 días')]; });
   expect(t[0]).toContain('you have done 1 of 3 sessions');
-  expect(t[1]).toContain('haven\'t touched “Química” in 5 days');
+  expect(t[1]).toContain('haven\'t touched “Topología” in 5 days');
   expect(t[2]).toBe('2 of 3 sessions');
   expect(t[3]).toBe('This week: 3 reviews, 20 min · last contact 4 days ago');
 });

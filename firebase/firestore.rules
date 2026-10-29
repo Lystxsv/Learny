@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* users/{uid}: cada persona solo toca su propio documento. */
+    match /users/{uid} {
+      /* Leer: solo el dueño. */
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      /* Crear: solo el dueño y SOLO con los valores iniciales de siempre (plan gratis, Pro inactivo y sin datos de pago).
+         Así nadie puede crearse un documento ya Pro desde el navegador. */
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'createdAt', 'plan', 'proStatus', 'proSince', 'proExpiresAt', 'paymentProvider', 'customerId', 'subscriptionId'])
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.plan == 'free'
+        && request.resource.data.proStatus == 'inactive'
+        && request.resource.data.proSince == null
+        && request.resource.data.proExpiresAt == null
+        && request.resource.data.paymentProvider == null
+        && request.resource.data.customerId == null
+        && request.resource.data.subscriptionId == null;
+
+      /* Actualizar (Bloque 4): el dueño SOLO puede cambiar «displayName» (texto de 0 a 40 caracteres) y «updatedAt» (la hora del servidor).
+         affectedKeys() lista lo que cambia respecto al documento guardado: cualquier otro campo (plan, proStatus, pagos, email, createdAt…) queda bloqueado,
+         así nadie puede volverse Pro desde el navegador. El servidor (Cloud Functions / Admin SDK) no pasa por estas reglas. */
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.updatedAt == request.time;
+
+      /* Borrar: nadie desde el navegador. */
+      allow delete: if false;
+    }
+
+    /* Datos del profesor (Etapa 6a en la nube): cada persona solo toca los suyos. No hay «update» aparte: guardar un documento es crearlo o sustituirlo completo,
+       así que las dos operaciones piden la misma forma válida. El nombre del documento es un identificador corto (letras, números, «_» y «-»). */
+    match /users/{uid}/reports/{id} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && id.matches('^[0-9A-Za-z_-]{1,40}$')
+        && request.resource.data.keys().hasOnly(['deckId', 'deckName', 'version', 'student', 'date', 'total', 'cards'])
+        && request.resource.data.keys().hasAll(['deckName', 'student', 'date', 'cards'])
+        && request.resource.data.deckName is string && request.resource.data.deckName.size() >= 1 && request.resource.data.deckName.size() <= 80
+        && request.resource.data.student is string && request.resource.data.student.size() >= 1 && request.resource.data.student.size() <= 40
+        && request.resource.data.date is string && request.resource.data.date.size() == 10
+        && request.resource.data.cards is list && request.resource.data.cards.size() <= 200
+        && (!('deckId' in request.resource.data) || (request.resource.data.deckId is string && request.resource.data.deckId.size() <= 12))
+        && (!('version' in request.resource.data) || (request.resource.data.version is number && request.resource.data.version >= 1 && request.resource.data.version <= 999))
+        && (!('total' in request.resource.data) || (request.resource.data.total is number && request.resource.data.total >= 0 && request.resource.data.total <= 5000));
+    }
+
+    match /users/{uid}/received/{id} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && id.matches('^[0-9a-z]{1,12}$')
+        && request.resource.data.keys().hasOnly(['deckId', 'name', 'author', 'description', 'version', 'importedAt', 'keys'])
+        && request.resource.data.keys().hasAll(['deckId', 'name', 'version', 'keys'])
+        && request.resource.data.deckId == id
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 80
+        && (!('author' in request.resource.data) || (request.resource.data.author is string && request.resource.data.author.size() <= 60))
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 300))
+        && request.resource.data.version is number && request.resource.data.version >= 1 && request.resource.data.version <= 999
+        && (!('importedAt' in request.resource.data) || (request.resource.data.importedAt is string && request.resource.data.importedAt.size() == 10))
+        && request.resource.data['keys'] is list && request.resource.data['keys'].size() <= 1000; // «keys» también es un método de los mapas: el campo se lee con corchetes
+    }
+
+    /* Todo lo demás, cerrado. */
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -70,7 +70,7 @@ function migrate(src) {
 function sanitizeSettings(s, d) {
   s.focus = num(s.focus, 1, 180, d.focus); s.rest = num(s.rest, 1, 60, d.rest);
   s.roulettePrepare = num(s.roulettePrepare, 1, 180, d.roulettePrepare); s.rouletteExplain = num(s.rouletteExplain, 1, 180, d.rouletteExplain);
-  s.fontSize = num(s.fontSize, 13, 24, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal);
+  s.fontSize = num(s.fontSize, 13, 24, d.fontSize); s.dailyGoal = num(s.dailyGoal, 1, 12, d.dailyGoal); s.newPerDay = num(s.newPerDay, 0, 200, d.newPerDay); // v71: 0 = sin límite
   const pick = (v, list, def) => (list.includes(v) ? v : def);
   s.theme = pick(s.theme, ['auto', 'dark', 'oled', 'light', 'sepia', 'contrast', 'chrome'], 'dark'); s.font = pick(s.font, ['sans', 'humanist', 'serif', 'rounded', 'mono', 'dyslexic'], 'sans');
   s.headFont = pick(s.headFont, ['serif', 'same'], 'serif'); s.radius = pick(s.radius, ['sharp', 'soft', 'round'], 'soft'); s.cardStyle = pick(s.cardStyle, ['border', 'shadow'], 'border'); s.bgStyle = pick(s.bgStyle, ['grid', 'dots', 'plain'], 'grid');
@@ -92,6 +92,25 @@ function sanitizeSettings(s, d) {
     style: ['12', 'uni', 'carrera'].includes(t.style) ? t.style : 'uni', career: String(t.career || '').slice(0, 60), mode: t.mode === 'direct' ? 'direct' : 'socratic' };
 }
 
+/* Etapa 6a (profesor): un informe de alumno es { deckId, deckName, student, date, cards: [{ k, q, n, a, last, iv }] }. Se valida igual al importarlo y al cargar (hydrate); como mucho 200 tarjetas por informe. */
+function normalizeReport(d) {
+  if (!isObj(d) || d.type !== 'learny-report' || !Array.isArray(d.cards)) return null;
+  const student = clean(d.student, 40), deckName = clean(d.deckName, 80); if (!student || !deckName) return null;
+  const cards = d.cards.filter(isObj).slice(0, 200).map((c) => ({ k: String(c.k || '').slice(0, 12), q: clean(c.q, 80), n: num(c.n, 0, 100000, 0), a: num(c.a, 0, 100000, 0), last: ['again', 'hard', 'easy'].includes(c.last) ? c.last : '', iv: num(c.iv, 0, MAX_INTERVAL, 0) })).filter((c) => c.k && c.a <= c.n);
+  return { id: uid(), deckId: String(d.deckId || '').replace(/[^0-9a-z]/g, '').slice(0, 12), deckName, version: num(d.deckVersion, 1, 999, 1), student, date: isDay(d.date) ? d.date : today(), total: num(d.total, 0, 5000, cards.length), cards };
+}
+
+/* Mazos recibidos e informes de alumnos: una sola validación para hydrate y para lo que llega de la nube (nunca se confía en el origen). */
+function cleanReceived(list) {
+  return arr(list).filter((r) => isObj(r) && typeof r.deckId === 'string' && r.deckId && String(r.name || '').trim()).slice(-30).map((r) => ({
+    deckId: r.deckId.replace(/[^0-9a-z]/g, '').slice(0, 12), name: clean(r.name, 80), author: clean(r.author, 60), description: cleanMl(r.description, 300), version: num(r.version, 1, 999, 1),
+    importedAt: isDay(r.importedAt) ? r.importedAt : today(), keys: arr(r.keys).filter((k) => typeof k === 'string' && k).map((k) => k.slice(0, 12)).slice(0, 1000)
+  })).filter((r) => r.deckId);
+}
+function cleanReports(list) {
+  return arr(list).map((r) => { const n = normalizeReport({ ...r, type: 'learny-report', deckVersion: r && r.version }); return n ? { ...n, id: idOf(r.id) } : null; }).filter(Boolean).slice(-40);
+}
+
 /* Fase 3: forma válida de cada lista del respaldo (las mismas reglas validan la vista previa y hydrate). */
 const okNote = (n) => isObj(n) && typeof n.text === 'string' && n.text.trim() !== '';
 const okExam = (e) => isObj(e) && isDay(e.date) && Number.isFinite(Number(e.score)) && Number.isFinite(Number(e.total)) && Number(e.total) >= 1 && Number(e.score) >= 0 && Number(e.score) <= Number(e.total);
@@ -111,7 +130,7 @@ function hydrate(raw) {
   sanitizeSettings(state.settings, base.settings);
   state.learning = sanitizeLearning(state.learning); // Fase 1 (metas): nunca lanza ni rechaza el archivo; lo inválido se corrige u omite (learningStatus)
   if (!state.drafts || typeof state.drafts !== 'object' || Array.isArray(state.drafts)) state.drafts = {};
-  ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog'].forEach((k) => {
+  ['sessions', 'cards', 'deadlines', 'reviews', 'topics', 'tasks', 'chats', 'exams', 'notes', 'feynman', 'decks', 'planLog', 'received', 'reports'].forEach((k) => {
     if (!Array.isArray(state[k])) state[k] = [];
   });
   if (!Array.isArray(state.settings.recentTurns)) state.settings.recentTurns = [];
@@ -139,6 +158,7 @@ function hydrate(raw) {
   state.topics = state.topics.filter((t) => t && String(t.name || '').trim()).map((t) => ({ id: idOf(t.id), name: String(t.name), category: String(t.category || 'Personal') }));
   state.reviews = state.reviews.filter(okReview).slice(-MAX_REVIEWS).map((r) => ({ ...r, subject: String(r.subject || ''), cardId: String(r.cardId || ''), quality: qualityOf(r.rating) }));
   state.notes = state.notes.filter(okNote).map((n) => ({ id: idOf(n.id), date: isDay(n.date) ? n.date : today(), text: n.text.trim().slice(0, 2000) })).slice(-500);
+  state.received = cleanReceived(state.received); state.reports = cleanReports(state.reports); // Etapa 6a (también los usa js/24-clase-nube.js con lo que llega de la nube)
   state.exams = state.exams.filter(okExam).map((e) => ({ date: e.date, score: Math.round(Number(e.score)), total: Math.round(Number(e.total)) })).slice(-500);
   state.feynman = [...new Set(state.feynman.filter(isDay))].slice(-1000);
   state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
@@ -146,7 +166,7 @@ function hydrate(raw) {
     title: String(t.title || ''), done: !!t.done, cardTarget: Number(t.cardTarget) || 0
   }));
   const liveDl = new Set(state.deadlines.map((d) => d.id)); state.tasks = state.tasks.filter((t) => liveDl.has(t.deadlineId)); // sin fecha no hay tarea
-  ['cards', 'sessions', 'deadlines', 'topics', 'tasks', 'notes', 'planLog'].forEach((k) => uniqueIds(state[k])); // JS-012: ids repetidos en una copia editada a mano
+  ['cards', 'sessions', 'deadlines', 'topics', 'tasks', 'notes', 'planLog', 'reports'].forEach((k) => uniqueIds(state[k])); // JS-012: ids repetidos en una copia editada a mano
   state.chats = state.chats.filter((c) => c && c.topic).slice(-MAX_CHATS).map((c) => ({
     topic: String(c.topic).slice(0, 60), messages: Array.isArray(c.messages) ? c.messages.filter(isObj).slice(-12).map((m) => ({ role: String(m.role || '').slice(0, 10), text: String(m.text || '').slice(0, 1500), at: String(m.at || '').slice(0, 40) })) : []
   }));

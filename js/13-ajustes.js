@@ -83,6 +83,7 @@ function openSettings() {
         <label class="check"><input name="notify" type="checkbox"> Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)</label>
         <div class="form-row"><label>Pomodoro (min)<input name="focus" type="number" min="1" max="180" value="${state.settings.focus}"></label>
         <label>Descanso (min)<input name="rest" type="number" min="1" max="60" value="${state.settings.rest}"></label></div>
+        <label>Tarjetas nuevas por día (0 = sin límite)<input name="newPerDay" type="number" min="0" max="200" value="${state.settings.newPerDay}"></label>
         <div class="form-row"><label>Ruleta: preparación<input name="prepare" type="number" min="1" max="180" value="${state.settings.roulettePrepare}"></label>
         <label>Ruleta: explicación<input name="explain" type="number" min="1" max="180" value="${state.settings.rouletteExplain}"></label></div>
       </details>
@@ -114,7 +115,7 @@ function openSettings() {
       name: clean(data.get('name'), 30), profile: ['exam', 'self', 'teach'].includes(data.get('profile')) ? data.get('profile') : state.settings.profile, proxyUrl: validProxy(data.get('proxy')), ...read(),
       sound: data.get('sound') === 'on', notify: data.get('notify') === 'on', mascot: data.get('mascot') === 'on', mascotAvatar: data.get('mascotAvatar') || state.settings.mascotAvatar, lang: data.get('lang'),
       focus: num(data.get('focus'), 1, 180, 25), rest: num(data.get('rest'), 1, 60, 5),
-      roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
+      newPerDay: num(data.get('newPerDay'), 0, 200, 20), roulettePrepare: num(data.get('prepare'), 1, 180, 10), rouletteExplain: num(data.get('explain'), 1, 180, 1),
       model: clean(data.get('model'), 80) || DEFAULT_MODEL
     });
     sanitizeSettings(state.settings, base); // lo que llega del formulario también se valida

@@ -260,6 +260,7 @@ function cardForm(card = null, preset = null) {
 
 let libLimit = 40;
 function renderLibrary() {
+  safe(renderReceived, 'mazos recibidos'); // Etapa 6a
   const q = clean($('#library-search')?.value || '', 60).toLowerCase();
   const all = state.cards.filter((c) => c.archived);
   const cards = q ? all.filter((c) => `${c.question} ${c.answer} ${c.subject}`.toLowerCase().includes(q)) : all;

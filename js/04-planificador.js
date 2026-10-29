@@ -123,7 +123,7 @@ function replanDeadline(id) {
     const entry = { id: uid(), date: today(), deadlineId: d.id, title: d.title, kind: 'replan', minutes: d.dailyMinutes, moved: [], dropped: [] };
     state.planLog = [...state.planLog, entry].slice(-30);
     save(); closeModal(); renderAll();
-    offerUndo(absorbs ? 'Plan recalculado.' : `Plan recalculado, pero con ${d.dailyMinutes} min/día aún no cabe todo lo pendiente (harían falta ≈ ${Math.ceil(rr.needed / rr.days / 5) * 5}).`, () => {
+    offerUndo(absorbs ? 'Plan recalculado.' : `Plan recalculado, pero con ${d.dailyMinutes} min/día aún no cabe todo lo pendiente (harían falta ≈ ${Math.ceil(rr.needed / rr.days / 5) * 5} min/día).`, () => {
       d.dailyMinutes = before.mins; d.skipped = before.skipped; d.debtMin = before.debt;
       state.tasks = state.tasks.filter((t) => t.deadlineId !== d.id).concat(before.tasks);
       state.planLog = state.planLog.filter((e) => e.id !== entry.id); save(); renderAll();

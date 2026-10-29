@@ -26,10 +26,10 @@ test('build: con menos de 4 tarjetas no hay quiz; opción múltiple trae 4 opcio
 
 test('shortMatch acepta la respuesta con las palabras clave y rechaza la vacía o la errónea', async ({ page }) => {
   const r = await page.evaluate(() => [
-    LearnyQuiz.shortMatch('la mitocondria produce ATP', 'La mitocondria, mediante la respiración celular.').pass,
+    LearnyQuiz.shortMatch('la mitocondria y la respiración celular', 'La mitocondria, mediante la respiración celular.').pass,
     LearnyQuiz.shortMatch('', 'algo').pass,
     LearnyQuiz.shortMatch('el núcleo', 'La mitocondria produce energía').pass,
-    LearnyQuiz.shortMatch('1789', '1789, con la toma de la Bastilla').pass]);
+    LearnyQuiz.shortMatch('1789 toma de la Bastilla', '1789, con la toma de la Bastilla').pass]);
   expect(r).toEqual([true, false, false, true]);
 });
 
@@ -94,7 +94,7 @@ test('respuesta corta: se puede cambiar el resultado a mano y el historial se ac
 test('cerrar con Esc a mitad limpia la sesión y se puede empezar otro quiz', async ({ page }) => {
   await go(page, 'practice', 'mixed', 5);
   await page.keyboard.press('Escape');
-  expect(await page.evaluate(() => LearnyQuiz.session())).toBeNull();
+  await expect.poll(() => page.evaluate(() => LearnyQuiz.session())).toBeNull(); // el evento «close» del diálogo es asíncrono
   await page.click('[data-quiz-go="practice"]');
   await expect(page.locator('#modal-body h2')).toContainText(/Question 1 of|Pregunta 1 de/);
 });

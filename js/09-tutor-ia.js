@@ -170,8 +170,7 @@ async function gemini(prompt, title, fallback, onDone) {
   try {
     const text = await askGemini(prompt);
     lastAi = { prompt, title, text };
-    if (mine()) $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`;
-    if (mine()) settleResult();
+    if (mine()) { $('#modal-body').innerHTML = `<h2>${esc(title)}</h2>${parseBlocks(text)}${aiActions}${closeButton}`; settleResult(); } // mine() va una sola vez: al reemplazar el contenido, `mark` deja de estar conectado
     try { onDone?.(text); } catch (e) { console.error(e); }
     return { text, fromAi: true };
   } catch (error) {
@@ -179,8 +178,7 @@ async function gemini(prompt, title, fallback, onDone) {
     if (error.cancelled) { if (mine()) closeModal(); toast('Consulta cancelada.'); return { text: '', fromAi: false, cancelled: true }; }
     const text = fallback?.() || localGuide(title);
     lastFail = { prompt, title, fallback, onDone };
-    if (mine()) $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Tu pregunta se conserva. Puedes reintentar o usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}<div class="actions"><button class="primary-button" type="button" data-ai-retry>Reintentar</button><button class="outline-button" type="button" data-close-modal>Cerrar</button></div>`;
-    if (mine()) settleResult();
+    if (mine()) { $('#modal-body').innerHTML = `<h2>No se pudo completar</h2><p>${esc(error.message)}</p><p class="modal-tip">Tu pregunta se conserva. Puedes reintentar o usar las preguntas guía locales mientras tanto.</p>${parseBlocks(text)}<div class="actions"><button class="primary-button" type="button" data-ai-retry>Reintentar</button><button class="outline-button" type="button" data-close-modal>Cerrar</button></div>`; settleResult(); }
     toast(error.message, 'error');
     return { text, fromAi: false, failed: true };
   }

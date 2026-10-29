@@ -1,0 +1,175 @@
+{
+ "nota": "Texto que todavía sale en español o mezclado en la pantalla en inglés. «bloque» = qué bloque de la revisión lo arregla. Quita la entrada cuando el bloque la resuelva.",
+ "pendientes": [
+  {
+   "bloque": 7,
+   "escena": "practicar",
+   "texto": "¿En qué año comenzó la Revolución Francesa?"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Period: últimos # days."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "# de # reviews marcados «Easy»"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "# de # reviews sin «Didn't know it»"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Sin exámenes en este periodo"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "de # days del periodo · día de gracia disponible"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "de # blocks · tiempo en sesión, no aprendizaje"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Retención real frente al objetivo"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "De las tarjetas que ya habías visto, cuántas recordaste al volver. Distinto de «Self-reported recall»."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Cards jóvenes (volvían en menos de # days)"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "# de # recordadas · en el objetivo"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Cards maduras (volvían in # days o más)"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Si pasas semanas por debajo del objetivo, repasa con más frecuencia o reescribe las tarjetas que se te resisten."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Cards que se te resisten"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Las que has fallado # veces o más. Repetirlas igual casi nunca funciona: mejor reescribirlas o dividirlas."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "None tarjeta acumula # mistakes. Si alguna lo hace, aparecerá aquí con una propuesta para reescribirla o dividirla."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Self-reported recall: # de # (#%)"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Repasa la tarjeta con errores recientes."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "# min esta semana"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Estás a # min de tu meta semanal."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Historia: #% sin fallar (# de # reviews)"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Un mini quiz de # cards empieza por tus errores."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Today toca: # task y # cards."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Racha de # days"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Completa una sesión de # minutes para mantenerla."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Esta semana: # min de # min. Te faltan # min."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Historia: #% sin fallar; priorízala tomorrow."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Revisa: ¿En qué año comenzó la Revolución France · ¿Qué fue el Tratado de Versalles (#)?"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "# de #"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Inglés: #% sin fallar."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Biología: #% sin fallar."
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Revisa: ¿Cuál es la diferencia entre mitosis y m"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "Repasa"
+  },
+  {
+   "bloque": 2,
+   "escena": "reforzar",
+   "texto": "(# % sin fallar: # de # reviews), practica con ejercicios y avanza cuando pases del # %."
+  }
+ ]
+}

@@ -67,7 +67,7 @@ test('Esc revierte la vista previa', async ({ page }) => {
   await pick(page, '[name="fs"][value="22"]');
   expect(await base(page)).toBe('137.5%');
   await page.keyboard.press('Escape');
-  expect(await base(page)).toBe('100%');
+  await expect.poll(() => base(page)).toBe('100%'); // el evento «close» del diálogo es asíncrono
   expect((await stored(page)).settings.fontSize).toBe(16);
 });
 
