@@ -96,3 +96,10 @@ test('cuentas y nube congeladas: Firebase no se inicializa y no hay botón «Ent
   await expect(page.locator('#account-button')).toBeHidden();
   await expect(page.locator('.nav-button[data-page="pro"]')).toBeHidden();
 });
+
+test('escribir #pro en la URL no abre la página de Pro (cancelado)', async ({ page }) => {
+  await page.goto('/?hash-pro=1#pro');
+  await page.waitForFunction(() => typeof state === 'object' && typeof showPage === 'function');
+  await expect(page.locator('#pro')).not.toHaveClass(/active/);
+  await expect(page.locator('.page.active')).toHaveCount(1);
+});

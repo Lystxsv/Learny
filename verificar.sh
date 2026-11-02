@@ -19,6 +19,7 @@ node tests/run-node.js >/tmp/learny-n1.txt 2>&1 && ok "metas (run-node.js)" || {
 [ -f tests/run-node-errores.js ] && { node tests/run-node-errores.js >/tmp/learny-n2.txt 2>&1 && ok "red de errores (run-node-errores.js)" || { tail -5 /tmp/learny-n2.txt; mal "run-node-errores.js"; }; }
 [ -f tests/run-node-csp.js ] && { node tests/run-node-csp.js >/tmp/learny-n3.txt 2>&1 && ok "política de seguridad de contenido (run-node-csp.js)" || { grep FAIL /tmp/learny-n3.txt | head -5; mal "run-node-csp.js"; }; }
 [ -f tests/run-node-nube.js ] && { node tests/run-node-nube.js >/tmp/learny-n4.txt 2>&1 && ok "nube aislada (run-node-nube.js)" || { grep FAIL /tmp/learny-n4.txt | head -5; mal "run-node-nube.js"; }; }
+[ -f tests/run-node-aviso.js ] && { node tests/run-node-aviso.js >/tmp/learny-n5.txt 2>&1 && ok "aviso de personajes (run-node-aviso.js)" || { grep FAIL /tmp/learny-n5.txt | head -5; mal "run-node-aviso.js"; }; }
 
 paso "3/5 Preparar Playwright"
 [ -d node_modules/@playwright ] || npm install >/dev/null 2>&1 || { mal "npm install"; }

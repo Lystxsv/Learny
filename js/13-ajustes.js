@@ -72,6 +72,7 @@ function openSettings() {
         ${lumiAvatars.length ? `<fieldset class="lumi-avatar-group"><legend>Apariencia de Lumi</legend>
           <div class="lumi-avatar-opts">${lumiAvatars.map(([id, name]) => `<label class="lumi-avatar-opt"><input type="radio" name="mascotAvatar" value="${id}"><span class="lumi-avatar-card">${LC.thumb(id)}<span class="lumi-avatar-name">${esc(name)}</span><span class="lumi-avatar-check" aria-hidden="true">${icon('check')}</span></span></label>`).join('')}</div>
           <p class="hint">Solo cambia el dibujo: Lumi se comporta igual. Se ve al instante y se guarda con «Guardar preferencias».</p>
+          <p class="hint legal-note">Proyecto personal, gratuito y sin fines comerciales, no afiliado a los titulares de los personajes de Lumi; esos personajes pertenecen a sus dueños.</p>
         </fieldset>` : ''}
       </details>
       <details class="more-inline settings-group"><summary>Estudio y avisos</summary>

@@ -129,7 +129,7 @@ if (DEMO) {
 const savedTimer = (() => { try { return localStorage.getItem(TIMER_KEY); } catch { return null; } })();
 applyPreferences(); resetTimer('focus', false); lastTimerRaw = savedTimer; restoreTimer(savedTimer);
 renderAll(); maybeRemind(); backupNag();
-{ const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide', 'pro'].includes(hash)) showPage(hash); }
+{ const hash = location.hash.slice(1); if (['study', 'practice', 'library', 'planner', 'analysis', 'guide'].includes(hash)) showPage(hash); } // 'pro' fuera de la lista (v112): Pro esta cancelado y la pagina #pro queda vacia sin la nube; al reactivarla, vuelve a anadirlo (nube/README.md)
 // Etapa 6: la portada es solo para quien nunca entró (sin datos, sin bienvenida, sin temporizador y sin enlace directo a una sección)
 if (!state.settings.welcomed && !hasUserData() && !timer.started && !location.hash.slice(1)) showLanding();
 // Avisos de arranque en cola: ninguno pisa a otro (lo más grave primero)
