@@ -1,0 +1,81 @@
+diff --git a/index.html b/index.html
+index 913c9c2..d6baf2b 100644
+--- a/index.html
++++ b/index.html
+@@ -7,7 +7,7 @@
+        · script-src 'self': solo se ejecutan los .js de este sitio; ni scripts en línea, ni eval, ni manejadores onclick="…".
+        · style-src con 'unsafe-inline': a propósito (la app crea estilos en línea; el riesgo real está en los scripts, que sí están cerrados).
+        · connect-src https: : la URL del proxy de IA la escribe cada persona en Ajustes (https, o http://localhost), así que no se puede fijar el dominio.
+-       · Nube congelada: Firebase no se carga. Si se reactiva, ver «Reactivar la nube» en ESTADO.md (hay que ampliar script-src y connect-src).
++       · Nube congelada: Firebase no se carga. Su código vive aparte, en nube/ (ni se carga ni se precachea); para reactivarla y ampliar esta política, ver nube/README.md.
+        La prueba tests/run-node-csp.js vigila esta línea y que el código no vuelva a usar nada de lo que bloquea. -->
+   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
+   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+@@ -652,8 +652,5 @@
+ <script src="js/21-quiz.js" defer></script>
+ <script src="js/22-metas.js" defer></script>
+ <script src="extras.js" defer></script>
+-<script src="js/23-cuenta.js" defer></script>
+-<script src="js/24-clase-nube.js" defer></script>
+-<script type="module" src="js/firebase/firebase-teaching.js"></script>
+ </body>
+ </html>
+diff --git a/js/02-datos.js b/js/02-datos.js
+index 44100ba..7c5317d 100644
+--- a/js/02-datos.js
++++ b/js/02-datos.js
+@@ -170,7 +170,7 @@ function hydrate(raw) {
+     });
+   }
+   state.notes = state.notes.filter(okNote).map((n) => ({ id: idOf(n.id), date: isDay(n.date) ? n.date : today(), text: n.text.trim().slice(0, 2000) })).slice(-500);
+-  state.received = cleanReceived(state.received); state.reports = cleanReports(state.reports); // Etapa 6a (también los usa js/24-clase-nube.js con lo que llega de la nube)
++  state.received = cleanReceived(state.received); state.reports = cleanReports(state.reports); // Etapa 6a (también los usa nube/js/24-clase-nube.js con lo que llega de la nube, si se reactiva)
+   state.exams = state.exams.filter(okExam).map((e) => ({ date: e.date, score: Math.round(Number(e.score)), total: Math.round(Number(e.total)) })).slice(-500);
+   state.feynman = [...new Set(state.feynman.filter(isDay))].slice(-1000);
+   state.tasks = state.tasks.filter((t) => t && t.deadlineId && isDay(t.date)).map((t) => ({
+diff --git a/js/12b-profesor.js b/js/12b-profesor.js
+index 392bb10..4fe81e2 100644
+--- a/js/12b-profesor.js
++++ b/js/12b-profesor.js
+@@ -151,7 +151,7 @@ $('#class-list')?.addEventListener('click', (e) => {
+   const id = e.target.closest('[data-del-report]')?.dataset.delReport; if (!id) return;
+   const i = state.reports.findIndex((r) => r.id === id); if (i < 0) return;
+   const r = state.reports[i]; state.reports.splice(i, 1); save(); renderAll();
+-  document.dispatchEvent(new CustomEvent('learny:class-removed', { detail: { kind: 'reports', item: r } })); // js/24-clase-nube.js lo borra también de la cuenta
++  document.dispatchEvent(new CustomEvent('learny:class-removed', { detail: { kind: 'reports', item: r } })); // nube/js/24-clase-nube.js (si está cargado) lo borra también de la cuenta
+   offerUndo('Informe quitado.', () => { state.reports.splice(Math.min(i, state.reports.length), 0, r); save(); renderAll(); });
+ });
+ $('#lib-received')?.addEventListener('click', (e) => {
+diff --git a/sw.js b/sw.js
+index b7ab5b3..257c295 100644
+--- a/sw.js
++++ b/sw.js
+@@ -35,14 +35,7 @@ const CORE = [
+   './js/19-copia-archivo.js',
+   './js/20-pro.js',
+   './js/21-quiz.js',
+-  './js/22-metas.js',
+-  './js/23-cuenta.js',
+-  './js/24-clase-nube.js',
+-  './js/firebase/firebase-config.js',
+-  './js/firebase/firebase-init.js',
+-  './js/firebase/firebase-auth.js',
+-  './js/firebase/firebase-profile.js',
+-  './js/firebase/firebase-teaching.js'
++  './js/22-metas.js'
+ ];
+ const OPTIONAL = ['./icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
+ const NETWORK_TIMEOUT = 4000;
+diff --git a/tests/bloque-3.spec.js b/tests/bloque-3.spec.js
+index d8b302e..dca1503 100644
+--- a/tests/bloque-3.spec.js
++++ b/tests/bloque-3.spec.js
+@@ -92,7 +92,7 @@ test('Pro cancelado: exportar y quiz funcionan sin plan, sin etiqueta Pro y sin
+ test('cuentas y nube congeladas: Firebase no se inicializa y no hay botón «Entrar» ni sección Pro', async ({ page }) => {
+   await page.goto('/');
+   await page.waitForFunction(() => typeof state === 'object' && typeof showPage === 'function');
+-  expect(await page.evaluate(async () => { const m = await import('/js/firebase/firebase-config.js'); return [m.CLOUD_ENABLED, m.isFirebaseConfigured]; })).toEqual([false, false]);
++  expect(await page.evaluate(() => [typeof window.LearnyCloud, typeof window.LearnyAccount, typeof window.LearnyClassCloud])).toEqual(['undefined', 'undefined', 'undefined']); // el código de la nube vive en nube/ y no se carga
+   await expect(page.locator('#account-button')).toBeHidden();
+   await expect(page.locator('.nav-button[data-page="pro"]')).toBeHidden();
+ });

@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- Política de seguridad de contenido (CSP). Va aquí, antes de cualquier script o hoja de estilos: solo vale para lo que viene después.
+       Se pone por <meta> porque el alojamiento (GitHub Pages) no deja fijar cabeceras HTTP. Un <meta> no admite frame-ancestors.
+       · script-src 'self': solo se ejecutan los .js de este sitio; ni scripts en línea, ni eval, ni manejadores onclick="…".
+       · style-src con 'unsafe-inline': a propósito (la app crea estilos en línea; el riesgo real está en los scripts, que sí están cerrados).
+       · connect-src https: : la URL del proxy de IA la escribe cada persona en Ajustes (https, o http://localhost), así que no se puede fijar el dominio.
+       · Nube congelada: Firebase no se carga. Su código vive aparte, en nube/ (ni se carga ni se precachea); para reactivarla y ampliar esta política, ver nube/README.md.
+       La prueba tests/run-node-csp.js vigila esta línea y que el código no vuelva a usar nada de lo que bloquea. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="description" content="Learny: Pomodoro, flashcards con repaso espaciado, método Feynman y planificador de exámenes. Privado y local.">
+  <meta name="theme-color" content="#0e1220">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Learny">
+  <title>Learny · Estudia con intención</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="motion.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<noscript><p style="padding:1rem">Learny necesita JavaScript activado para funcionar.</p></noscript>
+
+<!-- Etapa 6: portada pública. Capa aparte sobre la app (oculta por defecto); solo la ve quien aún no tiene datos ni pasó por la bienvenida. -->
+<div id="landing" class="landing" hidden>
+  <header class="landing-head">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff"/><path d="M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15" fill="none" stroke="#0e1220" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="51" cy="48" r="3" fill="#0e1220"/></svg>
+      </div>
+      <div><strong>Learny</strong><span>Estudia con intención</span></div>
+    </div>
+  </header>
+
+  <main class="landing-main" id="landing-main">
+    <section class="landing-hero" aria-labelledby="landing-title">
+      <div class="landing-copy">
+        <p class="eyebrow">Para estudiar con calma y constancia</p>
+        <h1 id="landing-title" tabindex="-1">Estudia con intención, un paso a la vez</h1>
+        <p class="lead">Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Cuenta opcional: tus datos se quedan en este navegador.</p>
+        <div class="actions landing-cta">
+          <button id="landing-start" class="primary-button big" type="button" data-landing="start">Probar Learny</button>
+          <button class="outline-button" type="button" data-landing="tour">Ver el recorrido</button>
+          <button id="landing-demo" class="outline-button" type="button" data-landing="demo">Ver una demostración</button>
+        </div>
+        <p class="landing-note">Una vez cargada, funciona sin conexión. Puedes descargar una copia de tus datos cuando quieras.</p>
+      </div>
+
+      <figure class="landing-mock" aria-labelledby="landing-mock-cap">
+        <div class="landing-mock-ui" aria-hidden="true">
+          <div class="card landing-mock-card">
+            <div class="card-head"><div><p class="eyebrow">Recomendado para ahora</p><p class="next-title">Repasar 6 tarjetas</p></div><span class="tag">≈ 5 min</span></div>
+            <p class="landing-mock-why"><b>Por qué:</b> Te sugerimos repasar estas 6 tarjetas porque 2 están vencidas y 4 tocan hoy.</p>
+            <span class="landing-mock-btn">Repasar ahora</span>
+            <p class="landing-mock-alt"><b>Haz un bloque de enfoque</b> <span class="tag">≈ 25 min</span></p>
+          </div>
+          <div class="landing-flash">
+            <small>Química</small>
+            <p>¿Qué ocurre con la entropía de un sistema aislado?</p>
+            <div class="landing-mock-rate"><span class="landing-mock-btn out">1 · No lo sabía</span><span class="landing-mock-btn out">2 · Dudé</span><span class="landing-mock-btn out">3 · Fácil</span></div>
+          </div>
+        </div>
+        <figcaption id="landing-mock-cap">Así se ve «Hoy»: una acción recomendada con su motivo y, debajo, una tarjeta de repaso. Es un ejemplo ilustrativo; no son datos tuyos.</figcaption>
+      </figure>
+    </section>
+
+    <section class="landing-section" aria-labelledby="landing-tour">
+      <h2 id="landing-tour" tabindex="-1">Preparar, practicar, repasar</h2>
+      <ol class="landing-steps">
+        <li><h3>Preparar</h3><p>Pon la fecha de tu examen y Learny reparte el trabajo en tareas diarias, contando hacia atrás. Crea tarjetas desde tus apuntes o añade un mazo de ejemplo.</p></li>
+        <li><h3>Practicar</h3><p>Elige un resultado concreto y haz un bloque Pomodoro. Con las tarjetas, primero escribes tu respuesta y luego la comparas: recordar con esfuerzo suele ayudar más que releer.</p></li>
+        <li><h3>Repasar</h3><p>Valoras cada tarjeta (no lo sabía, dudé, fácil) y Learny programa cuándo volver a verla. Cada día, «Hoy» te propone una sola cosa para empezar.</p></li>
+      </ol>
+    </section>
+
+    <section class="landing-section landing-trust" aria-labelledby="landing-trust-title">
+      <h2 id="landing-trust-title">Tus datos, contigo</h2>
+      <ul>
+        <li>La cuenta es opcional; Learny funciona sin ella.</li>
+        <li>Todo se guarda solo en este navegador; en Ajustes puedes descargar una copia.</li>
+        <li>La IA es opcional: solo se usa internet si añades tu propia clave o tu proxy.</li>
+      </ul>
+      <div class="actions landing-end"><button id="landing-start-2" class="primary-button big" type="button" data-landing="start">Probar Learny</button></div>
+    </section>
+  </main>
+
+  <footer class="landing-foot">Comentarios: <a href="mailto:learnyxsv@gmail.com">learnyxsv@gmail.com</a></footer>
+</div>
+
+<!-- Etapa 7: banner permanente de la demo (oculto salvo con ?demo). Sticky arriba: nunca tapa los controles ni la barra móvil inferior. -->
+<div id="demo-banner" class="demo-banner" role="region" aria-label="Modo demostración" hidden>
+  <p><b>Demostración</b> · Datos de ejemplo; nada de esto se guarda ni toca tus datos reales.</p>
+  <div class="demo-actions">
+    <button id="demo-reset" class="text-button" type="button">Reiniciar demo</button>
+    <button id="demo-exit" class="primary-button" type="button">Salir de la demo</button>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo" aria-label="Logo Learny">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#fff"/><path d="M7 26 32 13l25 13-25 13L7 26Zm10 7v12l15 8 15-8V33L32 41 17 33Zm34-3v15" fill="none" stroke="#0e1220" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/><circle cx="51" cy="48" r="3" fill="#0e1220"/></svg>
+      </div>
+      <div><strong>Learny</strong><span>Estudia con intención</span></div>
+    </div>
+    <nav class="nav" aria-label="Secciones">
+      <p class="nav-label">Estudiar</p>
+      <button class="nav-button active" data-page="study" aria-current="page"><span class="material-symbols-outlined" aria-hidden="true" translate="no">home</span> Hoy</button>
+      <button class="nav-button" data-page="practice"><span class="material-symbols-outlined" aria-hidden="true" translate="no">psychology</span> Practicar</button>
+      <button class="nav-button" data-page="library"><span class="material-symbols-outlined" aria-hidden="true" translate="no">library_books</span> Biblioteca</button>
+      <p class="nav-label">Organizar</p>
+      <button class="nav-button" data-page="planner"><span class="material-symbols-outlined" aria-hidden="true" translate="no">calendar_month</span> Planificar</button>
+      <button class="nav-button" data-page="analysis"><span class="material-symbols-outlined" aria-hidden="true" translate="no">bar_chart</span> Reforzar</button>
+      <p class="nav-label" data-for="pro" hidden>Cuenta</p>
+      <button class="nav-button" data-page="pro" hidden><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Learny Pro</button>
+      <p class="nav-label">Ayuda</p>
+      <button class="nav-button" data-page="guide"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span> Guía de uso</button>
+    </nav>
+    <div class="sidebar-footer">Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy) o el dictado por voz, que usa el servicio de tu navegador (en Chrome, Google). No guardes tu clave en un equipo compartido.</div>
+  </aside>
+
+  <main class="main" id="main" tabindex="-1">
+    <header class="topbar">
+      <div class="ai-input">
+        <span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span>
+        <select id="search-engine" aria-label="Buscador o tutor">
+          <option value="gemini">Gemini</option>
+          <option value="local">Guía local</option>
+          <option value="google">Google</option>
+          <option value="wikipedia">Wikipedia</option>
+          <option value="perplexity">Perplexity</option>
+        </select>
+        <label class="sr-only" for="ai-question">Pregunta para tu tutor</label>
+        <input id="ai-question" placeholder="Pregunta a tu tutor socrático…" maxlength="800">
+        <button id="ask-ai" class="ask-button">Consultar</button>
+      </div>
+      <div class="topbar-tools">
+        <span id="save-status" class="save-status"></span>
+        <button class="icon-button" data-page="guide" aria-label="Guía de uso"><span class="material-symbols-outlined" aria-hidden="true" translate="no">menu_book</span></button>
+        <button id="account-button" class="icon-button account-button" type="button" hidden>Entrar</button>
+        <button id="font-down" class="icon-button" aria-label="Reducir tamaño de texto">A−</button>
+        <button id="font-up" class="icon-button" aria-label="Aumentar tamaño de texto">A+</button>
+        <button id="settings-button" class="icon-button" aria-label="Ajustes"><span class="material-symbols-outlined" aria-hidden="true" translate="no">settings</span></button>
+      </div>
+    </header>
+    <p id="offline-note" class="alert info" role="status" hidden>Sin conexión: tarjetas, Pomodoro y plan siguen funcionando. El tutor con IA no estará disponible hasta que vuelvas a conectarte.</p>
+
+    <details class="tutor-context card">
+      <summary>Contexto del tutor socrático</summary>
+      <div class="form-row">
+        <label>Materia<input id="tutor-subject" maxlength="60" placeholder="p. ej. Química"></label>
+        <label>Nivel<input id="tutor-level" maxlength="40" placeholder="p. ej. 2.º bachillerato"></label>
+      </div>
+      <label>Qué ya sabes<textarea id="tutor-known" maxlength="400" placeholder="Lo que ya dominas"></textarea></label>
+      <label>Qué quieres lograr<textarea id="tutor-goal" maxlength="200" placeholder="Resultado concreto de esta sesión"></textarea></label>
+      <div class="form-row">
+        <label>Nivel de explicación
+          <select id="tutor-style">
+            <option value="12">Como si tuviera 12 años</option>
+            <option value="uni" selected>Nivel universitario</option>
+            <option value="carrera">Con un ejemplo de mi carrera</option>
+          </select>
+        </label>
+        <label>Carrera / contexto<input id="tutor-career" maxlength="60" placeholder="p. ej. medicina, programación"></label>
+      </div>
+      <label>Cómo quieres que te ayude
+        <select id="tutor-mode">
+          <option value="socratic">Guíame con preguntas</option>
+          <option value="direct">Dame una explicación directa</option>
+        </select>
+      </label>
+      <div class="actions">
+        <button id="save-tutor-context" class="outline-button" type="button">Guardar contexto</button>
+        <button id="tutor-voice" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">mic</span> Dictar</button>
+        <button id="tutor-exercises" class="outline-button" type="button">5 ejercicios</button>
+        <button id="tutor-error" class="outline-button" type="button">Modo error</button>
+        <button id="clear-tutor-history" class="text-button danger" type="button">Borrar historial del tema</button>
+      </div>
+    </details>
+
+    <!-- ===== ESPACIO DE APRENDIZAJE ===== -->
+    <section class="page active" id="study">
+      <div class="page-heading">
+        <h1 id="greeting">Tu día de estudio</h1>
+        <p id="home-summary" class="lead"></p>
+      </div>
+
+      <article class="card today-queue" id="today-queue" aria-label="Qué hacer ahora"></article>
+
+      <article class="card pomodoro-card" id="pomodoro-card">
+        <div class="card-head"><h2>Pomodoro</h2><span id="pomodoro-profile" class="tag">25/5 · Foco</span></div>
+        <div class="timer" role="timer" aria-live="off"><span id="timer-clock">25:00</span><small id="timer-note">¿Qué resultado concreto quieres lograr?</small></div>
+        <label class="field">Resultado concreto de este bloque
+          <input id="intention-input" class="intention" placeholder="Ej.: terminar los ejercicios 1 al 5" maxlength="140"></label>
+        <div id="distraction-zone" class="distraction-zone" hidden>
+          <label class="field" for="distraction-input">Anotar una distracción</label>
+          <div class="distraction-row">
+            <input id="distraction-input" maxlength="140" autocomplete="off" placeholder="Algo que te sacó del foco (lo miras después)">
+            <button id="distraction-add" class="outline-button" type="button">Anotar</button>
+          </div>
+          <ul id="distraction-list" class="distraction-list" aria-label="Últimas distracciones anotadas"></ul>
+          <p id="distraction-count" class="hint" aria-live="polite"></p>
+        </div>
+        <div class="actions">
+          <button id="pomodoro-button" class="primary-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">play_arrow</span> Iniciar enfoque</button>
+          <button id="pomodoro-skip" class="outline-button" hidden>Saltar descanso</button>
+          <button id="pomodoro-reset" class="outline-button">Reiniciar</button>
+        </div>
+        <details class="more-inline" id="pomodoro-more">
+          <summary>Opciones del bloque</summary>
+          <div class="form-row compact">
+            <label>Etiqueta del bloque
+              <input id="pomodoro-label" list="subject-list" maxlength="60" placeholder="Materia, curso o tarjeta">
+            </label>
+            <label>Meta diaria (bloques)
+              <input id="daily-goal-input" type="number" min="1" max="12" value="2">
+            </label>
+          </div>
+          <p id="goal-progress" class="lead rhythm"></p>
+          <p id="notify-hint" class="hint" hidden>Las notificaciones están bloqueadas: Learny avisará aquí y con sonido/vibración.</p>
+          <div class="ambient" role="group" aria-label="Ambiente de estudio">
+            <p class="hint"><b>Ambiente</b> · cambia tu apariencia (puedes deshacerlo); sin sonido.</p>
+            <div class="actions"><button class="outline-button" type="button" data-ambient="biblioteca">Biblioteca</button><button class="outline-button" type="button" data-ambient="noche">Noche</button><button class="outline-button" type="button" data-ambient="enfoque">Minimalista</button></div>
+          </div>
+          <div class="actions"><button id="pomodoro-config" class="outline-button" type="button">Ajustar tiempos</button></div>
+        </details>
+      </article>
+
+      <details class="card more-today" id="today-more">
+        <summary>Más sobre hoy <small>misiones, progreso y un dato curioso</small></summary>
+        <p id="home-last" class="lead"></p>
+        <div id="missions-card" class="tool-block">
+          <div class="card-head"><h2>Misiones de hoy</h2><span id="mission-count" class="tag">0/3</span></div>
+          <div id="missions-list"></div>
+        </div>
+        <div class="grid metrics">
+          <div class="metric"><b id="focus-today">0 min</b><span>Foco hoy</span></div>
+          <div class="metric"><b id="current-streak">0 días</b><span>Racha actual</span></div>
+          <div class="metric"><b id="average-energy">—</b><span>Concentración media</span></div>
+        </div>
+        <p id="daily-rhythm" class="lead rhythm"></p>
+        <p class="fact"><span class="material-symbols-outlined" aria-hidden="true" translate="no">lightbulb</span> <span id="daily-fact"></span></p>
+      </details>
+    </section>
+
+    <!-- ===== BIBLIOTECA ===== -->
+    <section class="page" id="library">
+      <div class="page-heading"><p class="eyebrow">Biblioteca</p><h1>Tus tarjetas y mazos</h1><p class="lead">Tarjetas que ya dominas y mazos iniciales para empezar rápido.</p></div>
+      <article class="card library-inline">
+        <div class="card-head">
+          <div><h2>Biblioteca</h2><p class="lead">Tarjetas guardadas para consultar cuando quieras.</p></div>
+          <span id="library-count" class="tag">0 tarjetas</span>
+        </div>
+        <label class="field library-search">Buscar en tu biblioteca
+          <input id="library-search" type="search" maxlength="60" placeholder="Pregunta, respuesta o materia"></label>
+        <div id="library-list" class="library-list"></div>
+      </article>
+
+
+      <details class="card" id="share-more">
+        <summary>Compartir con alumnos o con tu profesor <small>mazos con nombre y versión, e informes de resultados</small></summary>
+        <p class="lead">Un profesor comparte un mazo como archivo; el alumno lo importa y, cuando quiera, descarga un informe con sus resultados en ese mazo para devolvérselo. Todo se hace con archivos: no hay cuentas ni servidor.</p>
+        <div class="actions">
+          <button id="lib-share" class="outline-button" type="button">Compartir mazo</button>
+          <button id="lib-import" class="outline-button" type="button">Importar mazo o informe</button><input id="lib-file" type="file" accept="application/json,.json" hidden aria-label="Archivo de mazo o informe a importar">
+          <button id="lib-report" class="outline-button" type="button">Informe para mi profesor</button>
+        </div>
+        <h3 class="alts-head">Mazos recibidos</h3>
+        <div id="lib-received"></div>
+        <p id="lib-sync" class="hint" aria-live="polite" hidden></p>
+      </details>
+
+      <details class="card" id="decks-more">
+        <summary>Mazos iniciales y mazos propios <small>añade tarjetas de ejemplo o crea tu mazo</small></summary>
+        <p class="lead">Mazos iniciales sin tus estadísticas. Duplicas el contenido; el progreso es solo tuyo.</p>
+        <div id="topic-library" class="topic-results"></div>
+      </details>
+    </section>
+
+    <!-- ===== PRACTICAR ===== -->
+    <section class="page" id="practice">
+      <div class="page-heading"><p class="eyebrow">Practicar</p><h1>Recuerda de memoria, explica con tus palabras</h1><p class="lead">Repasa tarjetas, usa el método Feynman y captura material de clase.</p></div>
+      <div class="grid study-grid">
+        <article class="card">
+          <div class="card-head">
+            <div class="head-inline"><h2>Repasar hoy</h2><span id="card-count" class="tag">0 para hoy</span></div>
+            <div class="actions tight">
+              <button id="add-card" class="outline-button">+ Crear</button>
+              <button id="gen-cards-top" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Crear con IA</button>
+              <button id="exam-exit" class="outline-button" type="button" hidden>Salir del examen</button>
+            </div>
+          </div>
+          <div id="flashcard" class="flashcard" tabindex="-1"></div>
+          <label class="recall-wrap">Tu respuesta (recuperación activa)
+            <textarea id="recall-answer" maxlength="800" placeholder="Escríbela antes de ver la tarjeta. Compararemos al revelar."></textarea>
+          </label>
+          <div id="predict-row" class="predict-row" role="group" aria-labelledby="predict-label" hidden>
+            <span id="predict-label" class="predict-label">¿Qué tan seguro estás? <small>(opcional)</small></span>
+            <button type="button" class="option-button" data-pred="know" aria-pressed="false">Lo sé</button>
+            <button type="button" class="option-button" data-pred="unsure" aria-pressed="false">Dudo</button>
+            <button type="button" class="option-button" data-pred="no" aria-pressed="false">No lo sé</button>
+          </div>
+          <button id="reveal-card" class="outline-button card-reveal">Ver respuesta</button>
+          <div id="rating-row" class="rating-row" role="group" aria-label="Califica cómo te fue" hidden>
+            <button class="option-button" data-rating="again">1 · No lo sabía</button>
+            <button class="option-button" data-rating="hard">2 · Dudé</button>
+            <button class="option-button easy" data-rating="easy">3 · Fácil</button>
+          </div>
+          <div id="card-tools" class="card-tools" hidden>
+            <button class="text-button" id="card-snooze" type="button">Posponer 1 día</button>
+            <button class="text-button" id="card-edit" type="button">Editar</button>
+            <button class="text-button" id="card-archive" type="button">Enviar a Biblioteca</button>
+            <button class="text-button danger" id="card-delete" type="button">Eliminar</button>
+          </div>
+          <details class="more-inline" id="review-more">
+            <summary>Más formas de repasar</summary>
+            <div class="actions">
+              <button id="exam-mode" class="outline-button" type="button">Modo examen</button>
+              <button id="interleave-mode" class="outline-button" type="button">Intercalar</button>
+              <button id="quick-five" class="outline-button" type="button">5 minutos</button>
+              <button id="real-exam" class="outline-button" type="button" data-ptxt="realExam">Examen real</button>
+              <button id="gen-cards" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Crear con IA</button>
+            </div>
+            <p class="hint"><b>Modo examen:</b> las tarjetas de hoy. <b>Intercalar:</b> las mezcla por materias. <b>5 minutos:</b> una sesión corta. <b><span data-ptxt="realExam">Examen real</span>:</b> tarjetas de hoy, falladas y al azar, con cronómetro.</p>
+          </details>
+          <p class="hint">Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P inicia o pausa el Pomodoro. SM-2: No lo sabía = 1, Dudé = 3, Fácil = 5.</p>
+        </article>
+
+        <article class="card feynman-card">
+          <div class="card-head"><h2>Método Feynman</h2><span class="material-symbols-outlined" aria-hidden="true" translate="no">edit_note</span></div>
+          <label class="field">Tema que estás explicando
+            <input id="feynman-topic" class="intention" placeholder="Ej.: la fotosíntesis" maxlength="80"></label>
+          <label class="field">Tu explicación
+            <textarea id="feynman-text" maxlength="4000" placeholder="Explícalo como a alguien de 12 años; incluye un ejemplo y una duda."></textarea></label>
+          <div class="actions">
+            <button id="feynman-feedback" class="primary-button">Explica para aprender</button>
+          </div>
+          <details class="more-inline" id="feynman-more">
+            <summary>Más opciones</summary>
+            <div class="actions"><button id="feynman-voice" class="outline-button" type="button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">mic</span> Dictar explicación</button></div>
+          </details>
+          <div id="feynman-guide" class="guided-feedback" aria-live="polite">Escribe o dicta una explicación: Learny detecta vacíos, pregunta y propone tarjetas. Sin clave también funciona.</div>
+        </article>
+      </div>
+
+      <details class="card more-tools" id="more-tools">
+      <summary>Más herramientas de práctica <small>ruleta de temas, notas rápidas, lectura y resumen</small></summary>
+      <section class="tool-block roulette-panel">
+        <div class="card-head">
+          <div><h2>Ruleta temática</h2><p class="lead">Elige un tema al azar, estúdialo y luego explícalo: recuperación activa en dos fases.</p></div>
+          <button id="spin-roulette" class="primary-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">casino</span> Girar tema</button>
+        </div>
+        <div class="roulette-tools">
+          <label class="field grow">Añadir o buscar un tema
+            <input id="topic-search" class="intention" placeholder="Cualquier tema o concepto"></label>
+          <button id="add-topic" class="outline-button">Añadir</button>
+          <button id="suggest-topic" class="outline-button"><span class="material-symbols-outlined" aria-hidden="true" translate="no">auto_awesome</span> Sugerir con IA</button>
+        </div>
+        <div id="topic-results" class="topic-results"></div>
+      </section>
+
+      <div class="grid study-grid">
+        <section class="tool-block">
+          <div class="card-head"><h2>Notas rápidas</h2><span class="tag">Clase → tarjetas</span></div>
+          <label class="field">Tu nota
+            <textarea id="quick-note" maxlength="2000" placeholder="Una idea, definición o fórmula; luego conviértela en tarjeta."></textarea></label>
+          <div class="actions">
+            <button id="save-note" class="outline-button" type="button">Guardar nota</button>
+            <button id="note-to-card" class="primary-button" type="button">Convertir en tarjeta</button>
+            <button id="capture-clip" class="outline-button" type="button">Pegar del portapapeles</button>
+          </div>
+          <div id="notes-list" class="session-list"></div>
+        </section>
+        <section class="tool-block">
+          <div class="card-head"><h2>Lectura y resumen</h2><span class="tag">Fuente → práctica</span></div>
+          <label class="field">Texto a estudiar
+            <textarea id="source-text" maxlength="8000" placeholder="Pega un texto (o el contenido de un PDF copiado) para obtener resumen, preguntas y tarjetas."></textarea></label>
+          <div class="actions">
+            <button id="source-analyze" class="primary-button" type="button">Generar estudio</button>
+          </div>
+          <div id="source-out" class="guided-feedback" aria-live="polite">Pega material para ampliar Learny más allá de las flashcards.</div>
+        </section>
+      </div>
+      </details>
+    </section>
+
+    <!-- ===== PLANIFICADOR ===== -->
+    <section class="page" id="planner">
+      <div class="page-heading"><p class="eyebrow">Planificador inteligente</p><h1>Convierte fechas en pasos diarios.</h1></div>
+      <p id="planner-alert" class="alert" role="status" hidden></p>
+      <article class="card" id="week-calendar-card">
+        <div class="card-head">
+          <h2>Calendario de la semana</h2>
+          <div class="actions tight">
+            <button id="smart-plan" class="primary-button" type="button">Estudio inteligente</button>
+            <button id="emergency-plan" class="outline-button" type="button">Plan de emergencia</button>
+          </div>
+        </div>
+        <div id="week-calendar" class="week-cal"></div>
+        <p id="auto-block" class="lead"></p>
+      </article>
+      <div class="grid planner-grid">
+        <article class="card">
+          <div class="card-head"><h2>Próximas fechas</h2><button id="add-deadline" class="primary-button">+ Añadir</button></div>
+          <div id="deadline-list" class="session-list"></div>
+        </article>
+        <article class="card">
+          <div class="card-head"><h2>Tareas de hoy</h2><span class="tag">Plan inverso</span></div>
+          <div id="calendar-summary" class="empty"></div>
+          <div id="today-tasks" class="session-list"></div>
+        </article>
+      </div>
+      <article class="card spaced" id="plan-log-card">
+        <div class="card-head"><div><h2>Cambios en tu plan</h2><p class="lead">Si te atrasas, Learny mueve a hoy como máximo las 2 tareas atrasadas más recientes de cada examen y descarta las anteriores para que el plan siga siendo realista. Aquí ves cada cambio.</p></div><button id="plan-log-clear" class="text-button" type="button">Borrar historial</button></div>
+        <div id="plan-log" class="session-list"></div>
+      </article>
+      <details class="card spaced" id="recovery-more">
+        <summary><span data-ptxt="recoveryTitle">Informe de examen</span> <small data-ptxt="recoverySub">registra qué falló y crea un plan de recuperación</small></summary>
+        <p class="lead" data-ptxt="recoveryLead">Registra qué falló en un parcial y Learny arma un plan de recuperación.</p>
+        <div class="form-row">
+          <label>Materia<input id="recovery-subject" list="subject-list" maxlength="60"></label>
+          <label><span data-ptxt="recoveryMiss">Qué falló</span><textarea id="recovery-miss" maxlength="600" placeholder="Temas o tipos de problema"></textarea></label>
+        </div>
+        <button id="recovery-plan" class="primary-button" type="button" data-ptxt="recoveryBtn">Crear plan de recuperación</button>
+      </details>
+    </section>
+
+    <!-- ===== ANÁLISIS ===== -->
+    <section class="page" id="analysis">
+      <div class="page-heading"><p class="eyebrow">Análisis personal</p><h1>Qué reforzar mañana.</h1></div>
+      <div class="stats-bar">
+        <label class="field inline">Periodo
+          <select id="stats-period"><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option><option value="all">Todo el historial</option></select></label>
+        <span id="stats-period-note" class="lead"></span>
+      </div>
+      <div class="grid metrics">
+        <div class="metric"><b id="retention-stat">—</b><span>Recuerdo declarado</span><small id="retention-note"></small></div>
+        <div class="metric"><b id="accuracy-stat">—</b><span>Repasos sin fallar</span><small id="accuracy-note"></small></div>
+        <div class="metric"><b id="exam-stat">—</b><span>Exámenes (Fácil)</span><small id="exam-note"></small></div>
+        <div class="metric"><b id="consistency-stat">0 días</b><span>Constancia</span><small id="consistency-note"></small></div>
+        <div class="metric"><b id="time-stat">0 min</b><span>Tiempo registrado</span><small id="time-note"></small></div>
+        <div class="metric"><b id="overdue-stat">0</b><span>Tarjetas vencidas</span><small>pendientes de repaso ahora</small></div>
+      </div>
+      <details class="card how-calc">
+        <summary>Cómo se calculan estos números</summary>
+        <ul class="steps">
+          <li><b>Recuerdo declarado:</b> repasos que marcaste «Fácil» entre todos los repasos del periodo. Es tu autoevaluación; no demuestra por sí solo cuánto retuviste.</li>
+          <li><b>Repasos sin fallar:</b> repasos en que no marcaste «No lo sabía», entre todos los del periodo.</li>
+          <li><b>Exámenes (Fácil):</b> respuestas «Fácil» entre las respondidas en modo examen. También son autoevaluadas.</li>
+          <li><b>Constancia:</b> días distintos con un bloque de enfoque completado o un repaso, entre los días del periodo.</li>
+          <li><b>Retención real:</b> de los repasos de tarjetas ya vistas, cuántos no marcaste «No lo sabía». El intervalo de cada repaso sale del historial de la tarjeta (días desde el repaso anterior). El 90 % es solo una referencia: no cambia cuándo vuelven las tarjetas.</li>
+          <li><b>Tiempo registrado:</b> minutos de bloques de enfoque completados (los abandonados no cuentan). Mide dedicación, no aprendizaje.</li>
+          <li>Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.</li>
+        </ul>
+      </details>
+      <article class="card spaced" id="class-card" hidden>
+        <div class="card-head"><div><h2>Resultados de tus alumnos</h2><p class="lead">Informes que tus alumnos te envían desde su Learny. Solo ves las tarjetas de tu mazo: repasos y fallos, sin sus notas ni otras materias.</p></div><span id="class-count" class="tag"></span></div>
+        <div class="actions tight">
+          <button id="class-import" class="outline-button" type="button">Importar informe de alumno</button><input id="class-file" type="file" accept="application/json,.json" multiple hidden aria-label="Informes de alumnos a importar">
+          <button id="class-export" class="outline-button" type="button">Exportar resumen (CSV)</button>
+        </div>
+        <label class="field inline" id="class-deck-wrap" hidden>Mazo<select id="class-deck" translate="no"></select></label>
+        <p id="class-summary" class="lead"></p>
+        <div id="class-list"></div>
+        <h3 class="alts-head">Tarjetas que más se fallan en la clase</h3>
+        <div id="class-hard"></div>
+        <p id="class-sync" class="hint" aria-live="polite" hidden></p>
+      </article>
+      <article class="card spaced" id="retention-card">
+        <div class="card-head"><div><h2>Retención real frente al objetivo</h2><p class="lead">De las tarjetas que ya habías visto, cuántas recordaste al volver. Distinto de «Recuerdo declarado».</p></div><span id="retention-real-tag" class="tag"></span></div>
+        <div id="retention-real"></div>
+        <p id="retention-real-note" class="lead"></p>
+      </article>
+      <article class="card spaced" id="confidence-card">
+        <div class="card-head"><div><h2>Confianza frente a acierto</h2><p class="lead">Lo que dijiste saber antes de ver la respuesta, frente a lo que recordaste al calificar. Solo cuenta los repasos en los que elegiste una opción.</p></div><span id="confidence-tag" class="tag"></span></div>
+        <div id="confidence-real"></div>
+        <p id="confidence-note" class="lead"></p>
+      </article>
+      <article class="card spaced" id="leech-card">
+        <div class="card-head"><div><h2>Tarjetas que se te resisten</h2><p class="lead">Las que has fallado 4 veces o más. Repetirlas igual casi nunca funciona: mejor reescribirlas o dividirlas.</p></div><span id="leech-count" class="tag"></span></div>
+        <div id="leech-list"></div>
+      </article>
+      <article class="card" id="insight-actions"></article>
+      <article class="card spaced" id="forecast-card">
+        <div class="card-head"><h2>Repasos de los próximos 7 días</h2><span id="forecast-total" class="tag"></span></div>
+        <div id="forecast-chart" class="chart" role="group" aria-label="Repasos programados por día"></div>
+        <p id="forecast-note" class="lead"></p>
+      </article>
+      <div class="grid planner-grid spaced">
+        <article class="card">
+          <div class="card-head">
+            <h2>Minutos de foco por día</h2>
+            <button id="export-report" class="outline-button" type="button">Exportar semana</button>
+          </div>
+          <div id="focus-chart" class="chart" role="img" aria-label="Minutos de foco por día en la última semana"></div>
+          <p id="focus-summary" class="lead"></p>
+        </article>
+        <article class="card">
+          <h2>Materias a reforzar</h2>
+          <div id="weak-topics"></div>
+          <div id="adaptive-route" class="guided-feedback"></div>
+        </article>
+      </div>
+      <details class="card spaced" id="analysis-more">
+      <summary>Más datos <small>mapa conceptual, resultados y práctica</small></summary>
+      <div class="grid planner-grid">
+        <article class="tool-block">
+          <h2>Mapa conceptual</h2>
+          <div id="concept-map" class="concept-map" role="img" aria-label="Relación entre materias y tarjetas"></div>
+        </article>
+        <article class="tool-block">
+          <div class="card-head"><h2>Resultados y práctica</h2><span id="challenge-tag" class="tag">Reto semanal</span></div>
+          <div id="badges-list"></div>
+          <div id="levels-list"></div>
+          <p id="weekly-digest" class="lead"></p>
+        </article>
+      </div>
+      </details>
+    </section>
+
+    <!-- ===== GUÍA ===== -->
+    <section class="page" id="pro">
+      <div class="page-heading"><p class="eyebrow">Learny Pro</p><h1>Tu plan y lo que incluye Pro.</h1>
+        <p class="lead">Esta sección pide iniciar sesión. Learny gratis sigue funcionando sin cuenta.</p></div>
+      <article class="card" id="pro-account-card"></article>
+      <article class="card" id="pro-features-card"></article>
+    </section>
+
+    <section class="page" id="guide">
+      <div class="page-heading"><p class="eyebrow">Guía de uso</p><h1>Cómo sacarle partido a Learny.</h1>
+        <p class="lead">Cinco minutos de lectura. Todo funciona sin cuenta y tus datos se quedan en este navegador.</p></div>
+      <article class="card guide-flow"><h2>Tu rutina diaria</h2>
+        <p class="lead">Abre <i>Hoy</i>: Learny te propone <b>una acción recomendada</b>, te explica por qué con tus datos y te deja elegir entre dos alternativas. Si empiezas de cero, solo verás un primer paso.</p>
+        <ol class="steps"><li><b>Planificar.</b> En <i>Planificar</i> añade tu examen con fecha: Learny crea tareas diarias.</li>
+        <li><b>Enfocarte.</b> Escribe un resultado concreto y pulsa <i>Iniciar enfoque</i>.</li>
+        <li><b>Crear y repasar tarjetas.</b> Crea tarjetas de lo que estudiaste y repasa las de hoy.</li>
+        <li><b>Explicar.</b> Usa Feynman o la ruleta para explicar con tus palabras.</li>
+        <li><b>Reforzar.</b> En <i>Reforzar</i> mira qué materias fallan y empieza ahí mañana.</li></ol></article>
+      <div class="grid planner-grid spaced">
+        <article class="card"><h2>Pomodoro</h2><p class="lead">Foco de 25 min y descanso de 5 (cambiable en <i>Hoy → Opciones del bloque → Ajustar tiempos</i> o Ajustes). Al terminar anota si lograste tu resultado y tu concentración. La meta diaria y la racha se calculan solas. Al terminar un bloque o un examen, Learny muestra un cierre con solo los datos de esa sesión y te deja elegir entre <i>Terminar por hoy</i> y <i>Seguir un poco más</i>. Si el menú atenuado durante el bloque te molesta, apágalo en <i>Ajustes → Disposición</i>.</p></article>
+        <article class="card"><h2>Flashcards</h2><p class="lead">Pulsa <i>+ Crear</i>, escribe pregunta y respuesta, e intenta recordar antes de revelar. Para crear varias seguidas usa <i>Guardar y añadir otra</i> (o Ctrl+Intro); la casilla de <i>tarjeta inversa</i> crea también la pregunta al revés, que llega al día siguiente. Califica con honestidad: cuanto más difícil, antes vuelve la tarjeta; cada botón indica en cuántos días volverá. Las que dominas, envíalas a la Biblioteca. Para no abrumarte, cada día solo entran las tarjetas nuevas que fijes en <i>Ajustes → Estudio y avisos</i> (20 por defecto; 0 = sin límite): las demás esperan, y puedes adelantarlas desde Practicar. En <i>Reforzar</i>, <i>Tarjetas que se te resisten</i> reúne las que fallaste 4 veces o más para reescribirlas o dividirlas.</p></article>
+        <article class="card"><h2>Tutor y búsqueda</h2><p class="lead">La barra superior consulta a un tutor que pregunta antes de responder. Su <i>Contexto</i> (materia, nivel, modo, dictado) está en <i>Practicar</i>. <i>Guía local</i> funciona sin internet; Gemini necesita tu clave gratuita (Ajustes). Google, Wikipedia y Perplexity abren una pestaña nueva.</p></article>
+        <article class="card"><h2>Planificador</h2><p class="lead">Cada fecha se divide en fases: comprensión, práctica, repaso, simulacro y revisión. Cada tarea de hoy dice cuántas tarjetas de esa materia toca trabajar y tiene un botón <i>Empezar</i>. Marca las tareas hechas. Si te atrasas, Learny mueve a hoy hasta 2 tareas por examen, descarta el resto y te lo explica en <i>Cambios en tu plan</i>. Cada fecha indica si lo que queda todavía cabe a tu ritmo diario, y <i>Replanificar desde hoy</i> recalcula el plan.</p></article>
+      </div>
+      <div class="grid planner-grid spaced">
+        <article class="card"><h2>Siguiente mejor acción</h2><p class="lead">En <i>Hoy</i>, Learny recomienda una acción y explica <b>por qué</b> con datos reales (por ejemplo: «estas 6 tarjetas están vencidas y pertenecen a tu examen del martes»). Orden: tarjetas de hoy, plan de examen, tarjetas falladas, materia más débil y, si no hay nada pendiente, material nuevo. Debajo verás hasta <b>dos alternativas</b> con su propio motivo: pulsa la que prefieras. Si hoy te cuesta empezar, pulsa <i data-ptxt="stuck">Hoy me cuesta arrancar</i>: te propone algo muy pequeño (hasta 3 tarjetas, una pregunta, 5 minutos o explicar una idea) y cerrar la ventana no cambia nada. En <i>Más opciones</i> está <i>Empezar sesión inteligente</i>, que encadena tres pasos: repaso de tarjetas y errores, un Pomodoro y una explicación Feynman.</p></article>
+        <article class="card"><h2>Dónde está lo avanzado</h2><p class="lead">Nada se quitó: está a un clic en bloques plegables. <i>Hoy → Más sobre hoy</i> (misiones, progreso) y <i>Opciones del bloque</i>. <i>Practicar → Más formas de repasar</i> (Modo examen, Intercalar, 5 minutos, <span data-ptxt="realExam">Examen real</span>, Crear con IA) y <i>Más herramientas de práctica</i> (ruleta, notas, lectura). <i>Biblioteca → Mazos iniciales y mazos propios</i>. <i>Planificar → <span data-ptxt="recoveryTitle">Informe de examen</span></i>. <i>Reforzar → Más datos</i>. <i>Ajustes → Inteligencia artificial</i> (clave, modelo, proxy) y <i>Estudio y avisos</i> (ruleta). Durante un bloque de enfoque o un examen solo se muestra la actividad actual y sus controles; al terminar o salir, todo vuelve.</p></article>
+        <article class="card"><h2>Qué es Gemini y cómo conseguir tu clave</h2><p class="lead">Las funciones con IA de Learny (tutor, Generar estudio, Crear con IA) usan <b>Gemini</b>, la inteligencia artificial de Google. Sin clave, Learny sigue funcionando con la <i>Guía local</i>. Para activar la IA:</p>
+        <ol class="steps"><li>Entra a <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> con tu cuenta de Google y pulsa <i>Create API key</i>.</li>
+        <li>Copia la clave y pégala en <i>Ajustes → Inteligencia artificial</i>; pulsa <i>Guardar preferencias</i>. Al volver a abrir Ajustes el campo aparece vacío: es normal, la clave sí está guardada.</li>
+        <li>Opcional: cambia el modelo en ese mismo bloque. Por defecto es <code>gemini-3.8-flash</code>. Lista de modelos: <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/models</a>.</li></ol>
+        <p class="lead">La clave es personal: no la compartas. Los límites de uso gratuito los define Google.</p></article>
+        <article class="card"><h2>Tutor con IA y privacidad</h2><p class="lead">Tras cada respuesta del tutor puedes pedir <i>Explicar más simple</i>, <i>Dame un ejercicio</i> o <i>Crear tarjetas</i>, y cancelar mientras espera. Para no exponer tu clave, en Ajustes puedes indicar la URL de tu propio proxy (ver <code>proxy-worker.example.js</code>).</p></article>
+      </div>
+      <div class="grid planner-grid spaced">
+        <article class="card"><h2>Más formas de repasar</h2><p class="lead">En <i>Practicar → Más formas de repasar</i>: <i>Modo examen</i> usa las tarjetas de hoy. <i>Intercalar</i> las mezcla por materias. <i>5 minutos</i> hace una sesión corta. <i data-ptxt="realExam">Examen real</i> combina tarjetas de hoy, las que fallaste y otras al azar, con cronómetro de 1,5 min por tarjeta. Si repasas una tarjeta antes de su fecha y la sabes, su calendario no cambia.</p></article>
+        <article class="card"><h2>Notas y lectura</h2><p class="lead">En <i>Practicar → Más herramientas de práctica</i>, guarda notas rápidas y conviértelas en tarjetas (tú escribes la pregunta). <i>Generar estudio</i> resume un texto y propone preguntas; con <i>Crear tarjetas</i> se generan huecos para completar. El micrófono dicta tu explicación o tu pregunta (Chrome y Edge).</p></article>
+        <article class="card"><h2>Mazos</h2><p class="lead">En <i>Biblioteca → Mazos iniciales y mazos propios</i> añade mazos iniciales o crea el tuyo con una tarjeta por línea: <code>pregunta | respuesta</code>. <i>Compartir mazo</i> (Ajustes) exporta tus tarjetas y mazos sin progreso. También puedes importar CSV o texto de Anki (.csv, .txt).</p></article>
+        <article class="card"><h2>Planes especiales</h2><p class="lead"><i>Estudio inteligente</i> crea el plan completo con Pomodoros y tareas por fase. <i>Plan de emergencia</i> reparte los 3 últimos días. <i data-ptxt="recoveryTitle">Informe de examen</i> convierte tus <span data-ptxt="missMany">fallos</span> en <span data-ptxt="recoveryPlan">un plan de recuperación</span> de 7 días. En <i>Practicar</i>, el tutor ofrece <i>5 ejercicios</i> y <i>Modo error</i>, que señala dónde falla tu razonamiento.</p></article>
+      </div>
+      <article class="card spaced"><h2>Compartir con alumnos y con tu profesor</h2>
+        <p class="lead">Un profesor elige en <i>Biblioteca → Compartir con alumnos o con tu profesor → Compartir mazo</i> las materias que quiere enviar, les pone nombre, autor, descripción y versión, y descarga un archivo (sin progreso, notas ni clave). El alumno lo abre con <i>Importar mazo o informe</i> y ve una vista previa. Cuando quiera, el alumno pulsa <i>Informe para mi profesor</i>: se descarga un archivo con, por cada tarjeta de ese mazo, cuántas veces la repasó y cuántas falló. El profesor lo importa con <i>Importar informe de alumno</i> en <i>Reforzar → Resultados de tus alumnos</i> y ve quién ha repasado, el porcentaje sin fallar y las tarjetas que más se fallan en la clase. Para actualizar un mazo, conserva el nombre y el autor y sube la versión. Todo se hace con archivos: no hay cuentas ni servidor.</p></article>
+      <article class="card spaced"><h2>Apariencia y tipografía</h2>
+        <p class="lead">En <i>Ajustes</i>, los bloques plegables <i>Apariencia</i>, <i>Tipografía y lectura</i> y <i>Disposición</i> cambian el aspecto de Learny. El <b>tema</b> puede ser Automático (sigue a tu sistema), Oscuro, Negro (OLED), Claro, Sepia, Alto contraste o Cromo (negro y plata, con acento fijo); el <b>acento</b> admite un color personalizado que Learny ajusta solo hasta que se lea bien. También eliges esquinas, tarjetas con borde o sombra, fondo, densidad, fuente del texto y de los títulos (solo fuentes de tu sistema), tamaño de texto de 13 a 24 px (también con A− y A+), interlineado, espaciado de letras, tamaño de las tarjetas de estudio, ancho del contenido, menú lateral de solo iconos y si ver las misiones y el dato curioso. Los <i>estilos rápidos</i> (Cuaderno, Lectura nocturna, Papel, Enfoque) rellenan varias opciones a la vez y <i>Restablecer apariencia</i> vuelve al estilo Cuaderno. Los cambios se ven al instante, pero solo se guardan con <i>Guardar preferencias</i>; si cierras la ventana sin guardar, todo vuelve a como estaba.</p></article>
+      <article class="card spaced"><h2>Atajos de teclado</h2>
+        <p class="lead"><kbd>Espacio</kbd> revelar respuesta · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> calificar · <kbd>P</kbd> iniciar o pausar el Pomodoro · <kbd>Esc</kbd> cerrar una ventana · <kbd>Enter</kbd> en el resultado concreto inicia el bloque · <kbd>Z</kbd> deshace. Los atajos de tarjetas funcionan en <i>Practicar</i>. Todo el recorrido (planificar, iniciar un Pomodoro, repasar y calificar, crear una tarjeta, importar) se puede hacer solo con teclado: <kbd>Tab</kbd> avanza, <kbd>Mayús</kbd>+<kbd>Tab</kbd> retrocede, <kbd>Enter</kbd> o <kbd>Espacio</kbd> pulsan, y al cerrar una ventana el foco vuelve al botón que la abrió.</p></article>
+      <article class="card spaced"><h2>Datos, copias e instalación</h2>
+        <p class="lead">En Ajustes puedes descargar una copia, importar JSON o CSV, y compartir un mazo sin tu progreso. En el móvil, usa <i>Añadir a pantalla de inicio</i> para instalarla y usarla sin conexión. Antes de borrar o importar, Learny guarda una copia automática que puedes restaurar en Ajustes. Si borras los datos del navegador, pierdes tu progreso: descarga copias de vez en cuando.</p></article>
+    </section>
+  </main>
+</div>
+
+<nav class="bottom-nav" aria-label="Secciones en móvil">
+  <button class="nav-button active" data-page="study"><span class="material-symbols-outlined" aria-hidden="true" translate="no">home</span><small>Hoy</small></button>
+  <button class="nav-button" data-page="practice"><span class="material-symbols-outlined" aria-hidden="true" translate="no">psychology</span><small>Practicar</small></button>
+  <button class="nav-button" data-page="library"><span class="material-symbols-outlined" aria-hidden="true" translate="no">library_books</span><small>Biblioteca</small></button>
+  <button class="nav-button" data-page="planner"><span class="material-symbols-outlined" aria-hidden="true" translate="no">calendar_month</span><small>Planificar</small></button>
+  <button class="nav-button" data-page="analysis"><span class="material-symbols-outlined" aria-hidden="true" translate="no">bar_chart</span><small>Reforzar</small></button>
+</nav>
+
+<!-- Lumi (compañero de estudio opcional): dock fijo, visible en todas las secciones. El SVG es decorativo; el mensaje es texto real. Solo se muestra si settings.mascot está activo. -->
+<div class="lumi-dock" id="lumi-dock">
+  <p class="lumi-msg" id="lumi-msg" data-on="false" hidden></p>
+  <div class="lumi" id="lumi" data-avatar="bee" data-pose="neutral" data-anim="none" hidden>
+    <!-- El dibujo de Lumi (SVG decorativo) lo inserta js/16-lumi.js al iniciar -->
+    <button class="lumi-hide" type="button" aria-label="Ocultar a Lumi"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button>
+  </div>
+  <span id="lumi-live" class="sr-only" aria-live="polite"></span>
+</div>
+<datalist id="subject-list"></datalist>
+<dialog id="app-modal" class="modal" aria-label="Ventana de Learny">
+  <form id="modal-form" class="modal-content">
+    <div id="modal-body"></div>
+    <div class="sr-only modal-live" aria-live="polite" aria-atomic="true"></div><div class="sr-only modal-alert" role="alert" aria-atomic="true"></div>
+    <button class="modal-close" type="button" aria-label="Cerrar"><span class="material-symbols-outlined" aria-hidden="true" translate="no">close</span></button><!-- R9: después del contenido en el DOM (el lector lee primero el diálogo); sigue arriba a la derecha porque es absoluto -->
+  </form>
+</dialog>
+<dialog id="confirm-modal" class="modal confirm" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+  <form method="dialog" class="modal-content">
+    <h2 id="confirm-title">¿Seguro?</h2>
+    <p id="confirm-message" class="confirm-message"></p>
+    <div class="actions">
+      <button id="confirm-cancel" class="outline-button" value="cancel">Cancelar</button>
+      <button id="confirm-ok" class="primary-button" value="ok">Confirmar</button>
+    </div>
+    <div class="sr-only modal-live" aria-live="polite" aria-atomic="true"></div><div class="sr-only modal-alert" role="alert" aria-atomic="true"></div>
+  </form>
+</dialog>
+<button id="mini-timer" class="mini-timer" type="button" hidden aria-label="Volver al temporizador"></button>
+<div id="sr-live" class="sr-only" aria-live="polite"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<!-- Partes de la app (antes script.js). El orden importa: comparten ámbito global. -->
+<script src="js/00-errores.js" defer></script>
+<script src="js/01c-metas-datos.js" defer></script>
+<script src="js/01-base.js" defer></script>
+<script src="js/01b-perfil-textos.js" defer></script>
+<script src="js/02-datos.js" defer></script>
+<script src="js/03-interfaz.js" defer></script>
+<script src="js/04-planificador.js" defer></script>
+<script src="js/05-temporizador.js" defer></script>
+<script src="js/06-hoy.js" defer></script>
+<script src="js/07-tarjetas.js" defer></script>
+<script src="js/08-analisis.js" defer></script>
+<script src="js/09-tutor-ia.js" defer></script>
+<script src="js/10-revision-ia-y-temas.js" defer></script>
+<script src="js/11-apariencia.js" defer></script>
+<script src="js/12-copias-e-importacion.js" defer></script>
+<script src="js/12b-profesor.js" defer></script>
+<script src="js/13-ajustes.js" defer></script>
+<script src="js/14-eventos.js" defer></script>
+<script src="js/14b-autodidacta.js" defer></script>
+<script src="js/15-inicio.js" defer></script>
+<script src="js/16-lumi-eevee.js" defer></script>
+<script src="js/16-lumi-walle.js" defer></script>
+<script src="js/16-lumi-daniel.js" defer></script>
+<script src="js/16-lumi-yor.js" defer></script>
+<script src="js/16-lumi-gato.js" defer></script>
+<script src="js/16-lumi-cc.js" defer></script>
+<script src="js/16-lumi-alisa.js" defer></script>
+<script src="js/16-lumi.js" defer></script>
+<script src="js/17-movimiento.js" defer></script>
+<script src="js/19-copia-archivo.js" defer></script>
+<script src="js/20-pro.js" defer></script>
+<script src="js/21-quiz.js" defer></script>
+<script src="js/22-metas.js" defer></script>
+<script src="extras.js" defer></script>
+</body>
+</html>

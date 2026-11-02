@@ -1,0 +1,8 @@
+{
+  "name": "learny-nube-reglas",
+  "private": true,
+  "description": "Solo para probar las reglas de Firestore con el emulador. Ni la app ni 'npm test' de la raíz lo usan.",
+  "scripts": {
+    "test:reglas": "firebase emulators:exec --only firestore --project demo-learny \"node --test tests/reglas-emulador.js\""
+  }
+}

@@ -1,0 +1,799 @@
+/* Learny · parte 18 · Idioma (inglés predeterminado, español opcional)
+   El código de la app está escrito en español; este módulo traduce lo que se VE (texto, placeholder, aria-label, title) cuando settings.lang === 'en'
+   (valor por defecto) y lo devuelve tal cual cuando es 'es'. No toca datos del usuario: las tarjetas, notas y respuestas de la IA solo traducen botones/rótulos exactos.
+   Mecanismo: diccionario (frases) + reglas con números + MutationObserver sobre <body>. Lo que no esté en el diccionario se queda en español: añade entradas en EX/RULES.
+   También: guía de uso en inglés, guía local del tutor en inglés y la IA responde en el idioma elegido.
+   Se carga con <script defer> después de 17-movimiento.js (comparte el ámbito global; no hay import/export). */
+'use strict';
+
+(() => {
+  const EX = Object.assign(Object.create(null), {
+    /* ---- Revisión del inglés · bloque 1: plan diario, Hoy y Planificar (las frases con huecos están en RULES) ---- */
+    'Añade primero una fecha de examen.': 'Add an exam date first.', 'Indica la materia y qué falló.': 'Enter the subject and what went wrong.',
+    'Elige una fecha real entre hoy y los próximos 2 años.': 'Pick a real date between today and the next 2 years.', 'Elige una fecha entre hoy y los próximos 2 años.': 'Pick a date between today and the next 2 years.',
+    'Dime el examen y Learny reparte Pomodoros, tarjetas, práctica intercalada, simulacro y repaso de errores hasta la fecha.': 'Tell me the exam and Learny spreads Pomodoros, cards, interleaved practice, a mock exam and error review up to the date.',
+    'Parcial de cálculo': 'Calculus midterm',
+    'Las tareas de cada día aparecen en Planificar y puedes marcarlas al terminarlas.': "Each day's tasks appear in Plan and you can tick them off when you finish.",
+    'lo esencial del temario y 10 tarjetas clave': 'the essentials of the syllabus and 10 key cards', 'problemas y práctica de lo de mayor peso': 'problems and practice on the topics that weigh the most',
+    'simulacro cronometrado y revisión de errores': 'a timed mock exam and a final review of mistakes',
+    'El día del examen, solo un repaso ligero. Duerme bien la noche anterior: consolidas lo estudiado.': 'On exam day, only a light review. Sleep well the night before: it consolidates what you studied.',
+    'El examen es hoy. Haz un repaso ligero de 2 bloques de 25 min sobre los conceptos débiles, come algo, llega con tiempo y confía en lo que ya estudiaste.': 'The exam is today. Do a light review of 2 blocks of 25 min on the weak concepts, eat something, arrive on time and trust what you already studied.',
+    'crear tarjetas del tema': 'create topic cards', 'práctica intercalada de 10 tarjetas': 'interleaved practice with 10 cards', 'repaso de errores': 'review of mistakes',
+    'examen real cronometrado': 'timed real exam', 'repaso de errores y tarjetas débiles': 'review of mistakes and weak cards',
+    /* ---- Revisión del inglés · bloque 2: Reforzar (las frases con huecos están en RULES; las palabras sueltas, en ONLY). «sin fallar» = «without a miss». ---- */
+    'Retención real frente al objetivo': 'Real retention vs. target', 'Retención real:': 'Real retention:',
+    'De las tarjetas que ya habías visto, cuántas recordaste al volver. Distinto de «Recuerdo declarado».': 'Of the cards you had already seen, how many you recalled when they came back. Different from “Self-reported recall”.',
+    'Con pocos repasos esta cifra aún no es fiable: se afina a medida que repasas.': 'With few reviews this figure is not reliable yet: it gets sharper as you review.',
+    'Si pasas semanas por debajo del objetivo, repasa con más frecuencia o reescribe las tarjetas que se te resisten.': 'If you stay below the target for weeks, review more often or rewrite the cards you keep struggling with.',
+    'Tarjetas que se te resisten': 'Cards you keep struggling with',
+    'Las que has fallado 4 veces o más. Repetirlas igual casi nunca funciona: mejor reescribirlas o dividirlas.': 'The ones you have missed 4 or more times. Repeating them the same way rarely works: better to rewrite or split them.',
+    'Reescribir o dividir': 'Rewrite or split', 'Dividir en otra tarjeta': 'Split into another card', 'Dejarla como está': 'Leave it as it is', 'Una tarjeta que se te resiste': 'A card you keep struggling with',
+    'usa tus palabras y una pista más clara.': 'use your own words and a clearer hint.',
+    'si junta varias ideas, deja una por tarjeta (la original sigue ahí para que la recortes). Reescribirla la da por atendida.': 'if it mixes several ideas, leave one per card (the original stays there so you can trim it). Rewriting it marks it as dealt with.',
+    'Sin exámenes en este periodo': 'No exams in this period',
+    'Sin errores recientes: sigue con tu plan.': 'No recent mistakes: keep following your plan.', 'Hoy no tienes tareas pendientes de este examen.': 'You have no pending tasks for this exam today.', 'Hoy ya cuenta. ¡Buen ritmo!': 'Today already counts. Nice pace!',
+    'Un resultado destacado aparece con 30 repasos de una materia y al menos 80 % sin fallar.': 'A highlight appears with 30 reviews in a subject and at least 80% without a miss.',
+    'repasos que marcaste «Fácil» entre todos los repasos del periodo. Es tu autoevaluación; no demuestra por sí solo cuánto retuviste.': 'reviews you marked “Easy” out of all reviews in the period. It is your self-assessment; on its own it does not show how much you retained.',
+    'repasos en que no marcaste «No lo sabía», entre todos los del periodo.': "reviews where you did not mark “Didn't know it”, out of all reviews in the period.",
+    'respuestas «Fácil» entre las respondidas en modo examen. También son autoevaluadas.': '“Easy” answers out of those given in exam mode. They are also self-assessed.',
+    'días distintos con un bloque de enfoque completado o un repaso, entre los días del periodo.': 'distinct days with a completed focus block or a review, out of the days in the period.',
+    'de los repasos de tarjetas ya vistas, cuántos no marcaste «No lo sabía». El intervalo de cada repaso sale del historial de la tarjeta (días desde el repaso anterior). El 90 % es solo una referencia: no cambia cuándo vuelven las tarjetas.': "of the reviews of cards you had already seen, how many you did not mark “Didn't know it”. Each review's interval comes from the card's history (days since the previous review). The 90% is only a reference: it does not change when cards come back.",
+    'minutos de bloques de enfoque completados (los abandonados no cuentan). Mide dedicación, no aprendizaje.': 'minutes of completed focus blocks (abandoned ones do not count). It measures effort, not learning.',
+    'Con menos de 10 intentos verás «muestra pequeña», y con menos de 5 por materia Learny no la califica. Se guardan hasta 5 000 repasos.': 'With fewer than 10 attempts you will see “small sample”, and with fewer than 5 per subject Learny does not grade it. Up to 5,000 reviews are kept.',
+    /* ---- Estructura, menú y barra superior ---- */
+    /* ---- Profesor y alumnos (etapa 6a) ---- */
+    'Compartir con alumnos o con tu profesor': 'Share with students or with your teacher', 'mazos con nombre y versión, e informes de resultados': 'named, versioned decks and result reports',
+    'Un profesor comparte un mazo como archivo; el alumno lo importa y, cuando quiera, descarga un informe con sus resultados en ese mazo para devolvérselo. Todo se hace con archivos: no hay cuentas ni servidor.': 'A teacher shares a deck as a file; the student imports it and, whenever they want, downloads a report with their results in that deck to send back. Everything is done with files: there are no accounts and no server.',
+    'Importar mazo o informe': 'Import deck or report', 'Informe para mi profesor': 'Report for my teacher', 'Mazos recibidos': 'Received decks', 'Aún no has recibido ningún mazo con nombre.': "You haven't received any named deck yet.",
+    'Quitar de la lista': 'Remove from list', 'Mazo quitado de la lista. Tus tarjetas no se borran.': 'Deck removed from the list. Your cards are not deleted.', 'Archivo de mazo o informe a importar': 'Deck or report file to import',
+    'Se crea un archivo con tus tarjetas (sin tu progreso) para que otra persona lo importe en su Learny.': 'A file is created with your cards (without your progress) so someone else can import it into their Learny.',
+    'Autor (opcional)': 'Author (optional)', 'Descripción (opcional)': 'Description (optional)', 'Materias que incluir': 'Subjects to include', 'Incluir mis mazos propios': 'Include my own decks',
+    'Para actualizar un mazo que ya compartiste, conserva el nombre y el autor y sube la versión. El archivo no incluye tu progreso, tus notas ni tu clave.': 'To update a deck you already shared, keep the name and author and raise the version. The file does not include your progress, notes or key.',
+    'Descargar mazo': 'Download deck', 'Escribe un nombre para el mazo.': 'Write a name for the deck.', 'Elige al menos una materia o incluye tus mazos propios.': 'Choose at least one subject or include your own decks.', 'Registrar mazo': 'Register deck',
+    'Descarga un archivo con tus resultados en un mazo que recibiste y envíaselo a tu profesor.': 'Download a file with your results in a deck you received and send it to your teacher.',
+    'Incluye solo las tarjetas de ese mazo: la pregunta, cuántas veces las repasaste y cuántas fallaste. No incluye tus notas, otras materias ni tu clave.': 'It only includes the cards of that deck: the question, how many times you reviewed them and how many you failed. It does not include your notes, other subjects or your key.',
+    'Descargar informe': 'Download report', 'Informe descargado.': 'Report downloaded.', 'Escribe tu nombre para el informe.': 'Write your name for the report.', 'Ese mazo ya no está en tu lista.': 'That deck is no longer in your list.',
+    'Importa primero un mazo de tu profesor (Biblioteca → Compartir con alumnos o con tu profesor).': 'First import a deck from your teacher (Library → Share with students or with your teacher).',
+    'Resultados de tus alumnos': "Your students' results", 'Informes que tus alumnos te envían desde su Learny. Solo ves las tarjetas de tu mazo: repasos y fallos, sin sus notas ni otras materias.': "Reports your students send from their Learny. You only see the cards of your deck: reviews and mistakes, without their notes or other subjects.",
+    'Importar informe de alumno': 'Import student report', 'Informes de alumnos a importar': 'Student reports to import', 'Exportar resumen (CSV)': 'Export summary (CSV)', 'Tarjetas que más se fallan en la clase': 'Cards the class fails most',
+    'Aún no has importado informes. Pide a tus alumnos que usen «Informe para mi profesor» en su Learny e impórtalos aquí.': 'You have not imported any reports yet. Ask your students to use “Report for my teacher” in their Learny and import them here.',
+    'Ningún alumno ha repasado este mazo todavía.': 'No student has reviewed this deck yet.', 'Quitar informe': 'Remove report', 'Informe quitado.': 'Report removed.',
+    'Ninguna tarjeta destaca todavía: hacen falta al menos 3 repasos de una tarjeta con algún fallo.': 'No card stands out yet: a card needs at least 3 reviews with some failure.',
+    'Informe importado.': 'Report imported.', 'Informe actualizado (reemplaza el anterior de ese alumno).': 'Report updated (replaces that student\'s previous one).', 'Ya tienes un informe más reciente de ese alumno.': 'You already have a more recent report from that student.',
+    'El informe no tiene el formato esperado.': 'The report does not have the expected format.', 'Resumen descargado.': 'Summary downloaded.', 'No hay informes que exportar.': 'There are no reports to export.',
+    'Mira cómo van tus alumnos': 'See how your students are doing', 'Ver resultados': 'See results', 'Ya importaste informes de tus alumnos. Revisa quién ha repasado y qué tarjetas se fallan más en la clase.': 'You already imported reports from your students. See who has reviewed and which cards the class fails most.',
+    'Prepara un mazo para tus alumnos': 'Prepare a deck for your students', 'Tus tarjetas se pueden compartir como un archivo con nombre, descripción y versión; tus alumnos lo importan sin crear cuenta ni registro.': 'Your cards can be shared as a file with a name, description and version; your students import it without creating an account or signing up.',
+    'No hay tarjetas para compartir.': 'There are no cards to share.',
+    /* ---- Perfiles (etapa 1) ---- */
+    /* ---- Pro · Bloque 1 ---- */
+    'Exportar e imprimir': 'Export and print', 'Lleva tus tarjetas a Anki, a una hoja de cálculo o al papel.': 'Take your cards to Anki, a spreadsheet or paper.', 'Qué exportar': 'What to export', 'Todas las materias': 'All subjects',
+    'Anki (.txt)': 'Anki (.txt)', 'Imprimir tarjetas': 'Print cards', 'Imprimir hoja de preguntas': 'Print question sheet', 'Plan Pro activo en este navegador.': 'Pro plan active in this browser.', 'Volver al plan gratis': 'Back to the free plan',
+    'Función Pro.': 'Pro feature.', 'Ver qué incluye Pro': 'See what Pro includes', 'Esta función es Pro.': 'This feature is Pro.', 'Activar Pro en este navegador': 'Turn on Pro in this browser', 'Disponible': 'Available', 'Próximamente': 'Coming soon',
+    'Learny Pro reúne las herramientas para preparar y llevar tu material más lejos. Se irán sumando por bloques.': 'Learny Pro brings together tools to prepare your material and take it further. They will be added block by block.',
+    'Todo lo que ya usas (repaso SM-2, Pomodoro, tutor socrático, plan inverso, importar y copias) sigue siendo gratis. Todavía no hay cobro ni cuenta: Pro se activa solo en este navegador mientras se prueba.': 'Everything you already use (SM-2 review, Pomodoro, Socratic tutor, reverse plan, import and backups) stays free. There is no payment or account yet: Pro is only turned on in this browser while it is being tested.',
+    'Exportar e imprimir (Anki, CSV, papel)': 'Export and print (Anki, CSV, paper)', 'Quizzes y exámenes simulados': 'Quizzes and mock exams', 'Flashcards con IA desde PDF y fotos': 'AI flashcards from PDFs and photos', 'Tutor IA sobre tus documentos, con citas': 'AI tutor on your documents, with citations',
+    'Resúmenes y mapas conceptuales con IA': 'AI summaries and concept maps', 'Repaso dirigido a tus puntos débiles': 'Review targeted at your weak points', 'Gamificación: XP, niveles y medallas': 'Gamification: XP, levels and badges', 'Audio-resumen': 'Audio summary', 'Grupos de estudio': 'Study groups',
+    'Pro activado en este navegador.': 'Pro turned on in this browser.', 'Plan gratis. Tus datos no cambian.': 'Free plan. Your data does not change.', 'En la demostración no se descargan archivos.': 'Files are not downloaded in the demo.', 'No hay tarjetas para exportar.': 'There are no cards to export.',
+    'El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes para Learny.': 'The browser blocked the print window. Allow pop-ups for Learny.',
+    'Bienvenida': 'Welcome', '¿Para qué usas Learny?': 'What do you use Learny for?', 'Tengo un examen': 'I have an exam', 'Plan con fecha, tareas diarias y repasos.': 'A dated plan, daily tasks and reviews.',
+    'Estudio por mi cuenta': 'I study on my own', 'Ritmo y temas, sin fecha de examen.': 'A rhythm and topics, no exam date.', 'Enseño': 'I teach', 'Preparo material para mis alumnos.': 'I prepare material for my students.',
+    'Lo puedes cambiar después en Ajustes.': 'You can change this later in Settings.', 'Decidir después': 'Decide later', 'Personalizar · opcional': 'Personalize · optional', '¿Quieres ajustar algo más?': 'Want to adjust anything else?',
+    'Tu nombre': 'Your name', 'Todo es opcional. El tiempo ajusta la duración de tu Pomodoro.': 'Everything is optional. The time sets the length of your Pomodoro.', 'Uso principal': 'Main use',
+    'Accesibilidad': 'Accessibility', 'Tamaño de texto': 'Text size', 'Terminar': 'Finish',
+    'Tu sistema ya pide reducir el movimiento: Learny lo respeta aunque no marques esto.': 'Your system already asks to reduce motion: Learny respects it even if you do not tick this.',
+    'Los cambios se aplican al instante y se guardan al pulsar «Terminar».': 'Changes apply instantly and are saved when you press “Finish”.',
+    'Lectura fácil activada.': 'Easy reading turned on.', 'Lectura fácil desactivada.': 'Easy reading turned off.', 'Animaciones reducidas.': 'Animations reduced.', 'Animaciones normales.': 'Animations back to normal.',
+    'Completada:': 'Completed:', 'Pendiente:': 'Pending:',
+    'Listo. Puedes cambiar todo esto en Ajustes.': 'Done. You can change all of this in Settings.', 'Filtro quitado.': 'Filter removed.',
+    'Saltar al contenido': 'Skip to content', 'Learny necesita JavaScript activado para funcionar.': 'Learny needs JavaScript enabled to work.',
+    'Estudia con intención': 'Study with intention', 'Estudiar': 'Study', 'Organizar': 'Organize', 'Ayuda': 'Help',
+    'Hoy': 'Today', 'Practicar': 'Practice', 'Biblioteca': 'Library', 'Planificar': 'Plan', 'Reforzar': 'Reinforce', 'Guía de uso': 'User guide',
+    'Secciones': 'Sections', 'Secciones en móvil': 'Sections on mobile', 'Modo demostración': 'Demo mode',
+    'Demostración': 'Demo', 'Datos de ejemplo; nada de esto se guarda ni toca tus datos reales.': 'Sample data; none of this is saved or touches your real data.',
+    'Reiniciar demo': 'Reset demo', 'Salir de la demo': 'Exit demo', 'Demo: no se guarda': 'Demo: not saved',
+    'Tus datos se guardan solo en este navegador. Internet solo se usa si activas la IA (clave de Gemini o proxy) o el dictado por voz, que usa el servicio de tu navegador (en Chrome, Google). No guardes tu clave en un equipo compartido.': 'Your data is stored only in this browser. The internet is only used if you turn on AI (Gemini key or proxy) or voice dictation, which uses your browser\'s service (in Chrome, Google). Do not save your key on a shared computer.',
+    'Buscador o tutor': 'Search engine or tutor', 'Guía local': 'Local guide', 'Pregunta para tu tutor': 'Question for your tutor',
+    'Pregunta a tu tutor socrático…': 'Ask your Socratic tutor…', 'Pregunta y recibe una explicación directa…': 'Ask and get a direct explanation…', 'Consultar': 'Ask',
+    'Reducir tamaño de texto': 'Decrease text size', 'Aumentar tamaño de texto': 'Increase text size', 'Ajustes': 'Settings',
+    'Sin conexión: tarjetas, Pomodoro y plan siguen funcionando. El tutor con IA no estará disponible hasta que vuelvas a conectarte.': 'Offline: cards, Pomodoro and plan keep working. The AI tutor will not be available until you reconnect.',
+    /* ---- Contexto del tutor ---- */
+    'Contexto del tutor socrático': 'Socratic tutor context', 'Materia': 'Subject', 'Nivel': 'Level', 'p. ej. Química': 'e.g. Chemistry', 'p. ej. 2.º bachillerato': 'e.g. 12th grade',
+    'Qué ya sabes': 'What you already know', 'Lo que ya dominas': 'What you already master', 'Qué quieres lograr': 'What you want to achieve', 'Resultado concreto de esta sesión': 'A concrete outcome for this session',
+    'Nivel de explicación': 'Explanation level', 'Como si tuviera 12 años': 'As if I were 12', 'Nivel universitario': 'University level', 'Con un ejemplo de mi carrera': 'With an example from my field',
+    'Carrera / contexto': 'Field / context', 'p. ej. medicina, programación': 'e.g. medicine, programming', 'Cómo quieres que te ayude': 'How you want me to help',
+    'Guíame con preguntas': 'Guide me with questions', 'Dame una explicación directa': 'Give me a direct explanation', 'Guardar contexto': 'Save context',
+    'Dictar': 'Dictate', 'Modo error': 'Error mode', 'Escuchando… (pulsa para parar)': 'Listening… (press to stop)', 'Tu navegador no admite dictado. Prueba con Chrome o Edge.': 'Your browser does not support dictation. Try Chrome or Edge.', 'No se pudo dictar. Revisa el permiso del micrófono.': 'Dictation failed. Check the microphone permission.', 'Borrar historial del tema': 'Clear topic history', 'Borrar historial': 'Clear history',
+    /* ---- Hoy / Pomodoro ---- */
+    'Tu día de estudio': 'Your study day', 'Qué hacer ahora': 'What to do now', 'Foco': 'Focus', 'Descanso': 'Break',
+    '¿Qué resultado concreto quieres lograr?': 'What concrete outcome do you want to achieve?', 'Resultado concreto de este bloque': 'Concrete outcome for this block',
+    'Ej.: terminar los ejercicios 1 al 5': 'E.g.: finish exercises 1 to 5', 'Anotar una distracción': 'Note a distraction', 'Anotar': 'Note',
+    'Algo que te sacó del foco (lo miras después)': 'Something that pulled you out of focus (check it later)', 'Últimas distracciones anotadas': 'Latest distractions noted',
+    'Anótala aquí en vez de seguirla; la revisas al terminar.': 'Note it here instead of following it; you review it when you finish.',
+    'La revisas al terminar el bloque.': 'You review it when the block ends.', 'distracción anotada': 'distraction noted', 'Distracción anotada.': 'Distraction noted.',
+    'Saltar descanso': 'Skip break', 'Reiniciar': 'Reset', 'Opciones del bloque': 'Block options', 'Etiqueta del bloque': 'Block label', 'Materia, curso o tarjeta': 'Subject, course or card',
+    'Meta diaria (bloques)': 'Daily goal (blocks)', 'Las notificaciones están bloqueadas: Learny avisará aquí y con sonido/vibración.': 'Notifications are blocked: Learny will alert you here and with sound/vibration.',
+    'Ambiente de estudio': 'Study ambience', 'Ambiente': 'Ambience', 'cambia tu apariencia (puedes deshacerlo); sin sonido.': 'changes your appearance (you can undo it); no sound.',
+    'Noche': 'Night', 'Minimalista': 'Minimalist', 'Ajustar tiempos': 'Adjust times', 'Intención:': 'Intention:',
+    'Descanso: toma agua, respira lento, estira y mira a lo lejos.': 'Break: drink some water, breathe slowly, stretch and look into the distance.',
+    'Más sobre hoy': 'More about today', 'misiones, progreso y un dato curioso': 'missions, progress and a fun fact', 'Misiones de hoy': "Today's missions",
+    'Foco hoy': 'Focus today', 'Racha actual': 'Current streak', 'Concentración media': 'Average concentration', 'Concentración': 'Concentration',
+    'Aún no has completado bloques hoy. Empieza con una intención breve.': "You haven't completed any blocks today. Start with a short intention.",
+    'Repasa 10 tarjetas': 'Review 10 cards', 'Completa un Pomodoro': 'Complete a Pomodoro', 'Explica un tema con Feynman': 'Explain a topic with Feynman',
+    'en pausa': 'paused', 'Volver al temporizador': 'Back to the timer', 'Reiniciar a mitad de bloque': 'Reset mid-block',
+    'El bloque se descartará. ¿Qué pasó?': 'The block will be discarded. What happened?', 'Distracción': 'Distraction', 'Cansancio': 'Tiredness', 'Interrupción': 'Interruption', 'Guardar y reiniciar': 'Save and reset',
+    '¡Bloque completado!': 'Block completed!', 'Para mirar después:': 'To look at later:', '¿Lograste el resultado concreto?': 'Did you achieve the concrete outcome?', 'Aún no': 'Not yet',
+    'Ya puedes iniciar tu descanso de': 'You can now start your break of', 'Personaliza el temporizador': 'Customize the timer', 'Foco (min)': 'Focus (min)', 'Descanso (min)': 'Break (min)',
+    'Escribe un resultado concreto antes de empezar.': 'Write a concrete outcome before starting.', 'Escribe un resultado concreto en «Hoy» antes de empezar un bloque.': 'Write a concrete outcome in “Today” before starting a block.',
+    'Descanso terminado. ¡Listo para otro bloque!': 'Break over. Ready for another block!', 'Un bloque de enfoque terminó mientras no estabas; no se contó como sesión.': 'A focus block ended while you were away; it did not count as a session.',
+    'Bloque completado. Cuando cierres esta ventana podrás valorarlo.': 'Block completed. When you close this window you can rate it.', 'Bloque completado. Guarda cómo te fue.': 'Block completed. Save how it went.',
+    'Bloque de enfoque iniciado.': 'Focus block started.', 'Descanso iniciado.': 'Break started.', 'Temporizador en pausa.': 'Timer paused.', 'Ya anotaste 20 en este bloque. Sigue con tu foco.': 'You have already noted 20 in this block. Keep your focus.',
+    /* ---- Cola de Hoy (06-hoy) ---- */
+    'Buenos días': 'Good morning', 'Buenas tardes': 'Good afternoon', 'Buenas noches': 'Good evening',
+    'Hoy no tienes pendientes urgentes.': 'You have nothing urgent today.', 'Bienvenido a Learny. Te propongo un primer paso para empezar.': "Welcome to Learny. Here's a first step to get started.",
+    'Aún no has completado ningún bloque. Tu primer Pomodoro desbloquea tu progreso.': "You haven't completed any block yet. Your first Pomodoro unlocks your progress.",
+    'Recomendado para ahora': 'Recommended for now', 'Tu primer paso': 'Your first step', 'Por qué:': 'Why:', 'Tiempo estimado': 'Estimated time', 'Repasar': 'Review', 'Repasar ahora': 'Review now',
+    'Repasar errores': 'Review errors', 'Repaso rápido de 5 tarjetas': 'Quick review of 5 cards', 'Repasar 5 tarjetas': 'Review 5 cards',
+    'Te sugerimos repasar esta tarjeta porque': 'We suggest reviewing this card because', 'Te sugerimos repasar estas': 'We suggest reviewing these', 'porque': 'because',
+    'está vencida y': 'is overdue and', 'están vencidas y': 'are overdue and', 'está vencida': 'is overdue', 'están vencidas': 'are overdue', 'toca hoy': 'is due today', 'tocan hoy': 'are due today',
+    'le toca repaso hoy según tu calendario': 'is due for review today according to your schedule', 'les toca repaso hoy según tu calendario': 'are due for review today according to your schedule',
+    'y pertenece a': 'and belongs to', 'y pertenecen a': 'and belong to', ', que es': ', which is', 'mañana': 'tomorrow', 'para hoy': 'for today', 'hoy': 'today', 'ayer': 'yesterday',
+    'el lunes': 'on Monday', 'el martes': 'on Tuesday', 'el miércoles': 'on Wednesday', 'el jueves': 'on Thursday', 'el viernes': 'on Friday', 'el sábado': 'on Saturday', 'el domingo': 'on Sunday',
+    'Este repaso toma 5 de ellas; el resto sigue pendiente.': 'This review takes 5 of them; the rest stay pending.',
+    'A este ritmo ya no cabe todo lo que queda: revisa o replanifica.': 'At this pace not everything left will fit: review or replan.',
+    'Ver plan de hoy': "View today's plan", 'Continuar plan de': 'Continue plan:', 'Mini quiz de': 'Mini quiz:', 'Empezar quiz': 'Start quiz', 'Mini quiz': 'Mini quiz',
+    'Crea tu primera tarjeta': 'Create your first card', 'Crear tarjeta': 'Create card', 'Aún no tienes tarjetas. Con ellas Learny agenda tus repasos por ti; la primera tarda un minuto.': "You don't have any cards yet. With them Learny schedules your reviews for you; the first one takes a minute.",
+    'Probar con un mazo de ejemplo': 'Try a sample deck', 'Ver mazos': 'See decks', 'Añade unas pocas tarjetas ya hechas para ver cómo funciona el repaso sin escribir nada.': 'Add a few ready-made cards to see how review works without writing anything.',
+    'Haz un bloque de enfoque': 'Do a focus block', 'Ir al Pomodoro': 'Go to the Pomodoro', 'No tienes repasos pendientes.': 'You have no pending reviews.',
+    'Añade la fecha de un examen': 'Add an exam date', 'No tienes ninguna fecha próxima. Con una fecha, Learny reparte tareas diarias hasta el examen.': 'You have no upcoming date. With a date, Learny splits daily tasks up to the exam.',
+    'Explícalo con tus palabras (Feynman)': 'Explain it in your own words (Feynman)', 'Explicar un tema': 'Explain a topic', 'Explicar un tema de hoy revela lo que todavía no entiendes.': "Explaining a topic from today reveals what you still don't understand.",
+    'Solo 5 minutos': 'Just 5 minutes', 'Una sesión': 'One session', 'Elegir tema': 'Pick a topic', '¿Cuánto tiempo tienes?': 'How much time do you have?', 'Elige un tema': 'Pick a topic',
+    '¿Qué materia quieres trabajar?': 'Which subject do you want to work on?', 'Empieza un mini quiz de 8 tarjetas de la materia, con tus errores primero.': 'Starts an 8-card mini quiz of the subject, with your mistakes first.',
+    'O elige otra opción': 'Or pick another option', 'O prueba otra cosa': 'Or try something else', 'Próxima fecha:': 'Next date:',
+    '≈ Los tiempos son estimaciones.': '≈ Times are estimates.', 'Más opciones': 'More options', 'Empezar sesión inteligente': 'Start smart session', 'Explicar un tema (Feynman)': 'Explain a topic (Feynman)',
+    'Probar un Pomodoro sin tarjetas': 'Try a Pomodoro without cards', 'Elige un mazo de ejemplo y púlsalo para añadir sus tarjetas.': 'Pick a sample deck and click it to add its cards.',
+    'Ahora mismo no hay nada que encaje con': 'Right now nothing fits', 'Te muestro lo recomendado:': "Here's what's recommended:",
+    'Es normal. No hace falta hacer mucho: elige una cosa pequeña, o ninguna.': "That's normal. You don't need to do much: pick one small thing, or none.",
+    'Cerrar esta ventana no cambia nada: tu plan y tus datos siguen igual.': 'Closing this window changes nothing: your plan and data stay the same.', 'Ahora no': 'Not now',
+    'Hacer una pregunta': 'Ask a question', 'Escribe una duda, por pequeña que sea. Funciona también sin internet (guía local).': 'Write a doubt, however small. It also works offline (local guide).',
+    'Una sesión breve de 5 minutos': 'A short 5-minute session', 'Un repaso corto; puedes salir del examen cuando quieras.': 'A short review; you can leave the exam whenever you want.',
+    'Explicar una idea con tus palabras': 'Explain an idea in your own words', 'Método Feynman: solo una idea, sin nota.': 'Feynman method: just one idea, no grade.',
+    'Crear una tarjeta pequeña': 'Create a small card', 'Una pregunta y una respuesta; tarda un minuto.': 'One question and one answer; it takes a minute.', 'Probar un mazo de ejemplo': 'Try a sample deck',
+    'Tarjetas ya hechas para ver cómo funciona el repaso.': 'Ready-made cards to see how review works.',
+    'Cierre del bloque': 'Block summary', 'Cierre del examen': 'Exam summary', 'Terminar por hoy': 'Finish for today', 'Seguir un poco más': 'Keep going a bit', 'Siguiente paso:': 'Next step:',
+    'El tiempo mide dedicación, no aprendizaje. Aquí solo ves lo de esta sesión.': 'Time measures dedication, not learning. Here you only see this session.',
+    'Tiempo:': 'Time:', 'Tu intención:': 'Your intention:', 'dijiste que la lograste': 'you said you achieved it', 'dijiste que aún no': 'you said not yet', 'sin valorar': 'not rated',
+    'Tarjetas respondidas:': 'Cards answered:', 'Listo por hoy. Lo que estudiaste ya está guardado.': 'Done for today. What you studied is already saved.',
+    'No tienes nada urgente pendiente. Descansar también es parte de estudiar.': 'You have nothing urgent pending. Resting is also part of studying.',
+    /* ---- Fase 1 · metas (avisos de arranque) ---- */
+    'Las metas guardadas no tenían un formato válido y se ignoraron. Si tenías metas, restaura una copia automática en Ajustes.': 'The saved goals were not in a valid format and were ignored. If you had goals, restore an automatic backup in Settings.',
+    'Las metas de la copia no tienen un formato válido.': 'The goals in the backup are not in a valid format.',
+    /* ---- Etapa 4 · modo autodidacta (ETAPA4) ---- */
+    'Retomar': 'Resume', 'Al día': 'Up to date', 'Sin empezar': 'Not started', 'Sin sesión': 'No session',
+    'Tu ritmo de esta semana': 'Your rhythm this week', 'Empezar una sesión': 'Start a session', 'Cambiar ritmo': 'Change rhythm',
+    'Sin fecha de examen: lo que cuenta es volver con regularidad. Una sesión es un bloque de enfoque completado.': 'No exam date: what counts is coming back regularly. A session is a completed focus block.',
+    'Tu ritmo semanal': 'Your weekly rhythm', '¿Cuántas sesiones (bloques de enfoque) quieres hacer por semana?': 'How many sessions (focus blocks) do you want to do per week?',
+    'Sesiones por semana': 'Sessions per week', 'Se cuentan los últimos 7 días. Puedes cambiarlo cuando quieras.': 'The last 7 days are counted. You can change it whenever you want.', 'Ritmo guardado.': 'Rhythm saved.',
+    'Progreso por tema': 'Progress by topic', 'Qué has tocado esta semana en cada tema y cuánto hace de lo último. Aquí no hay fechas: solo constancia.': 'What you touched this week in each topic and how long ago you last did. There are no dates here: only consistency.',
+    'Crea tarjetas para ver tu progreso por tema.': 'Create cards to see your progress by topic.',
+    'sin repasos todavía': 'no reviews yet', 'último contacto': 'last contact',
+    /* ---- Tarjetas / Practicar ---- */
+    'Recuerda de memoria, explica con tus palabras': 'Recall from memory, explain in your own words', 'Repasa tarjetas, usa el método Feynman y captura material de clase.': 'Review cards, use the Feynman method and capture class material.',
+    'Repasar hoy': 'Review today', '+ Crear': '+ Create', 'Salir del examen': 'Exit exam', 'Tu respuesta (recuperación activa)': 'Your answer (active recall)',
+    'Escríbela antes de ver la tarjeta. Compararemos al revelar.': 'Write it before seeing the card. We will compare when you reveal it.', 'Tu respuesta': 'Your answer', 'Ver respuesta': 'Show answer',
+    'Califica cómo te fue': 'Rate how it went', 'No lo sabía': "Didn't know it", 'Dudé': 'Unsure', 'Fácil': 'Easy', 'Posponer 1 día': 'Snooze 1 day', 'Editar': 'Edit', 'Enviar a Biblioteca': 'Send to Library', 'Eliminar': 'Delete',
+    'Más formas de repasar': 'More ways to review', 'Modo examen': 'Exam mode', 'Intercalar': 'Interleave', 'Crear con IA': 'Create with AI',
+    'Modo examen:': 'Exam mode:', 'Intercalar:': 'Interleave:', '5 minutos:': '5 minutes:',
+    'las tarjetas de hoy.': "today's cards.", 'las mezcla por materias.': 'mixes them by subject.', 'una sesión corta.': 'a short session.', 'tarjetas de hoy, falladas y al azar, con cronómetro.': "today's, failed and random cards, with a stopwatch.",
+    'Atajos: Espacio revela; 1/2/3 califican; Z deshace la última acción; P inicia o pausa el Pomodoro. SM-2: No lo sabía = 1, Dudé = 3, Fácil = 5.': "Shortcuts: Space reveals; 1/2/3 rate; Z undoes the last action; P starts or pauses the Pomodoro. SM-2: Didn't know it = 1, Unsure = 3, Easy = 5.",
+    'Método Feynman': 'Feynman method', 'Tema que estás explicando': 'Topic you are explaining', 'Ej.: la fotosíntesis': 'E.g.: photosynthesis', 'Tu explicación': 'Your explanation',
+    'Explícalo como a alguien de 12 años; incluye un ejemplo y una duda.': 'Explain it to a 12-year-old; include an example and a doubt.', 'Explica para aprender': 'Explain to learn', 'Dictar explicación': 'Dictate explanation',
+    'Escribe o dicta una explicación: Learny detecta vacíos, pregunta y propone tarjetas. Sin clave también funciona.': 'Write or dictate an explanation: Learny detects gaps, asks questions and suggests cards. It also works without a key.',
+    'Más herramientas de práctica': 'More practice tools', 'ruleta de temas, notas rápidas, lectura y resumen': 'topic roulette, quick notes, reading and summary', 'Ruleta temática': 'Topic roulette',
+    'Elige un tema al azar, estúdialo y luego explícalo: recuperación activa en dos fases.': 'Pick a random topic, study it and then explain it: active recall in two phases.', 'Girar tema': 'Spin topic',
+    'Añadir o buscar un tema': 'Add or search for a topic', 'Cualquier tema o concepto': 'Any topic or concept', 'Añadir': 'Add', 'Sugerir con IA': 'Suggest with AI',
+    'No hay coincidencias. Añade el tema que quieras estudiar hoy.': 'No matches. Add the topic you want to study today.',
+    'Notas rápidas': 'Quick notes', 'Clase → tarjetas': 'Class → cards', 'Tu nota': 'Your note', 'Una idea, definición o fórmula; luego conviértela en tarjeta.': 'An idea, definition or formula; then turn it into a card.',
+    'Guardar nota': 'Save note', 'Convertir en tarjeta': 'Turn into card', 'Pegar del portapapeles': 'Paste from clipboard', 'Hacer tarjeta': 'Make card', 'Quitar': 'Remove',
+    'Aún no hay notas. Anota una idea durante la clase y conviértela en tarjeta.': 'No notes yet. Jot down an idea during class and turn it into a card.',
+    'Lectura y resumen': 'Reading and summary', 'Fuente → práctica': 'Source → practice', 'Texto a estudiar': 'Text to study',
+    'Pega un texto (o el contenido de un PDF copiado) para obtener resumen, preguntas y tarjetas.': 'Paste a text (or the content of a copied PDF) to get a summary, questions and cards.',
+    'Generar estudio': 'Generate study set', 'Pega material para ampliar Learny más allá de las flashcards.': 'Paste material to extend Learny beyond flashcards.', 'Resumen': 'Summary', 'Preguntas para ti': 'Questions for you',
+    'No tienes repasos hoy.': 'You have no reviews today.', 'Puedes adelantar 5 tarjetas o crear nuevas.': 'You can move up 5 cards or create new ones.', 'Adelantar 5 tarjetas': 'Move up 5 cards', 'Aún no tienes tarjetas.': "You don't have any cards yet.",
+    'Crea una desde tus apuntes, pide 5 al tutor o añade un mazo de ejemplo.': 'Create one from your notes, ask the tutor for 5 or add a sample deck.', 'Pedir 5 al tutor': 'Ask the tutor for 5', 'Mazo de ejemplo': 'Sample deck',
+    'Esta tarjeta no se pudo cargar.': 'This card could not be loaded.', 'Le falta la pregunta o la respuesta. Edítala para repararla, pospónla o elimínala.': 'It is missing the question or the answer. Edit it to repair it, postpone it or delete it.',
+    'Pregunta': 'Question', 'Respuesta': 'Answer', 'Devolver a rotación': 'Return to rotation', 'Nueva flashcard': 'New flashcard', 'Editar flashcard': 'Edit flashcard', 'Plantilla': 'Template', 'Ninguna': 'None',
+    'Definición': 'Definition', 'Concepto → ejemplo': 'Concept → example', 'Problema → solución': 'Problem → solution', 'Generar respuesta con IA': 'Generate answer with AI', 'Guardar cambios': 'Save changes',
+    'Crear tarjetas con IA': 'Create cards with AI', 'Tus apuntes (opcional)': 'Your notes (optional)', 'Generar 5 tarjetas': 'Generate 5 cards', 'Generando tarjetas…': 'Generating cards…',
+    'Revisa las tarjetas': 'Review the cards', 'Aceptar': 'Accept', 'Descartar': 'Discard', 'Guardar aceptadas': 'Save accepted',
+    'Tarjeta creada.': 'Card created.', 'Tarjeta e inversa creadas.': 'Card and reverse card created.', 'Escribe la siguiente.': 'Write the next one.',
+    'La inversa no se creó: la respuesta es demasiado larga para ser una pregunta (máx. 500 caracteres).': 'The reverse card was not created: the answer is too long to be a question (max. 500 characters).',
+    'Crear también la tarjeta inversa (respuesta → pregunta)': 'Also create the reverse card (answer → question)', 'Guardar y añadir otra': 'Save and add another',
+    'Ctrl+Intro (⌘+Intro en Mac) guarda y añade otra.': 'Ctrl+Enter (⌘+Enter on Mac) saves and adds another.', 'Añadidas en esta tanda:': 'Added in this batch:', 'Tarjeta actualizada.': 'Card updated.', 'Tarjeta eliminada.': 'Card deleted.', 'Pospuesta 1 día.': 'Snoozed 1 day.', 'Tarjeta enviada a la Biblioteca.': 'Card sent to the Library.',
+    'Tarjeta devuelta a la rotación.': 'Card returned to rotation.', 'Calificación guardada.': 'Rating saved.', 'Repaso anticipado guardado: la tarjeta mantiene su fecha.': 'Early review saved: the card keeps its date.',
+    'Nota guardada.': 'Note saved.', 'Escribe una nota primero.': 'Write a note first.', 'Acción deshecha.': 'Action undone.', 'Deshacer': 'Undo', 'Ya no se puede deshacer: la situación cambió.': "Can't undo anymore: the situation changed.",
+    'Ya tienes un examen en curso. Termínalo o sal de él antes de empezar otro.': 'You already have an exam in progress. Finish it or leave it before starting another.',
+    'No hay tarjetas vencidas o de hoy para el examen.': 'There are no overdue or due cards for the exam.',
+    'Saliste del examen. Tus respuestas se guardaron en el repaso, pero no cuentan como examen.': 'You left the exam. Your answers were saved in your reviews, but do not count as an exam.',
+    'Termina o abandona el examen antes de eliminar esta tarjeta.': 'Finish or leave the exam before deleting this card.',
+    'No hay tarjetas para hoy. Crea más o vuelve mañana.': 'There are no cards for today. Create more or come back tomorrow.',
+    'Fase terminada. Ahora explica con Feynman.': 'Phase finished. Now explain with Feynman.', 'Escribe tu explicación.': 'Write your explanation.', 'Modo local: sin clave también recibes guía socrática.': 'Local mode: without a key you also get Socratic guidance.',
+    'Tema añadido a tu ruleta.': 'Topic added to your roulette.', 'Escribe cualquier tema primero.': 'Write any topic first.', 'Añade cualquier tema para girar la ruleta.': 'Add any topic to spin the roulette.',
+    /* ---- Biblioteca ---- */
+    'Tus tarjetas y mazos': 'Your cards and decks', 'Tarjetas que ya dominas y mazos iniciales para empezar rápido.': 'Cards you already master and starter decks to get going fast.', 'Tarjetas guardadas para consultar cuando quieras.': 'Saved cards to look up whenever you want.',
+    'Buscar en tu biblioteca': 'Search your library', 'Pregunta, respuesta o materia': 'Question, answer or subject', 'Mazos iniciales y mazos propios': 'Starter decks and your own decks', 'añade tarjetas de ejemplo o crea tu mazo': 'add sample cards or create your own deck',
+    'Mazos iniciales sin tus estadísticas. Duplicas el contenido; el progreso es solo tuyo.': 'Starter decks without your statistics. You duplicate the content; the progress is only yours.',
+    'Aún no hay archivo. Envía aquí las tarjetas que ya dominas.': 'Nothing archived yet. Send the cards you already master here.', 'Ninguna tarjeta coincide con tu búsqueda.': 'No card matches your search.',
+    '+ Crear mazo': '+ Create deck', 'Crear mazo': 'Create deck', 'Nombre del mazo': 'Deck name', 'Guardar mazo': 'Save deck', 'Cálculo básico': 'Basic calculus', 'Método científico': 'Scientific method', 'Programación': 'Programming',
+    /* ---- Planificar ---- */
+    'Planificador inteligente': 'Smart planner', 'Convierte fechas en pasos diarios.': 'Turn dates into daily steps.', 'Calendario de la semana': 'Week calendar', 'Estudio inteligente': 'Smart study', 'Plan de emergencia': 'Emergency plan',
+    'Próximas fechas': 'Upcoming dates', '+ Añadir': '+ Add', 'Tareas de hoy': "Today's tasks", 'Plan inverso': 'Reverse plan', 'Cambios en tu plan': 'Changes to your plan',
+    'Si te atrasas, Learny mueve a hoy como máximo las 2 tareas atrasadas más recientes de cada examen y descarta las anteriores para que el plan siga siendo realista. Aquí ves cada cambio.': 'If you fall behind, Learny moves at most the 2 most recent overdue tasks of each exam to today and discards the earlier ones so the plan stays realistic. Here you see every change.',
+    'Temas o tipos de problema': 'Topics or problem types',
+    'Añade una fecha para que Learny arme tu bloque de estudio de hoy.': "Add a date so Learny can build today's study block.", 'Añade una fecha importante para ver el plan inverso del día.': "Add an important date to see the day's reverse plan.",
+    'Añade una fecha de examen para generar tareas diarias conectadas a temas y tarjetas.': 'Add an exam date to generate daily tasks linked to topics and cards.', 'Cuando tengas un examen, aquí aparecerán las tareas de hoy.': "When you have an exam, today's tasks will appear here.",
+    'Nueva fecha': 'New date', 'Nombre': 'Name', 'Fecha': 'Date', 'Dificultad (1-5)': 'Difficulty (1-5)', 'Minutos diarios': 'Daily minutes', 'Guardar y crear plan': 'Save and create plan', 'Plan inverso creado con tareas diarias.': 'Reverse plan created with daily tasks.',
+    'Replanificar desde hoy': 'Replan from today', 'Replanificar': 'Replan', 'Pasada': 'Past', 'dificultad': 'difficulty', 'min/día': 'min/day', 'fases:': 'phases:', 'comprensión': 'understanding', 'práctica': 'practice', 'repaso': 'review', 'simulacro': 'mock exam', 'revisión': 'final review',
+    'Comprensión': 'Understanding', 'Práctica': 'Practice', 'Repaso': 'Review', 'Simulacro': 'Mock exam', 'Revisión final': 'Final review', 'Ya no cabe a este ritmo': 'No longer fits at this pace',
+    'Todavía no hubo cambios. Si te atrasas, aquí verás qué tareas movió o descartó Learny y por qué.': 'No changes yet. If you fall behind, here you will see which tasks Learny moved or discarded and why.',
+    'Entendido': 'Got it', 'Crear plan': 'Create plan', 'Examen': 'Exam',
+    /* ---- Reforzar ---- */
+    'Análisis personal': 'Personal analysis', 'Qué reforzar mañana.': 'What to reinforce tomorrow.', 'Periodo': 'Period', 'Últimos 7 días': 'Last 7 days', 'Últimos 30 días': 'Last 30 days', 'Todo el historial': 'Entire history',
+    'Recuerdo declarado': 'Self-reported recall', 'Repasos sin fallar': 'Reviews without a miss', 'Exámenes (Fácil)': 'Exams (Easy)', 'Exámenes': 'Exams', 'Constancia': 'Consistency', 'Tiempo registrado': 'Time logged',
+    'Tarjetas vencidas': 'Overdue cards', 'pendientes de repaso ahora': 'pending review now', 'Cómo se calculan estos números': 'How these numbers are calculated',
+    'Minutos de foco por día': 'Focus minutes per day', 'Exportar semana': 'Export week', 'Materias a reforzar': 'Subjects to reinforce', 'Más datos': 'More data', 'mapa conceptual, resultados y práctica': 'concept map, results and practice',
+    'Mapa conceptual': 'Concept map', 'Resultados y práctica': 'Results and practice', 'Reto semanal': 'Weekly challenge', 'Qué hacer con estos números': 'What to do with these numbers', 'Iniciar enfoque': 'Start focus', 'Ver plan': 'View plan', 'Empezar': 'Start',
+    'Minutos de foco por día en la última semana': 'Focus minutes per day over the last week', 'Relación entre materias y tarjetas': 'Relationship between subjects and cards',
+    'Completa tu primer Pomodoro para ver tu progreso.': 'Complete your first Pomodoro to see your progress.', 'Sin datos en este periodo': 'No data in this period', 'muestra pequeña': 'small sample',
+    'Aún no hay repasos en este periodo. Repasa tus primeras tarjetas para ver qué materias reforzar.': 'There are no reviews in this period yet. Review your first cards to see which subjects to reinforce.',
+    'Crea tarjetas para ver este panel.': 'Create cards to see this panel.', '¡Meta semanal cumplida!': 'Weekly goal reached!', '¡Meta cumplida!': 'Goal reached!', 'Ruta sugerida': 'Suggested route',
+    'Sin huecos claros: sigue con tu plan y añade tarjetas nuevas.': 'No clear gaps: keep following your plan and add new cards.',
+    'Repasos de los próximos 7 días': 'Reviews over the next 7 days', 'Repasos programados por día': 'Reviews scheduled per day', 'Más adelante:': 'Later:',
+    'Solo cuenta lo que ya está programado; si fallas una tarjeta, volverá antes.': 'Only what is already scheduled is counted; if you fail a card, it will come back sooner.',
+    'Crea tarjetas para ver cuántos repasos te esperan.': 'Create cards to see how many reviews are waiting for you.',
+    'sin cambio': 'no change', 'la tarjeta mantiene su fecha': 'the card keeps its date', 'dentro de': 'in',
+    /* ---- Guardado, avisos y confirmaciones ---- */
+    'Guardado': 'Saved', 'No guardado': 'Not saved', 'Sincronizado': 'Synced', 'Cerrar': 'Close', 'Cancelar': 'Cancel', 'Confirmar': 'Confirm', '¿Seguro?': 'Are you sure?', 'Ventana de Learny': 'Learny window', 'Guardar': 'Save',
+    'Consulta cancelada.': 'Query cancelled.', 'Cancelar consulta': 'Cancel query', 'Escribe una consulta.': 'Write a query.', 'Consultando tutor…': 'Consulting tutor…', 'Reintentar': 'Retry', 'No se pudo completar': 'Could not be completed',
+    'Learny se actualizó. Recarga la página para usar la última versión.': 'Learny was updated. Reload the page to use the latest version.',
+    '¿Qué tan seguro estás?': 'How sure are you?', '(opcional)': '(optional)', 'Lo sé': 'I know it', 'Dudo': 'Not sure', 'No lo sé': "I don't know", 'Tu predicción:': 'Your prediction:',
+    'Preguntarme qué tan seguro estoy antes de ver la respuesta': 'Ask me how sure I am before showing the answer',
+    'Confianza frente a acierto': 'Confidence versus accuracy',
+    'Lo que dijiste saber antes de ver la respuesta, frente a lo que recordaste al calificar. Solo cuenta los repasos en los que elegiste una opción.': 'What you said you knew before seeing the answer, versus what you remembered when you rated it. It only counts reviews where you chose an option.',
+    'Cuando dijiste «Lo sé»': 'When you said “I know it”', 'Cuando dijiste «Dudo»': 'When you said “Not sure”', 'Cuando dijiste «No lo sé»': 'When you said “I don’t know”',
+    'Con pocas predicciones esta cifra aún no es fiable: se afina a medida que repasas eligiendo una opción antes de ver la respuesta.': 'With few predictions this figure is not reliable yet: it sharpens as you review choosing an option before seeing the answer.',
+    'No se pudo guardar la copia automática previa. Descarga una copia en Ajustes antes de seguir borrando.': 'Could not save the automatic backup beforehand. Download a backup in Settings before deleting more.',
+    'Tu explicación es muy corta para contar como hecha hoy: escribe al menos una idea central y un ejemplo (unas 8 palabras).': 'Your explanation is too short to count as done today: write at least one core idea and an example (about 8 words).',
+    'Tus datos ya ocupan mucho espacio y las copias automáticas pueden no caber. Descarga una copia en Ajustes.': 'Your data now takes up a lot of space and automatic backups may not fit. Download a backup in Settings.',
+    'No se pudo guardar: el navegador bloqueó el almacenamiento o está lleno. Descarga una copia en Ajustes.': 'Could not save: the browser blocked storage or it is full. Download a backup in Settings.',
+    'Datos importados correctamente.': 'Data imported successfully.', 'Copia descargada (sin clave API).': 'Backup downloaded (without API key).', 'Preferencias guardadas.': 'Preferences saved.', 'Contexto del tutor guardado.': 'Tutor context saved.',
+    'Explicar más simple': 'Explain more simply', 'Explícamelo directamente': 'Explain it directly', 'Dame un ejercicio': 'Give me an exercise', 'Crear tarjetas': 'Create cards', 'Guardar en notas': 'Save to notes',
+    'Pregunta guía': 'Guiding question', 'Pista': 'Hint', 'Explicación': 'Explanation', 'Ejemplo': 'Example', 'Siguiente reto': 'Next challenge', 'Lo que explicaste bien': 'What you explained well',
+    'Revisa esta afirmación': 'Check this statement', 'Falta este concepto': 'Missing concept', 'Pregunta para comprobar': 'Check question', 'Conecta Gemini': 'Connect Gemini', 'Guardar clave': 'Save key', 'Continuar sin IA': 'Continue without AI',
+    'Añade tu clave de Gemini en Ajustes o elige Guía local.': 'Add your Gemini key in Settings or choose Local guide.',
+    'La clave de Gemini solo puede tener caracteres ASCII (letras, números y símbolos), sin espacios. Cópiala de nuevo desde Google AI Studio.': 'The Gemini key can only contain ASCII characters (letters, numbers and symbols), no spaces. Copy it again from Google AI Studio.',
+    /* ---- Ajustes ---- */
+    'Idioma': 'Language', 'Apariencia': 'Appearance', 'Los cambios se ven al instante y solo se guardan con «Guardar preferencias».': 'Changes are visible instantly and are only saved with “Save preferences”.',
+    'Estilos rápidos': 'Quick styles', 'Cuaderno': 'Notebook', 'Lectura nocturna': 'Night reading', 'Papel': 'Paper', 'Enfoque': 'Focus', 'Restablecer apariencia': 'Reset appearance', 'Apariencia restablecida. Pulsa «Guardar preferencias» para conservarla.': 'Appearance reset. Press “Save preferences” to keep it.',
+    'Automático (según tu sistema)': 'Automatic (follows your system)', 'Oscuro': 'Dark', 'Negro (OLED)': 'Black (OLED)', 'Claro': 'Light', 'Alto contraste': 'High contrast', 'Cromo': 'Chrome',
+    'Color de acento (no en Sepia, Alto contraste ni Cromo)': 'Accent color (not in Sepia, High contrast or Chrome)', 'Cielo': 'Sky', 'Menta': 'Mint', 'Violeta': 'Violet', 'Ámbar': 'Amber', 'Rosa': 'Rose', 'Personalizado': 'Custom', 'Color personalizado': 'Custom color',
+    'Cromo utiliza una paleta monocromática.': 'Chrome uses a monochrome palette.', 'Esquinas': 'Corners', 'Rectas': 'Sharp', 'Suaves': 'Soft', 'Redondeadas': 'Rounded', 'Tarjetas': 'Cards', 'Con borde': 'With border', 'Con sombra': 'With shadow',
+    'Fondo': 'Background', 'Cuadriculado': 'Grid', 'Puntos': 'Dots', 'Liso': 'Plain', 'Densidad': 'Density', 'Compacta': 'Compact', 'Amplia': 'Roomy', 'Tipografía y lectura': 'Typography and reading',
+    'Para el texto solo se usan fuentes del sistema: no se descarga nada de internet.': 'Text uses system fonts only: nothing is downloaded from the internet.', 'Fuente del texto': 'Text font', 'Sistema (sans)': 'System (sans)', 'Humanista': 'Humanist', 'Serif de lectura': 'Reading serif', 'Redondeada': 'Rounded', 'Monoespaciada': 'Monospaced',
+    'Lectura fácil (OpenDyslexic si está instalada; si no, Verdana)': 'Easy reading (OpenDyslexic if installed; otherwise Verdana)', 'Fuente de los títulos': 'Heading font', 'Serif (actual)': 'Serif (current)', 'La misma del texto': 'Same as text',
+    'Tamaño de texto:': 'Text size:', 'Interlineado': 'Line spacing', 'Compacto': 'Compact', 'Amplio': 'Wide', 'Espaciado de letras': 'Letter spacing', 'Muy amplio': 'Very wide', 'Texto de las tarjetas de estudio': 'Study card text', 'Grande': 'Large', 'Muy grande': 'Very large',
+    'Disposición': 'Layout', 'Ancho del contenido': 'Content width', 'Estrecho (1000 px)': 'Narrow (1000 px)', 'Normal (1240 px)': 'Normal (1240 px)', 'Ancho (1600 px)': 'Wide (1600 px)', 'Menú lateral (escritorio)': 'Side menu (desktop)', 'Completo': 'Full', 'Solo iconos': 'Icons only',
+    'Mostrar las misiones de hoy': "Show today's missions", 'Mostrar el dato curioso': 'Show the fun fact', 'Reducir animaciones': 'Reduce animations', 'Atenuar el menú y la barra superior durante un bloque o examen': 'Dim the menu and top bar during a block or exam',
+    'Compañero de estudio: Lumi': 'Study companion: Lumi', 'Apariencia de Lumi': 'Lumi appearance', 'Abeja pixelada': 'Pixel bee', 'Solo cambia el dibujo: Lumi se comporta igual. Se ve al instante y se guarda con «Guardar preferencias».': 'Only the drawing changes: Lumi behaves the same. It shows instantly and is saved with “Save preferences”.',
+    'Estudio y avisos': 'Study and notifications', 'Tarjetas nuevas por día (0 = sin límite)': 'New cards per day (0 = no limit)', 'Tu nombre (opcional, para el saludo)': 'Your name (optional, for the greeting)', 'Materia y objetivo de estudio: se editan en «Contexto del tutor», arriba en la página.': 'Subject and study goal: edit them in “Tutor context”, at the top of the page.',
+    'Sonido al terminar': 'Sound when finished', 'Avisos al terminar bloques y un recordatorio diario al abrir la app (no llegan con la app cerrada)': 'Alerts when blocks finish and a daily reminder when opening the app (they do not arrive with the app closed)',
+    'Pomodoro (min)': 'Pomodoro (min)', 'Ruleta: preparación': 'Roulette: preparation', 'Ruleta: explicación': 'Roulette: explanation', 'Inteligencia artificial': 'Artificial intelligence', 'Clave de Gemini (opcional)': 'Gemini key (optional)',
+    'Clave guardada (vacío = conservar)': 'Key saved (empty = keep)', 'Pega aquí tu clave': 'Paste your key here', 'Tu clave se guarda solo en este navegador y no debe usarse en un equipo compartido. Va en el encabezado x-goog-api-key, no en la URL.': 'Your key is stored only in this browser and should not be used on a shared computer. It goes in the x-goog-api-key header, not in the URL.',
+    'Gemini es la inteligencia artificial de Google que usa Learny. Consigue una clave gratuita en': 'Gemini is the Google artificial intelligence that Learny uses. Get a free key at', 'Modelos disponibles:': 'Available models:',
+    'Modelo de Gemini': 'Gemini model', 'URL de tu proxy (opcional, para no exponer la clave)': 'Your proxy URL (optional, to avoid exposing the key)', 'Datos y copias': 'Data and backups', 'Descargar copia': 'Download backup', 'Compartir mazo': 'Share deck',
+    'Importar JSON': 'Import JSON', 'Importar CSV / Anki (.csv, .txt)': 'Import CSV / Anki (.csv, .txt)', 'Quitar clave guardada': 'Remove saved key', 'Restaurar copia automática': 'Restore automatic backup', 'Borrar todo': 'Delete everything',
+    'Elegir archivo para copia automática': 'Choose a file for automatic backup', 'Reactivar copia automática': 'Resume automatic backup', 'Desactivar copia automática': 'Turn off automatic backup',
+    'Copia automática a un archivo: desactivada': 'Automatic backup to a file: off', 'Copia automática en pausa: el navegador necesita tu permiso': 'Automatic backup paused: the browser needs your permission', 'Copia automática: no se pudo escribir (se reintentará)': 'Automatic backup: could not write (will retry)',
+    'Copia automática activada. Se actualizará sola mientras Learny esté abierta.': 'Automatic backup on. It updates itself while Learny is open.', 'No se pudo escribir en ese archivo.': 'Could not write to that file.', 'No se pudo activar la copia automática.': 'Could not turn on automatic backup.',
+    'Sin permiso, la copia automática sigue en pausa.': 'Without permission, automatic backup stays paused.', 'No se pudo reactivar la copia automática.': 'Could not resume automatic backup.', 'Copia automática desactivada. El archivo que ya existe no se borra.': 'Automatic backup turned off. The existing file is not deleted.',
+    'Archivo JSON a importar': 'JSON file to import', 'Archivo CSV o Anki a importar': 'CSV or Anki file to import', 'Guardar preferencias': 'Save preferences', 'Comentarios:': 'Feedback:',
+    'Lumi está oculto. Puedes reactivarlo en Ajustes.': 'Lumi is hidden. You can turn it back on in Settings.', 'Ocultar a Lumi': 'Hide Lumi',
+    /* ---- Lumi ---- */
+    '¿Empezamos con algo corto?': 'Shall we start with something short?', 'Bloque completado.': 'Block completed.', 'Esta vuelve pronto. Sin prisa.': 'This one will be back soon. No rush.',
+    'En el repaso anterior marcaste «No lo sabía»; esta vez, «Fácil».': "On the previous review you marked “Didn't know it”; this time, “Easy”.",
+    'Bienvenido de nuevo. Podemos empezar con algo corto.': 'Welcome back. We can start with something short.', 'Crea tu primera tarjeta para empezar.': 'Create your first card to get started.',
+    'Un bloque más hecho.': 'One more block done.', 'Buen ritmo: bloque completado.': 'Nice pace: block completed.', 'Volverá pronto; así se fija mejor.': "It will be back soon; that's how it sticks better.", 'Fallar también enseña. Sin prisa.': 'Getting it wrong teaches too. No rush.',
+    'Esta te costó la vez anterior y ahora la marcaste «Fácil».': 'This one was hard last time and now you marked it “Easy”.',
+    'Intentar recordar antes de mirar la respuesta fortalece la memoria.': 'Trying to recall before looking at the answer strengthens memory.', 'Un descanso corto entre bloques ayuda a mantener la atención.': 'A short break between blocks helps you keep your attention.',
+    'Explicar algo en voz alta muestra qué te falta por entender.': 'Explaining something out loud shows what you still need to understand.', 'Estudiar un poco cada día rinde más que mucho un solo día.': 'Studying a little every day works better than a lot on a single day.',
+    'Anotar tus dudas mientras estudias te ayuda a resolverlas después.': 'Writing down your doubts while you study helps you resolve them later.',
+    /* ---- Portada ---- */
+    'Para estudiar con calma y constancia': 'For calm, consistent studying', 'Estudia con intención, un paso a la vez': 'Study with intention, one step at a time',
+    'Learny reúne un temporizador Pomodoro, tarjetas con repaso espaciado y un plan que cuenta hacia atrás desde la fecha de tu examen. Cuenta opcional: tus datos se quedan en este navegador.': 'Learny brings together a Pomodoro timer, spaced-repetition flashcards and a plan that counts backwards from your exam date. Optional account: your data stays in this browser.',
+    'Probar Learny': 'Try Learny', 'Ver el recorrido': 'See how it works', 'Ver una demostración': 'See a demo', 'Una vez cargada, funciona sin conexión. Puedes descargar una copia de tus datos cuando quieras.': 'Once loaded, it works offline. You can download a copy of your data whenever you want.',
+    'Así se ve «Hoy»: una acción recomendada con su motivo y, debajo, una tarjeta de repaso. Es un ejemplo ilustrativo; no son datos tuyos.': 'This is what “Today” looks like: a recommended action with its reason and, below, a review card. It is an illustrative example; it is not your data.',
+    'Te sugerimos repasar estas 6 tarjetas porque 2 están vencidas y 4 tocan hoy.': 'We suggest reviewing these 6 cards because 2 are overdue and 4 are due today.', 'Química': 'Chemistry',
+    '¿Qué ocurre con la entropía de un sistema aislado?': 'What happens to the entropy of an isolated system?', 'Preparar, practicar, repasar': 'Prepare, practice, review', 'Preparar': 'Prepare',
+    'Pon la fecha de tu examen y Learny reparte el trabajo en tareas diarias, contando hacia atrás. Crea tarjetas desde tus apuntes o añade un mazo de ejemplo.': 'Set your exam date and Learny splits the work into daily tasks, counting backwards. Create cards from your notes or add a sample deck.',
+    'Elige un resultado concreto y haz un bloque Pomodoro. Con las tarjetas, primero escribes tu respuesta y luego la comparas: recordar con esfuerzo suele ayudar más que releer.': 'Pick a concrete outcome and do a Pomodoro block. With cards, you first write your answer and then compare it: effortful recall usually helps more than rereading.',
+    'Valoras cada tarjeta (no lo sabía, dudé, fácil) y Learny programa cuándo volver a verla. Cada día, «Hoy» te propone una sola cosa para empezar.': 'You rate each card (didn\'t know it, unsure, easy) and Learny schedules when you\'ll see it again. Every day, “Today” suggests a single thing to start with.',
+    'Tus datos, contigo': 'Your data, with you', 'La cuenta es opcional; Learny funciona sin ella.': 'An account is optional; Learny works without one.', 'Todo se guarda solo en este navegador; en Ajustes puedes descargar una copia.': 'Everything is stored only in this browser; in Settings you can download a copy.',
+    'La IA es opcional: solo se usa internet si añades tu propia clave o tu proxy.': 'AI is optional: the internet is only used if you add your own key or proxy.',
+    /* ---- Datos curiosos ---- */
+    'Los pulpos tienen tres corazones.': 'Octopuses have three hearts.', 'La miel puede conservarse durante miles de años.': 'Honey can keep for thousands of years.', 'Tu cerebro consolida recuerdos mientras duermes.': 'Your brain consolidates memories while you sleep.',
+    'Los árboles intercambian nutrientes mediante redes de hongos.': 'Trees exchange nutrients through fungal networks.', 'La luz solar tarda unos 8 minutos en llegar a la Tierra.': 'Sunlight takes about 8 minutes to reach Earth.', 'Los tiburones existen desde antes que los árboles.': 'Sharks have existed since before trees.',
+    'Un día en Venus dura más que un año en Venus.': 'A day on Venus lasts longer than a year on Venus.', 'Explicar algo con tus palabras revela lo que realmente entiendes.': 'Explaining something in your own words reveals what you really understand.',
+    'Repasar justo antes de olvidar fortalece más la memoria que releer sin pausa.': 'Reviewing right before you forget strengthens memory more than rereading without pause.',
+    'El corazón de un colibrí puede latir más de mil veces por minuto.': 'A hummingbird\'s heart can beat more than a thousand times per minute.', 'El cuerpo humano adulto tiene 206 huesos.': 'The adult human body has 206 bones.',
+    'Las abejas se comunican entre sí con una especie de baile.': 'Bees communicate with each other through a kind of dance.', 'Hacer pausas cortas ayuda a mantener la atención durante más tiempo.': 'Taking short breaks helps you keep your attention for longer.',
+    'Dormir bien antes de un examen suele ayudar más que estudiar toda la noche.': 'Sleeping well before an exam usually helps more than studying all night.', 'El agua cubre aproximadamente el 71 % de la superficie de la Tierra.': 'Water covers about 71% of the Earth\'s surface.'
+  });
+  /* ---- Pro · Bloque 2: quiz y simulacro (21-quiz.js) ---- */
+  Object.assign(EX, {
+    'Quiz y examen simulado': 'Quiz and mock exam', 'Ponte a prueba con preguntas hechas desde tus tarjetas: opción múltiple, verdadero/falso y respuesta corta.': 'Test yourself with questions made from your cards: multiple choice, true/false and short answer.',
+    'Preguntas': 'Questions', 'Tipo de pregunta': 'Question type', 'Mezcla': 'Mix', 'Opción múltiple': 'Multiple choice', 'Verdadero o falso': 'True or false', 'Respuesta corta': 'Short answer', 'Simulacro cronometrado': 'Timed mock exam',
+    'Necesitas al menos 4 tarjetas para armar un quiz.': 'You need at least 4 cards to build a quiz.',
+    'Las preguntas salen de tus tarjetas. La respuesta corta se corrige por coincidencia de palabras y puedes cambiar el resultado. Un quiz no cambia tu calendario de repaso.': 'Questions come from your cards. Short answers are graded by word matching and you can change the result. A quiz does not change your review schedule.',
+    'Últimos resultados': 'Latest results', 'Resultado del simulacro': 'Mock exam result', 'Resultado del quiz': 'Quiz result',
+    'Simulacro: verás las respuestas al final.': 'Mock exam: you will see the answers at the end.', 'No lo sé': "I don't know", 'Terminar ahora': 'Finish now', 'Entregar ya': 'Submit now',
+    'Verdadero o falso: ¿esta respuesta es la correcta para la pregunta?': 'True or false: is this answer the correct one for the question?', 'Respuesta propuesta': 'Proposed answer', 'Respuesta propuesta:': 'Proposed answer:',
+    'Escribe tu respuesta': 'Write your answer', 'Tiempo restante': 'Time left', 'Correcto.': 'Correct.', 'Incorrecto.': 'Incorrect.', 'Sin respuesta': 'No answer', 'Respuesta correcta:': 'Correct answer:', 'Era verdadero.': 'It was true.', 'Era falso.': 'It was false.',
+    'Corregida por ti': 'Graded by you', 'Contarla como incorrecta': 'Count it as incorrect', 'Contarla como correcta': 'Count it as correct', 'Repetir quiz': 'Repeat quiz',
+    'Es práctica, no una medida de dominio: son preguntas generadas desde tus tarjetas. No cambió tu calendario de repaso.': 'This is practice, not a measure of mastery: the questions are generated from your cards. It did not change your review schedule.',
+    'Queda 1 minuto.': '1 minute left.', 'Quedan 10 segundos.': '10 seconds left.', 'Se acabó el tiempo. Se entregó el simulacro.': 'Time is up. The mock exam was submitted.',
+    'Termina o sal del examen de tarjetas antes de empezar un quiz.': 'Finish or leave the card exam before starting a quiz.', 'Cierra la ventana abierta antes de empezar un quiz.': 'Close the open window before starting a quiz.',
+    'No hay suficientes tarjetas para este tipo de pregunta. Prueba con «Mezcla» o crea más tarjetas.': 'There are not enough cards for this question type. Try “Mix” or create more cards.'
+  });
+  /* Perfiles · Etapa 2: las frases que cambian según settings.profile viven en js/01b-perfil-textos.js (una sola tabla [español, inglés] por variante); aquí solo se vuelcan al diccionario.
+     Las de PROFILE_NO_EX (palabras sueltas o que se guardan en los datos) no entran al diccionario global: se traducen donde una regla lo pide (NOUN con cifra y las dos frases de «más fallos»). */
+  const PT = typeof PROFILE_TEXT !== 'undefined' ? PROFILE_TEXT : {};
+  Object.entries(PT).forEach(([k, byProfile]) => { if (!PROFILE_NO_EX.includes(k)) Object.values(byProfile).forEach(([es, en]) => { EX[es] = en; }); });
+  /* Palabras ambiguas o muy cortas: solo se traducen cuando son TODO el texto del nodo (nunca dentro de una frase). */
+  const ONLY = Object.assign(Object.create(null), { 'Iniciar enfoque': 'Start focus', 'Pausar': 'Pause', 'Continuar': 'Resume', 'Iniciar descanso': 'Start break', 'Continuar descanso': 'Resume break', 'Sí': 'Yes', 'Tarjeta': 'Card', dom: 'Sun', lun: 'Mon', mar: 'Tue', 'mié': 'Wed', jue: 'Thu', vie: 'Fri', 'sáb': 'Sat',
+    /* R6: bienvenida (paso «Personalizar»). Van en ONLY (solo texto completo) porque son palabras sueltas: dentro de otra frase no deben traducirse. */
+    'Omitir': 'Skip', 'Atrás': 'Back', 'Tiempo de hoy': "Today's time", 'Algo corto': 'Something short', 'Un Pomodoro': 'One Pomodoro', 'Sesión larga': 'Long session' });
+
+  Object.assign(ONLY, { 'Siguiente': 'Next', 'Responder': 'Answer', 'Entregar': 'Submit', 'Verdadero': 'True', 'Falso': 'False', 'Correcta': 'Correct', 'Incorrecta': 'Incorrect', 'Quiz': 'Quiz' }); // Pro · Bloque 2: palabras sueltas (solo texto completo)
+  Object.assign(ONLY, { 'Repasa': 'Review', 'Revisa:': 'Review:', 'Reescribir': 'Rewrite', 'Reescribir:': 'Rewrite:', 'Dividir:': 'Split:' }); // Bloque 2 · Reforzar: rótulos sueltos (en «Ruta sugerida», «Revisa:» y la ventana de tarjeta difícil)
+  const pl = (n, a, b) => (Number(n) === 1 ? a : b);
+  const MON = { ene: 'Jan', feb: 'Feb', mar: 'Mar', abr: 'Apr', may: 'May', jun: 'Jun', jul: 'Jul', ago: 'Aug', sep: 'Sep', sept: 'Sep', oct: 'Oct', nov: 'Nov', dic: 'Dec' };
+  const MON_RE = 'ene|feb|mar|abr|may|jun|jul|ago|sept|sep|oct|nov|dic';
+  const NOUN = { 'tarjetas falladas': 'failed cards', 'tarjeta fallada': 'failed card', 'tarjetas nuevas': 'new cards', 'tarjeta nueva': 'new card', 'tarjetas guardadas': 'cards saved', 'tarjeta guardada': 'card saved', tarjetas: 'cards', tarjeta: 'card',
+    alumnos: 'students', alumno: 'student', informes: 'reports', informe: 'report', días: 'days', día: 'day', minutos: 'minutes', minuto: 'minute', 'bloques completados': 'blocks completed', 'bloque completado': 'block completed', bloques: 'blocks', bloque: 'block',
+    'sesiones pendientes': 'pending sessions', 'sesión pendiente': 'pending session', 'sesiones descartadas': 'discarded sessions', 'sesión descartada': 'discarded session', sesiones: 'sessions', sesión: 'session',
+    'tareas atrasadas': 'overdue tasks', 'tarea atrasada': 'overdue task', tareas: 'tasks', tarea: 'task', repasos: 'reviews', repaso: 'review', exámenes: 'exams', examen: 'exam', errores: 'errors', error: 'error',
+    'registros': 'records', registro: 'record', 'distracciones anotadas': 'distractions noted', 'distracción anotada': 'distraction noted', 'mazos propios nuevos': 'new custom decks', 'mazo propio nuevo': 'new custom deck', mazos: 'decks', mazo: 'deck',
+    'ideas de tema': 'topic ideas', 'idea de tema': 'topic idea', materias: 'subjects', materia: 'subject', válidas: 'valid', válida: 'valid', 'posibles duplicadas': 'possible duplicates', 'posible duplicada': 'possible duplicate', nuevas: 'new', nueva: 'new', Pomodoros: 'Pomodoros', Pomodoro: 'Pomodoro' };
+  ['missOne', 'missMany'].forEach((k) => Object.values(PT[k] || {}).forEach(([es, en]) => { if (!(es in NOUN)) NOUN[es] = en; })); // «4 tropiezos» → «4 slip-ups» (lo que ya estaba, como «errores», no se pisa)
+  const MISS_MANY = Object.values(PT.missMany || { exam: ['fallos', 'mistakes'] }), MISS_EN = Object.fromEntries(MISS_MANY), MISS_RE = MISS_MANY.map((x) => x[0]).join('|');
+  /* ---- Metas · interfaz (22-metas.js) ---- */
+  Object.assign(EX, {
+    'Mis metas': 'My goals', 'Lo que quieres aprender, dividido en etapas que tú puedes cambiar. Sin fecha obligatoria.': 'What you want to learn, split into stages you can change. No mandatory date.', '+ Nueva meta': '+ New goal',
+    'Aún no tienes metas. Crea una con lo que quieras aprender.': 'You have no goals yet. Create one with whatever you want to learn.', 'Aún sin etapas': 'No stages yet', 'con una actividad': 'by an activity', 'Fecha objetivo:': 'Target date:',
+    'Estas metas se crearon con una versión más nueva de Learny: aquí solo se pueden ver.': 'These goals were created with a newer version of Learny: here they can only be viewed.',
+    'Activa': 'Active', 'En pausa': 'Paused', 'Terminada': 'Done', 'Archivada': 'Archived', 'Por hacer': 'To do', 'En curso': 'In progress', 'Hecha': 'Done', 'Saltada': 'Skipped', 'Ya la sabía': 'Already known',
+    'Sin marcar': 'Not marked', 'Lo estoy explorando': "I'm exploring it", 'Con ayuda': 'With help', 'Sin ayuda': 'Without help', 'Lo apliqué en otra situación': 'I applied it in another situation', 'Necesito repasarlo': 'I need to review it',
+    'Entender lo básico': 'Understand the basics', 'Practicar con ayuda': 'Practice with help', 'Practicar sin ayuda': 'Practice without help', 'Aplicarlo en algo real': 'Apply it to something real',
+    'Editar meta': 'Edit goal', 'Nueva meta': 'New goal', '¿Qué quieres aprender?': 'What do you want to learn?', '¿Para qué? (opcional)': 'What for? (optional)', '¿Dónde estás ahora? (opcional)': 'Where are you now? (optional)', '¿Qué resultado esperas? (opcional)': 'What result do you expect? (optional)',
+    'Minutos por semana (opcional)': 'Minutes per week (optional)', 'Fecha objetivo (opcional)': 'Target date (optional)', 'Estado': 'Status', 'Ruta inicial': 'Starting path', 'Empezar sin etapas': 'Start with no stages', 'Plantilla de 4 etapas (editable)': '4-stage template (editable)',
+    'Solo la primera pregunta es obligatoria. No hay cuenta regresiva: la fecha es solo una referencia.': 'Only the first question is required. There is no countdown: the date is only a reference.',
+    'Escribe qué quieres aprender.': 'Write what you want to learn.', 'Meta actualizada.': 'Goal updated.', 'Meta creada.': 'Goal created.', 'Esa meta ya no existe (otra pestaña la cambió).': 'That goal no longer exists (another tab changed it).',
+    'Meta ·': 'Goal ·', 'Resultado esperado:': 'Expected result:', 'Para qué:': 'What for:', 'Dónde estoy:': 'Where I am:', 'Tiempo por semana:': 'Time per week:',
+    'Aún no hay etapas. Añade la primera o usa la plantilla.': 'There are no stages yet. Add the first one or use the template.', 'Marcar una etapa como hecha no es lo mismo que comprobarla.': 'Marking a stage as done is not the same as checking it.',
+    'Abrir etapa': 'Open stage', 'Subir': 'Move up', 'Bajar': 'Move down', 'Dividir': 'Split', 'Saltar': 'Skip', 'Reactivar': 'Reactivate', 'Comprobada': 'Checked',
+    '+ Añadir etapa': '+ Add stage', 'Eliminar meta': 'Delete goal', 'Eliminar etapa': 'Delete stage', 'Editar etapa': 'Edit stage', 'Nueva etapa': 'New stage', 'Título': 'Title', 'Qué aprender': 'What to learn', 'Qué aprender:': 'What to learn:', 'Práctica:': 'Practice:',
+    'Cómo lo comprobarás': 'How you will check it', 'Cómo lo comprobarás:': 'How you will check it:', 'El título de la etapa no puede quedar en blanco.': 'The stage title cannot be blank.', 'Etapa añadida.': 'Stage added.',
+    'Mi autoevaluación:': 'My self-assessment:', 'Mi autoevaluación': 'My self-assessment', 'Comprobación por una actividad:': 'Check by an activity:', 'Todavía no.': 'Not yet.', 'Evidencias': 'Evidence',
+    'Aún no hay evidencias. Una nota o un enlace a lo que hiciste.': 'There is no evidence yet. A note or a link to what you did.', '+ Añadir evidencia': '+ Add evidence', 'Añadir evidencia': 'Add evidence', 'Quitar comprobación': 'Remove check',
+    'Comprobar con mi evidencia': 'Check with my evidence', 'Cambiar mi autoevaluación': 'Change my self-assessment', 'Marcar como pendiente': 'Mark as pending', 'Marcar como hecha': 'Mark as done', 'Esto ya lo sé': 'I already know this',
+    'Volver a la meta': 'Back to the goal', 'Cómo sientes esta etapa ahora. Es tu opinión: no cuenta como comprobación.': 'How you feel about this stage now. It is your opinion: it does not count as a check.',
+    'Una nota sobre lo que hiciste o un enlace a ello.': 'A note about what you did or a link to it.', 'Para comprobar lo que ya sabes, muestra algo que lo demuestre.': 'To check what you already know, show something that proves it.',
+    'Qué hiciste o qué lo demuestra': 'What you did or what proves it', 'Enlace (opcional, https://…)': 'Link (optional, https://…)', 'El enlace debe empezar por http:// o https://.': 'The link must start with http:// or https://.', 'Escribe una nota o pega un enlace.': 'Write a note or paste a link.',
+    'Evidencia guardada.': 'Evidence saved.', 'Evidencia guardada y etapa comprobada.': 'Evidence saved and stage checked.', 'Evidencia quitada.': 'Evidence removed.', 'Etapa comprobada con tu evidencia.': 'Stage checked with your evidence.',
+    'Puedes comprobarlo con una actividad o seguir adelante sin comprobarlo. En los dos casos la etapa queda como «Ya la sabía».': 'You can check it with an activity or move on without checking. Either way the stage is marked “Already known”.',
+    'Comprobarlo ahora': 'Check it now', 'Añade una evidencia que lo demuestre.': 'Add evidence that proves it.', 'Continuar sin comprobar': 'Continue without checking', 'Queda marcada como ya sabida, sin comprobación.': 'It is marked as already known, without a check.',
+    'Etapa movida hacia arriba.': 'Stage moved up.', 'Etapa movida hacia abajo.': 'Stage moved down.', 'Etapa dividida: la segunda parte está debajo. Edítala para darle su contenido.': 'Stage split: the second part is below. Edit it to give it content.',
+    'Etapa eliminada.': 'Stage deleted.', 'Meta eliminada.': 'Goal deleted.'
+  });
+  Object.assign(EX, { // Metas · Fase 3a: tarjetas ligadas a una etapa
+    'Tarjetas de esta etapa': 'Cards for this stage', 'Esta etapa aún no tiene una materia de tarjetas. Vincula una para repasar y comprobar con ellas.': 'This stage has no card subject yet. Link one to review and check with its cards.',
+    'Vincular materia': 'Link subject', 'Cambiar materia': 'Change subject', 'Quitar vínculo': 'Remove link', 'Vincular': 'Link', 'Materia vinculada:': 'Linked subject:', 'Vincular materia de tarjetas': 'Link a card subject',
+    'Las tarjetas de esa materia serán las de esta etapa. Una materia puede servir a varias etapas.': 'The cards of that subject will be this stage\'s cards. One subject can serve several stages.',
+    'Si la materia aún no existe, se usará al crear la primera tarjeta desde la etapa.': 'If the subject does not exist yet, it will be used when you create the first card from the stage.',
+    'Repasar las de hoy': "Review today's cards", 'Practicar errores primero': 'Practice mistakes first', '+ Crear tarjeta': '+ Create card', 'Comprobar con tarjetas': 'Check with cards',
+    'Para comprobar con tarjetas: al menos 3, todas repasadas y ninguna marcada «No lo sabía» la última vez.': 'To check with cards: at least 3, all reviewed and none marked “Didn\'t know it” last time.',
+    'Escribe la materia de tus tarjetas.': 'Write the subject of your cards.', 'Materia vinculada.': 'Subject linked.', 'Vínculo quitado.': 'Link removed.', 'No hay tarjetas de esa materia por repasar hoy.': 'There are no cards of that subject to review today.',
+    'Aún no se cumplen las condiciones para comprobar con tarjetas.': 'The conditions to check with cards are not met yet.', 'Etapa comprobada con tus tarjetas.': 'Stage checked with your cards.', 'con tus tarjetas': 'with your cards'
+  });
+  Object.assign(NOUN, { etapas: 'stages', etapa: 'stage', hechas: 'done', hecha: 'done', comprobadas: 'checked', comprobada: 'checked' });
+  Object.assign(EX, { // Firebase · Bloque 2: cuentas (23-cuenta.js y firebase-auth.js)
+    "Iniciar sesión": "Sign in",
+    "Crear una cuenta": "Create an account",
+    "Crear cuenta": "Create account",
+    "Olvidé mi contraseña": "I forgot my password",
+    "Ya tengo una cuenta": "I already have an account",
+    "Volver a iniciar sesión": "Back to sign in",
+    "Correo electrónico": "Email",
+    "Contraseña": "Password",
+    "Contraseña (mínimo 8 caracteres)": "Password (at least 8 characters)",
+    "Repite la contraseña": "Repeat the password",
+    "Recuperar contraseña": "Recover password",
+    "Enviar enlace": "Send link",
+    "Escribe tu correo y te enviaremos un enlace para elegir una contraseña nueva.": "Enter your email and we'll send you a link to choose a new password.",
+    "Tu cuenta es opcional: Learny gratis sigue funcionando sin ella.": "Your account is optional: free Learny keeps working without it.",
+    "Tu cuenta": "Your account",
+    "Cuenta": "Account",
+    "Tu plan y lo que incluye Pro.": "Your plan and what Pro includes.",
+    "Esta sección pide iniciar sesión. Learny gratis sigue funcionando sin cuenta.": "This section requires signing in. Free Learny keeps working without an account.",
+    "Inicia sesión": "Sign in",
+    "Para ver tu plan necesitas una cuenta.": "You need an account to see your plan.",
+    "Tu plan": "Your plan",
+    "Cuenta:": "Account:",
+    "El plan lo guarda el servidor: este navegador no puede activar Pro en tu cuenta. El cobro todavía no existe.": "The plan is stored on the server: this browser cannot activate Pro on your account. Payment does not exist yet.",
+    "Qué incluye Learny Pro": "What Learny Pro includes",
+    "Todo lo que ya usas (repaso SM-2, Pomodoro, tutor socrático, plan inverso, importar y copias) sigue siendo gratis.": "Everything you already use (SM-2 review, Pomodoro, Socratic tutor, reverse plan, import and backups) stays free.",
+    "En la demostración, Pro se activa solo en este navegador.": "In the demo, Pro is turned on only in this browser.",
+    "Las cuentas no están disponibles ahora mismo, así que no se puede comprobar tu plan.": "Accounts are not available right now, so your plan cannot be checked.",
+    "Pro va ligado a tu cuenta: inicia sesión para comprobar tu plan.": "Pro is tied to your account: sign in to check your plan.",
+    "Tu plan es Gratis y el cobro todavía no está disponible.": "Your plan is Free and payment is not available yet.",
+    "No se pudo comprobar tu plan ahora mismo. Inténtalo de nuevo desde «Learny Pro».": "Your plan could not be checked right now. Try again from “Learny Pro”.",
+    "Ver mi plan": "See my plan",
+    "Inicia sesión para usar las funciones Pro.": "Sign in to use Pro features.",
+    "Plan Pro activo en tu cuenta.": "Pro plan active on your account.",
+    "Inicia sesión para guardar también estos datos en tu cuenta y verlos en otro navegador.": "Sign in to also save this data in your account and see it in another browser.",
+    "Sincronizando con tu cuenta…": "Syncing with your account…",
+    "Sincronización en pausa hasta que recargues la página o vuelvas a iniciar sesión.": "Sync is paused until you reload the page or sign in again.",
+    "No hay permiso para sincronizar con tu cuenta. Revisa que las reglas de Firestore estén publicadas.": "There is no permission to sync with your account. Check that the Firestore rules are published.",
+    "Se alcanzó el límite diario gratuito de Firestore. Se reintentará más tarde.": "The free daily Firestore limit was reached. It will be retried later.",
+    "No se pudo sincronizar con tu cuenta. Inténtalo de nuevo.": "Could not sync with your account. Try again.",
+    "Nombre (opcional)": "Name (optional)",
+    "Guardar nombre": "Save name",
+    "Nombre guardado.": "Name saved.",
+    "No hay permiso para guardar el nombre. Revisa que las reglas de Firestore estén publicadas.": "There is no permission to save the name. Check that the Firestore rules are published.",
+    "No se pudo guardar el nombre. Inténtalo de nuevo.": "The name could not be saved. Try again.",
+    "Inicia sesión y espera a que cargue tu perfil.": "Sign in and wait for your profile to load.",
+    "Cargando tu plan…": "Loading your plan…",
+    "No se pudo cargar tu plan.": "Your plan could not be loaded.",
+    "Plan:": "Plan:",
+    "Gratis": "Free",
+    "No hay permiso para leer o crear tu perfil. Revisa que las reglas de Firestore estén publicadas.": "There is no permission to read or create your profile. Check that the Firestore rules are published.",
+    "No hay conexión con el servicio. Revisa tu internet e inténtalo de nuevo.": "There is no connection to the service. Check your internet and try again.",
+    "No se encontró la base de datos de Firestore. Comprueba que esté creada en Firebase Console.": "The Firestore database was not found. Check that it is created in Firebase Console.",
+    "No se pudo cargar tu perfil. Inténtalo de nuevo.": "Your profile could not be loaded. Try again.",
+    "Cerrar sesión": "Sign out",
+    "Tus tarjetas y demás datos siguen guardados en este navegador. Aún no se sincronizan con la nube.": "Your cards and other data are still stored in this browser. They are not synced to the cloud yet.",
+    "Inicia sesión para entrar en esta sección.": "Sign in to enter this section.",
+    "Sesión iniciada.": "Signed in.",
+    "Cuenta creada. Ya iniciaste sesión.": "Account created. You are now signed in.",
+    "Sesión cerrada.": "Signed out.",
+    "Si existe una cuenta con ese correo, te enviamos un enlace para cambiar la contraseña. Revisa también el correo no deseado.": "If an account exists with that email, we sent you a link to change the password. Also check your spam folder.",
+    "Las contraseñas no coinciden.": "The passwords do not match.",
+    "Escribe tu correo electrónico.": "Enter your email.",
+    "Escribe tu contraseña.": "Enter your password.",
+    "La contraseña es demasiado débil. Usa al menos 8 caracteres.": "The password is too weak. Use at least 8 characters.",
+    "El correo no es válido. Revisa que esté bien escrito.": "The email is not valid. Check that it is spelled correctly.",
+    "Correo o contraseña incorrectos.": "Incorrect email or password.",
+    "Ya existe una cuenta con ese correo. Prueba a iniciar sesión.": "An account with that email already exists. Try signing in.",
+    "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.": "Too many attempts. Wait a few minutes and try again.",
+    "No hay conexión con el servicio. Revisa tu internet e inténtalo de nuevo.": "Could not reach the service. Check your internet and try again.",
+    "Esta cuenta está deshabilitada.": "This account is disabled.",
+    "El inicio de sesión con correo no está activado en este proyecto.": "Email sign-in is not enabled in this project.",
+    "No se pudo completar la operación. Inténtalo de nuevo.": "The operation could not be completed. Try again.",
+    "Las cuentas no están disponibles ahora mismo.": "Accounts are not available right now."
+  });
+  Object.assign(ONLY, { 'Entrar': 'Sign in', 'Cuenta': 'Account' });
+  const NOUN_KEYS = Object.keys(NOUN).sort((a, b) => b.length - a.length).join('|');
+  const W = '(?![\\p{L}\\p{N}])';
+  const T = (x) => tr(x, false);
+
+  /* Frase completa (^…$) que tolera espacios al principio y al final del nodo de texto (p. ej. «…por repasar. » antes de un botón) y los conserva. */
+  const full = (re, fn) => [new RegExp(`^(\\s*)(?:${re.source.replace(/^\^/, '').replace(/\$$/, '')})(\\s*)$`, re.flags),
+    (...a) => `${a[1]}${fn(a[0], ...a.slice(2, -3))}${a[a.length - 3]}`];
+  /* Reglas con números o con frases con huecos. Se aplican en orden sobre el texto ORIGINAL (español); lo capturado se traduce con T(). */
+  const RULES = [
+    /* ---- Revisión del inglés · bloque 1: plan diario, Hoy y Planificar. Van primero: son frases completas y deben ganar a las reglas sueltas de abajo. ---- */
+    // Títulos de las tareas (rebuildTasks, se guardan en español) y su cola «→ N Pomodoros + …» del Estudio inteligente (extras.js). La cola va primero para que lo demás no dependa de ella.
+    [/ → (\d+) Pomodoros? \+ ([^.]+)\./u, (m, n, e) => ` → ${n} ${pl(n, 'Pomodoro', 'Pomodoros')} + ${T(e)}.`],
+    full(/^Recuperar: (.+)$/su, (m, r) => `Catch up: ${T(r)}`),
+    [/Hoy debes crear (\d+) tarjetas de (.+?) y leer lo esencial \((\d+) min\)\./u, (m, n, s, min) => `Today, create ${n} ${s} ${pl(n, 'card', 'cards')} and read the essentials (${min} min).`],
+    [/Practica (.+?): ejercicios activos (\d+) min y (\d+) preguntas en voz alta\./u, (m, s, a, q) => `Practice ${s}: ${a} min of active exercises and ${q} questions out loud.`],
+    [/Repasa tarjetas de (.+?) y cierra huecos \((\d+) min\)\./u, (m, s, a) => `Review ${s} cards and close gaps (${a} min).`],
+    [/Simulacro de (.+?): (\d+) min cronometrados y anota errores\./u, (m, s, a) => `Mock exam for ${s}: ${a} min, timed. Write down your mistakes.`],
+    [/Revisión final de (.+?): conceptos débiles y un pase rápido\./u, (m, s) => `Final review of ${s}: weak concepts and a quick pass.`],
+    [/Hoy toca la fase de (.+?)\./u, (m, f) => `Today is the ${T(f)} phase.`],
+    // Detalle de cada tarea de hoy con cifras reales (taskDetail)
+    full(/^Aún no hay tarjetas de (.+): crea algunas para poder practicar\.$/su, (m, s) => `There are no ${s} cards yet: create some to practice.`),
+    full(/^Hoy: (\d+) tarjetas? de (.+) por repasar\.$/su, (m, n, s) => `Today: ${n} ${s} ${pl(n, 'card', 'cards')} to review.`),
+    full(/^Hoy no hay tarjetas de (.+) por repasar\.$/su, (m, s) => `No ${s} cards to review today.`),
+    full(/^Hoy: práctica con (\d+) tarjetas? de (.+), tus errores primero\.$/su, (m, n, s) => `Today: practice with ${n} ${s} ${pl(n, 'card', 'cards')}, mistakes first.`),
+    full(/^Simulacro: (\d+) tarjetas? de (.+)\.$/su, (m, n, s) => `Mock exam: ${n} ${s} ${pl(n, 'card', 'cards')}.`),
+    full(/^Revisión: (\d+) tarjetas? de (.+) con fallos recientes\.$/su, (m, n, s) => `Review: ${n} ${s} ${pl(n, 'card', 'cards')} with recent mistakes.`),
+    full(/^Revisión: sin fallos recientes en (.+); repasa por encima\.$/su, (m, s) => `Review: no recent mistakes in ${s}; skim through.`),
+    // Bloque de hoy (extras.js) y avisos de Planificar
+    full(/^Hoy: (\d+) min de (.+) \+ (\d+) tarjetas? \+ repaso de (\d+) (?:error|errores)\.$/su, (m, a, s, c, e) => `Today: ${a} min of ${s} + ${c} ${pl(c, 'card', 'cards')} + review of ${e} ${pl(e, 'mistake', 'mistakes')}.`),
+    [/Te quedan (\d+) días? para “([^”]*)” y tienes ([\d.]+) h pendientes\./u, (m, d, t, h) => `You have ${d} ${pl(d, 'day', 'days')} left until “${t}” and ${h} h of tasks pending.`],
+    [/((?:«[^»]*»)(?:, «[^»]*»)*) ya no (?:cabe|caben) a tu ritmo diario: revisa «Próximas fechas» y replanifica\./u, (m, ts) => `${ts.replace(/[«»]/g, (c) => (c === '«' ? '“' : '”'))} ${ts.includes('», «') ? 'no longer fit' : 'no longer fits'} your daily pace: check “${T('Próximas fechas')}” and replan.`],
+    [/Ya no cabe a este ritmo: quedan ([\d.]+) h de trabajo \((\d+) sesi(?:ón|ones) pendientes?(?: y (\d+) descartadas?)?\) y solo hay ([\d.]+) h hasta el examen\. (?:Con (\d+) min\/día sí cabe\.|Ni con (\d+) min\/día cabe: cambia la fecha o recorta el temario\.)/u,
+      (m, w, p, d, a, need, max) => `It no longer fits at this pace: ${w} h of work left (${p} ${pl(p, 'pending session', 'pending sessions')}${d ? ` and ${d} discarded` : ''}) and only ${a} h available until the exam. ${need ? `At ${need} min/day it fits.` : `It does not fit even at ${max} min/day: change the date or trim the syllabus.`}`],
+    [/A este ritmo ya no cabe todo lo que queda: revisa o replanifica\./u, () => 'At this pace everything left no longer fits: review or replan.'],
+    full(/^Plan reajustado: moví (\d+) tareas? atrasadas? a hoy(?: y descarté (\d+) tareas? que ya no cabían)?\. El detalle está en Planificar → Cambios en tu plan\.$/u,
+      (m, a, b) => `Plan adjusted: ${a} overdue ${pl(a, 'task', 'tasks')} moved to today${b ? ` and ${b} ${pl(b, 'task', 'tasks')} dropped because ${pl(b, 'it no longer fits', 'they no longer fit')}` : ''}. Details are in ${T('Planificar')} → ${T('Cambios en tu plan')}.`),
+    full(/^Replanificado desde hoy a (\d+) min\/día\. Lo completado antes de hoy se conservó\.$/u, (m, n) => `Replanned from today at ${n} min/day. What you completed before today was kept.`),
+    full(/^Estabas atrasado: moví a hoy (.+?)\.(?: Descarté (.+?) porque ya no cabían \(≈ ([\d.]+) h\)\.)?$/su, (m, a, b, h) => `You were behind. Moved to today: ${T(a)}.${b ? ` Dropped because they no longer fit (≈ ${h} h): ${T(b)}.` : ''}`),
+    full(/^Replanificar «(.+)»$/su, (m, t) => `Replan “${t}”`),
+    full(/^Se recalculan las tareas desde hoy hasta el (\S+)\. Lo que completaste antes de hoy se conserva(?:\. (\d+) sesi(?:ón descartada se recupera|ones descartadas se recuperan) solo si los minutos diarios alcanzan)?\.$/su,
+      (m, d, n) => `Tasks are recalculated from today until ${d}. What you completed before today is kept${n ? `. ${n} discarded ${pl(n, 'session is', 'sessions are')} recovered only if the daily minutes are enough` : ''}.`),
+    full(/^Plan recalculado, pero con (\d+) min\/día aún no cabe todo lo pendiente \(harían falta ≈ (\d+)(?: min\/día)?\)\.$/u, (m, a, b) => `Plan recalculated, but at ${a} min/day everything pending still does not fit (you would need ≈ ${b} min/day).`),
+    // Plan de emergencia y resultado del Estudio inteligente
+    full(/^(\d+) bloques de 25 min \(≈([\d.]+) h\): (.+)\.$/su, (m, n, h, f) => `${n} ${pl(n, 'block', 'blocks')} of 25 min (≈${h} h): ${T(f)}.`),
+    full(/^Tu plan para (.+)$/su, (m, t) => `Your plan for ${t}`),
+    full(/^(\d+) días? de estudio, (\d+) Pomodoros? al día\.$/u, (m, d, p) => `${d} study ${pl(d, 'day', 'days')}, ${p} ${pl(p, 'Pomodoro', 'Pomodoros')} a day.`),
+    full(/^(\d{4}-\d{2}-\d{2})(?: a (\d{4}-\d{2}-\d{2}))? · (crear tarjetas del tema|práctica intercalada de 10 tarjetas|repaso de errores y tarjetas débiles|repaso de errores|examen real cronometrado)$/su, (m, a, b, e) => `${a}${b ? ` to ${b}` : ''} · ${T(e)}`),
+    // Motivo de «Siguiente mejor acción» en Hoy cuando hay examen cerca
+    [/ y (pertenece|pertenecen) a «([^»]*)», que es /u, (m, v, t) => ` and ${v === 'pertenece' ? 'belongs' : 'belong'} to “${t}”, which is `],
+    [/\. (\d+) (?:es|son) de «([^»]*)», que es /u, (m, n, t) => `. ${n} ${Number(n) === 1 ? 'is' : 'are'} from “${t}”, which is `],
+    /* ---- Revisión del inglés · bloque 2: Reforzar. Frases completas con cifras (extras.js, 08-analisis.js, 07-tarjetas.js). El nombre de la materia («(.+)») se copia tal cual: es dato de la persona. ---- */
+    full(/^Periodo: (?:últimos (\d+) días|todo el historial guardado)\.$/u, (m, n) => (n ? `Period: last ${n} days.` : 'Period: entire saved history.')),
+    full(/^(\d+) de (\d+) repasos marcados «Fácil»( · muestra pequeña)?$/u, (m, a, b, s) => `${a} of ${b} reviews marked “Easy”${s ? ' · small sample' : ''}`),
+    full(/^(\d+) de (\d+) repasos sin «No lo sabía»( · muestra pequeña)?$/u, (m, a, b, s) => `${a} of ${b} reviews without “Didn't know it”${s ? ' · small sample' : ''}`),
+    full(/^(\d+) de (\d+) respuestas «Fácil» en (\d+) (?:examen|exámenes)( · muestra pequeña)?$/u, (m, a, b, n, s) => `${a} of ${b} “Easy” answers in ${n} ${pl(n, 'exam', 'exams')}${s ? ' · small sample' : ''}`),
+    full(/^de (\d+) días del periodo(?: · día de gracia (usado|disponible))?$/u, (m, n, g) => `of ${n} days in the period${g ? ` · grace day ${g === 'usado' ? 'used' : 'available'}` : ''}`),
+    full(/^de (\d+) bloques? · tiempo en sesión, no aprendizaje$/u, (m, n) => `of ${n} ${pl(n, 'block', 'blocks')} · time in session, not learning`),
+    full(/^Objetivo (\d+) ?%$/u, (m, n) => `Target ${n}%`),
+    full(/^Tarjetas jóvenes \(volvían en menos de (\d+) días\)$/u, (m, n) => `Young cards (came back in under ${n} days)`),
+    full(/^Tarjetas maduras \(volvían en (\d+) días o más\)$/u, (m, n) => `Mature cards (came back in ${n} days or more)`),
+    full(/^(\d+) predicci(?:ón|ones)$/u, (m, n) => `${n} ${pl(n, 'prediction', 'predictions')}`),
+    full(/^La diferencia entre «Lo sé» y «No lo sé» es de (-?\d+) puntos\. Cuanto mayor sea, mejor distingues lo que sabes de lo que no\.$/u, (m, d) => `The difference between “I know it” and “I don’t know” is ${d} ${pl(Math.abs(d), 'point', 'points')}. The larger it is, the better you tell what you know from what you don’t.`),
+    full(/^(\d+) de (\d+) recordadas( · muestra pequeña)?(?: · (en el objetivo)| · (\d+) puntos por debajo)?$/u, (m, a, b, s, ok, g) => `${a} of ${b} recalled${s ? ' · small sample' : ''}${ok ? ' · on target' : g ? ` · ${g} ${pl(g, 'point', 'points')} below` : ''}`),
+    full(/^Ninguna tarjeta acumula (\d+) fallos\. Si alguna lo hace, aparecerá aquí con una propuesta para reescribirla o dividirla\.$/u, (m, n) => `No card has reached ${n} mistakes yet. If one does, it will show up here with a suggestion to rewrite or split it.`),
+    full(/^… y (\d+) más\.$/u, (m, n) => `… and ${n} more.`),
+    full(/^Marcaste «No lo sabía» (\d+) (?:vez|veces) en esta tarjeta\. Repetirla igual rara vez ayuda: casi siempre funciona mejor cambiarla\.$/u, (m, n) => `You marked “Didn't know it” ${n} ${pl(n, 'time', 'times')} on this card. Repeating it the same way rarely helps: it almost always works better to change it.`),
+    full(/^Listo: no te la volveré a marcar hasta que falles otras (\d+) veces\.$/u, (m, n) => `Done: it will not be flagged again until you miss it ${n} more times.`),
+    full(/^Recuerdo declarado: (\d+) de (\d+) \((\d+)%\)$/u, (m, a, b, p) => `Self-reported recall: ${a} of ${b} (${p}%)`),
+    full(/^Repasa (?:la tarjeta|las (\d+) tarjetas) con errores recientes\.$/u, (m, n) => (n ? `Review the ${n} cards with recent mistakes.` : 'Review the card with recent mistakes.')),
+    full(/^(\d+) min esta semana$/u, (m, n) => `${n} min this week`),
+    full(/^Estás a (\d+) min de tu meta semanal\.$/u, (m, n) => `You are ${n} min from your weekly goal.`),
+    full(/^(.+): (\d+)% sin fallar \((\d+) de (\d+) repasos\)$/u, (m, s, p, a, b) => `${s}: ${p}% without a miss (${a} of ${b} reviews)`),
+    full(/^Un mini quiz de (\d+) tarjetas empieza por tus errores\.$/u, (m, n) => `${/^(?:8|11|18|8\d)$/.test(n) ? 'An' : 'A'} ${n}-card mini quiz starts with your mistakes.`),
+    full(/^(.+) es hoy$/u, (m, t) => `${t} is today`),
+    full(/^Hoy toca: (\d+) tareas? y (\d+) tarjetas?\.$/u, (m, a, b) => `Today: ${a} ${pl(a, 'task', 'tasks')} and ${b} ${pl(b, 'card', 'cards')}.`),
+    full(/^Racha de (\d+) días?$/u, (m, n) => `${n}-day streak`),
+    full(/^Completa una sesión de (\d+) minutos para mantenerla\.$/u, (m, n) => `Complete a ${n}-minute session to keep it going.`),
+    full(/^Esta semana: (\d+) min de (\d+) min\.(?: (¡Meta cumplida!)| Te faltan (\d+) min\.)$/u, (m, a, b, ok, f) => `This week: ${a} min of ${b} min. ${ok ? 'Goal reached!' : `${f} min to go.`}`),
+    full(/^Esta semana: (\d+) min de foco, (\d+) (?:repaso|repasos) y (\d+) (?:examen|exámenes)\. Meta para la próxima: superar tus repasos de esta semana\.$/u, (m, a, b, c) => `This week: ${a} min of focus, ${b} ${pl(b, 'review', 'reviews')} and ${c} ${pl(c, 'exam', 'exams')}. Goal for next week: beat this week's review count.`),
+    full(/^(.+): (\d+)% sin fallar; priorízala mañana\.$/u, (m, s, p) => `${s}: ${p}% without a miss; prioritize it tomorrow.`),
+    full(/^(.+): (\d+)% sin fallar\.$/u, (m, s, p) => `${s}: ${p}% without a miss.`),
+    full(/^(.+): pocos datos todavía\. Repasa más para saber cómo vas\.$/u, (m, s) => `${s}: not enough data yet. Review more to see how you are doing.`),
+    full(/^(\d+) de (\d+)$/u, (m, a, b) => `${a} of ${b}`),
+    full(/^Buen resultado en (.+): (\d+) de (\d+) repasos sin fallar\. Falta comprobarlo en próximos repasos\.$/u, (m, s, a, b) => `Good result in ${s}: ${a} of ${b} reviews without a miss. Still to be confirmed in upcoming reviews.`),
+    full(/^Práctica nivel (\d+) · (\d+) repasos?$/u, (m, n, r) => `Practice level ${n} · ${r} ${pl(r, 'review', 'reviews')}`),
+    full(/^Reto: (\d+)\/(\d+) repasos · (\d+)\/(\d+) exámenes$/u, (m, a, b, c, d) => `Challenge: ${a}/${b} reviews · ${c}/${d} exams`),
+    full(/^\((\d+) % sin fallar: (\d+) de (\d+) repasos\), practica con ejercicios y avanza cuando pases del (\d+) %\.$/u, (m, p, a, b, t) => `(${p}% without a miss: ${a} of ${b} reviews), practice with exercises and move on once you pass ${t}%.`),
+    [new RegExp('^Guardado también en tu cuenta(?: \\(sincronizado a las (.+)\\))?\\. Los informes incluyen los nombres de tus alumnos: pídeles permiso\\.$', 'u'), (m, t) => `Also saved in your account${t ? ` (synced at ${t})` : ''}. Reports include your students' names: ask for their permission.`],
+    [new RegExp('^(\\d{4}-\\d{2}-\\d{2}) · (\\d+) de (\\d+) tarjetas repasadas · v(\\d+)$', 'u'), (m, d, a, b, v) => `${d} · ${a} of ${b} cards reviewed · v${v}`], // Etapa 6a (panel del profesor)
+    [new RegExp('^(\\d+) alumnos? · (\\d+)% sin fallar en conjunto \\((\\d+) de (\\d+) repasos\\)( · muestra pequeña)?$', 'u'), (m, n, p, o, t, s) => `${n} ${pl(n, 'student', 'students')} · ${p}% without a miss overall (${o} of ${t} reviews)${s ? ' · small sample' : ''}`],
+    [new RegExp('^Fallada por (\\d+) de (\\d+) alumnos? · (\\d+) fallos? en (\\d+) repasos?$', 'u'), (m, a, b, f, r) => `Failed by ${a} of ${b} ${pl(b, 'student', 'students')} · ${f} ${pl(f, 'mistake', 'mistakes')} in ${r} ${pl(r, 'review', 'reviews')}`],
+    [new RegExp('^Quitar informe de (.+)$', 'u'), (m, n) => `Remove report from ${n}`],
+    [new RegExp('Ya tienes una versión más nueva \\(v(\\d+)\\)\\.', 'u'), (m, v) => `You already have a newer version (v${v}).`],
+    [new RegExp('^ · vence el (.+)$', 'u'), (m, d) => ` · expires on ${d}`], // Firebase · Bloque 3
+    [new RegExp('^Tarjetas: (\\d+) · (\\d+) por repasar hoy · (\\d+) de (\\d+) repasadas · (\\d+) recordadas$', 'u'), (m, t, d, sn, t2, k) => `Cards: ${t} · ${d} due today · ${sn} of ${t2} reviewed · ${k} remembered`], // Metas · Fase 3a
+    [new RegExp('^Una meta admite hasta (\\d+) materias\\.$', 'u'), (m, n) => `A goal allows up to ${n} subjects.`],
+    [new RegExp('^Pregunta (\\d+) de (\\d+)$', 'u'), (m, a, b) => `Question ${a} of ${b}`], // Pro · Bloque 2
+    [new RegExp('^(\\d+) de (\\d+) aciertos \\((\\d+) %\\)$', 'u'), (m, a, b, p) => `${a} of ${b} correct (${p} %)`],
+    [new RegExp('^Revisar respuestas \\((\\d+)\\)$', 'u'), (m, n) => `Review answers (${n})`],
+    [new RegExp('^Repasar las falladas \\((\\d+)\\)$', 'u'), (m, n) => `Review the failed ones (${n})`],
+    [new RegExp('^Coincidencia de palabras: (\\d+) %$', 'u'), (m, n) => `Word match: ${n} %`],
+    [new RegExp('^Exportadas (\\d+) tarjetas? a (.+)\\.$', 'u'), (m, n, d) => `Exported ${n} ${pl(n, 'card', 'cards')} to ${d}.`], // Pro · Bloque 1
+    [new RegExp('^metas \\(ahora: (\\d+)\\)$', 'u'), (m, n) => `goals (now: ${n})`], // Fase 1: vista previa de importar
+    [new RegExp('^Cada etapa admite hasta (\\d+) evidencias\\. Quita alguna para añadir otra\\.$', 'u'), (m, n) => `Each stage allows up to ${n} pieces of evidence. Remove one to add another.`],
+    /* Etapa 4 · modo autodidacta (ETAPA4) */
+    [new RegExp('Hace (\\d+) días? que no tocas «([^»]*)»\\. Un mini quiz de 8 tarjetas te ayuda a retomarlo\\.', 'u'), (m, n, s) => `You haven't touched “${s}” in ${n} ${pl(n, 'day', 'days')}. An 8-card mini quiz helps you pick it back up.`],
+    [new RegExp('Esta semana \\(últimos 7 días\\) llevas (\\d+) de (\\d+) sesi(?:ón|ones)\\. Una sesión de hoy te acerca a tu ritmo\\.', 'u'), (m, a, b) => `This week (last 7 days) you have done ${a} of ${b} ${pl(b, 'session', 'sessions')}. One session today brings you closer to your rhythm.`],
+    [new RegExp('Ya cumpliste tu ritmo de (\\d+) sesi(?:ón|ones) esta semana\\. Una sesión más es opcional\\.', 'u'), (m, n) => `You already met your rhythm of ${n} ${pl(n, 'session', 'sessions')} this week. One more session is optional.`],
+    [new RegExp('Cumpliste tu ritmo de la semana: (\\d+) de (\\d+) sesi(?:ón|ones)\\. Una sesión más es opcional\\.', 'u'), (m, a, b) => `You met your rhythm for the week: ${a} of ${b} ${pl(b, 'session', 'sessions')}. One more session is optional.`],
+    [new RegExp('Te (?:falta|faltan) (\\d+) sesi(?:ón|ones) para llegar a tu ritmo de (\\d+) por semana\\. Se cuentan los últimos 7 días\\.', 'u'), (m, n, g) => `You are ${n} ${pl(n, 'session', 'sessions')} short of your rhythm of ${g} per week. The last 7 days are counted.`],
+    [new RegExp('^(\\d+) de (\\d+) sesi(?:ón|ones)$', 'u'), (m, a, b) => `${a} of ${b} ${pl(b, 'session', 'sessions')}`],
+    [new RegExp('^Tus metas se crearon con una versión más nueva de Learny \\(metas v(\\d+)\\): aquí solo se pueden ver y se conservan intactas\\. Actualiza la app\\.$', 'u'), (m, v) => `Your goals were created with a newer version of Learny (goals v${v}): here they can only be viewed and are kept intact. Update the app.`], // Fase 1
+    [new RegExp('^(\\d+) elementos? de tus metas se omiti(?:ó|eron) al cargar por pasar los límites\\. Hay una copia automática en Ajustes por si la necesitas\\.$', 'u'), (m, n) => `${n} ${pl(n, 'item', 'items')} of your goals ${pl(n, 'was', 'were')} skipped on load for exceeding the limits. There is an automatic backup in Settings in case you need it.`],
+    [new RegExp('^(\\d+) temas?$', 'u'), (m, n) => `${n} ${pl(n, 'topic', 'topics')}`],
+    [new RegExp('Esta semana: (\\d+) repasos?, (\\d+) min', 'u'), (m, a, b) => `This week: ${a} ${pl(a, 'review', 'reviews')}, ${b} min`],
+    [new RegExp('^Tamaño de texto: (.+)\\.$', 'u'), (m, x) => `Text size: ${T(x)}.`], // R12: aviso del tamaño elegido en la bienvenida
+    [new RegExp('^Listo, (.+?)\\. Puedes cambiar todo esto en Ajustes\\.$', 'u'), (m, n) => `Done, ${n}. You can change all of this in Settings.`], // R6: aviso al terminar la bienvenida con nombre
+    [new RegExp('^Filtro aplicado: (.+)\\.$', 'u'), (m, f) => `Filter applied: ${T(f)}.`], // R2: aviso del selector de tiempo de Hoy
+    [new RegExp('^Mañana te tocan (\\d+) repasos?\\.$', 'u'), (m, n) => `Tomorrow you have ${n} ${pl(n, 'review', 'reviews')} due.`], // Lumi (v73)
+    [new RegExp('^Dato curioso: (.+)$', 'u'), (m, f) => `Fun fact: ${T(f)}`], // Lumi (v74): el dato del día se traduce con su entrada de EX
+    [new RegExp('^Faltan? (\\d+) días? para tu próximo examen\\.$', 'u'), (m, n) => `${n} ${pl(n, 'day', 'days')} left until your next exam.`],
+    [new RegExp('^Hoy llevas (\\d+) de (\\d+) bloques de tu meta\\.$', 'u'), (m, a, b) => `Today you have done ${a} of ${b} blocks of your goal.`],
+    [new RegExp(`Copia automática activa(?: · última a las (\\d\\d:\\d\\d))?$`, 'u'), (m, t) => `Automatic backup on${t ? ` · last at ${t}` : ''}`],
+    [new RegExp(`Meta: (\\d+) bloques? de (\\d+) minutos · hoy (\\d+)/(\\d+)\\. Racha: (\\d+) días?\\.`, 'u'), (m, a, b, c, d, e) => `Goal: ${a} ${pl(a, 'block', 'blocks')} of ${b} minutes · today ${c}/${d}. Streak: ${e} ${pl(e, 'day', 'days')}.`],
+    [new RegExp(`Modo examen: (\\d+) tarjetas?\\.`, 'u'), (m, n) => `Exam mode: ${n} ${pl(n, 'card', 'cards')}.`],
+    [new RegExp(`Sesión inteligente · paso (\\d) de 3: (\\d+) tarjetas?\\.`, 'u'), (m, s, n) => `Smart session · step ${s} of 3: ${n} ${pl(n, 'card', 'cards')}.`],
+    [new RegExp(`Volverá en (\\d+) días?\\.`, 'u'), (m, n) => `It will be back in ${n} ${pl(n, 'day', 'days')}.`],
+    [new RegExp(`Sumaste (\\d+) minutos?(?: en (.+?))?\\.`, 'u'), (m, n, l) => `You logged ${n} ${pl(n, 'minute', 'minutes')}${l ? ` on ${l}` : ''}.`],
+    [new RegExp(`Última vez: (\\d+) minutos?(?: de (.+?))? (hoy|ayer|hace (\\d+) días?)\\.`, 'u'), (m, n, l, w, d) => `Last time: ${n} ${pl(n, 'minute', 'minutes')}${l ? ` of ${l}` : ''} ${d ? `${d} ${pl(d, 'day', 'days')} ago` : w === 'hoy' ? 'today' : 'yesterday'}.`],
+    [new RegExp(`Bienvenido de vuelta: han pasado (\\d+) días? desde tu última sesión, y no pasa nada\\. Puedes retomar con «Solo 5 minutos»\\.`, 'u'), (m, n) => `Welcome back: ${n} ${pl(n, 'day has', 'days have')} passed since your last session, and that's okay. You can pick up again with “Just 5 minutes”.`],
+    [new RegExp(`Tienes (\\d+) tarjetas para hoy\\. Este repaso toma 5 de ellas; el resto sigue pendiente\\.`, 'u'), (m, n) => `You have ${n} cards for today. This review takes 5 of them; the rest stay pending.`],
+    [new RegExp(`Tienes ([^.]+)\\.`, 'u'), (m, body) => { const i = body.indexOf(' y '); const p = i < 0 ? [body] : [body.slice(0, i), body.slice(i + 3)]; return `You have ${p.map(T).join(' and ')}.`; }],
+    [new RegExp(`Hoy llevas (\\d+) de (\\d+) bloques? de tu meta; escribe un resultado concreto y empieza\\.`, 'u'), (m, a, b) => `Today you have done ${a} of ${b} ${pl(b, 'block', 'blocks')} of your goal; write a concrete outcome and start.`],
+    [new RegExp(`Hoy tienes (\\d+) tareas? de «([^»]*)», que es `, 'u'), (m, n, t) => `Today you have ${n} ${pl(n, 'task', 'tasks')} from “${t}”, which is `],
+    [new RegExp(`Marcaste «No lo sabía» en (?:esta tarjeta|estas (\\d+) tarjetas) la última vez(?: \\(([^)]*)\\))?\\. Volver a verlas pronto es lo que más ayuda a fijarlas\\.`, 'u'), (m, n, s) => `You marked “Didn't know it” on ${n ? `these ${n} cards` : 'this card'} last time${s ? ` (${s})` : ''}. Seeing them again soon is what helps most to fix them.`],
+    [new RegExp(`(\\d+)% sin fallar \\((\\d+) de (\\d+) repasos\\): es tu materia con más (${MISS_RE})\\. El quiz empieza por tus errores\\.`, 'u'), (m, p, a, b, x) => `${p}% without a miss (${a} of ${b} reviews): it is your subject with the most ${MISS_EN[x]}. The quiz starts with your errors.`],
+    [new RegExp(`Explicar «([^»]*)», tu materia con más (${MISS_RE}), revela lo que todavía no entiendes\\.`, 'u'), (m, s, x) => `Explaining “${s}”, your subject with the most ${MISS_EN[x]}, reveals what you still don't understand.`],
+    [new RegExp(`Cabe: quedan ([\\d.]+) h de trabajo y hay ([\\d.]+) h disponibles hasta el examen\\.`, 'u'), (m, a, b) => `It fits: ${a} h of work left and ${b} h available until the exam.`],
+    [new RegExp(`\\((\\d+) vencidas?\\)`, 'u'), (m, n) => `(${n} overdue)`],
+    [new RegExp(`(\\d+) para hoy${W}`, 'u'), (m, n) => `${n} due today`],
+    [new RegExp(`quedan (\\d\\d:\\d\\d)`, 'u'), (m, t) => `${t} left`],
+    [new RegExp(`hace (\\d+) días?${W}`, 'u'), (m, n) => `${n} ${pl(n, 'day', 'days')} ago`],
+    [new RegExp(`(?<![\\p{L}])en (\\d+) días?${W}`.replace('(?<![\\p{L}])', '\\b'), 'u'), (m, n) => `in ${n} ${pl(n, 'day', 'days')}`],
+    [new RegExp(`\\bel (\\d{1,2}) (${MON_RE})\\.?${W}`, 'u'), (m, d, mo) => `on ${MON[mo]} ${d}`],
+    [new RegExp(`\\b(\\d{1,2}) (${MON_RE})\\.?${W}`, 'u'), (m, d, mo) => `${MON[mo]} ${d}`],
+    [new RegExp(`^(dom|lun|mar|mié|jue|vie|sáb) (\\d{1,2})$`, 'u'), (m, w, d) => `${T(w)} ${d}`],
+    [new RegExp(`(\\d[\\d.,]*) (${NOUN_KEYS})${W}`, 'gu'), (m, n, k) => `${n} ${NOUN[k]}`]
+  ];
+  const keys = Object.keys(EX).sort((a, b) => b.length - a.length);
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const PH_RE = new RegExp(`(^|[^\\p{L}\\p{N}])(${keys.map(esc).join('|')})${W}`, 'gu'); // sin lookbehind (Safari antiguo)
+
+  const cache = new Map();
+  function tr(s, strict) {
+    const ck = (strict ? 's' : 'n') + s; if (cache.has(ck)) return cache.get(ck);
+    const t = s.trim(); let out = s;
+    if (t && (EX[t] !== undefined || ONLY[t] !== undefined)) out = s.replace(t, () => EX[t] ?? ONLY[t]);
+    else if (!strict) { out = s; for (const [re, fn] of RULES) out = out.replace(re, fn); out = out.replace(PH_RE, (m, pre, k) => pre + EX[k]); }
+    if (cache.size > 4000) cache.clear(); cache.set(ck, out); return out;
+  }
+
+  /* ---- DOM: traduce y recuerda el original para poder volver al español ---- */
+  const SKIP = '[translate="no"], textarea, script, style, noscript';
+  const STRICT = '#flashcard, #library-list, #notes-list, #source-out, #feynman-guide, .ai-answer, .tutor-block, #topic-results, .review-card, #distraction-list, #concept-map b, #deadline-list > .session-item > b, #week-calendar .tag'; // contenido del usuario o de la IA: solo rótulos exactos
+  const ATTRS = ['placeholder', 'aria-label', 'title', 'alt'];
+  const tStore = new WeakMap(), aStore = new WeakMap();
+  let cur = null, obs = null, titleObs = null, guideEs = null;
+
+  function doText(n) {
+    const p = n.parentElement; if (!p || p.closest(SKIP)) return;
+    let rec = tStore.get(n); if (rec && n.data !== rec.t) rec = null;
+    if (cur !== 'en') { if (rec) { n.data = rec.o; tStore.delete(n); } return; }
+    const o = rec ? rec.o : n.data; if (!/\p{L}/u.test(o)) return;
+    let out;
+    if (o.trim() === 'Tema') out = o.replace('Tema', p.closest('label')?.querySelector('[name="theme"]') ? 'Theme' : 'Topic');
+    else out = tr(o, !!p.closest(STRICT));
+    if (out === o) { if (rec) tStore.delete(n); return; }
+    if (rec && n.data === out) return;
+    tStore.set(n, { o, t: out }); n.data = out;
+  }
+  function doAttr(el, name) {
+    if (el.closest('[translate="no"]')) return;
+    const v = el.getAttribute(name); if (v == null) return;
+    const m = aStore.get(el) || {}; let rec = m[name]; if (rec && v !== rec.t) rec = null;
+    if (cur !== 'en') { if (rec) { el.setAttribute(name, rec.o); delete m[name]; } return; }
+    const o = rec ? rec.o : v, out = /\p{L}/u.test(o) ? tr(o, false) : o;
+    if (out === o) { if (rec) delete m[name]; return; }
+    if (rec && v === out) return;
+    m[name] = { o, t: out }; aStore.set(el, m); el.setAttribute(name, out);
+  }
+  function walk(n) {
+    if (n.nodeType === 3) { doText(n); return; }
+    if (n.nodeType !== 1 || n.getAttribute('translate') === 'no') return;
+    if (n.parentElement && n.parentElement.closest('[translate="no"]')) return;
+    ATTRS.forEach((a) => { if (n.hasAttribute(a)) doAttr(n, a); });
+    if (/^(SCRIPT|STYLE|TEXTAREA|NOSCRIPT)$/.test(n.tagName)) return;
+    for (let c = n.firstChild; c; c = c.nextSibling) walk(c);
+  }
+  const onMut = (recs) => {
+    for (const r of recs) {
+      if (r.type === 'characterData') doText(r.target);
+      else if (r.type === 'attributes') doAttr(r.target, r.attributeName);
+      else r.addedNodes.forEach(walk);
+    }
+  };
+  const onTitle = () => { const t = document.querySelector('title'); if (t) t.childNodes.forEach((c) => c.nodeType === 3 && doText(c)); };
+
+  /* Guía de uso en inglés: se sustituye el contenido de #guide (con translate="no") y se restaura al volver al español. */
+  const GUIDE_EN = `<div class="page-heading"><p class="eyebrow">User guide</p><h1 tabindex="-1">How to get the most out of Learny.</h1>
+    <p class="lead">Five minutes of reading. Everything works without an account and your data stays in this browser.</p></div>
+  <article class="card guide-flow"><h2>Your daily routine</h2>
+    <p class="lead">Open <i>Today</i>: Learny suggests <b>one recommended action</b>, explains why using your data and lets you choose between two alternatives. If you are starting from scratch you will only see a first step.</p>
+    <ol class="steps"><li><b>Plan.</b> In <i>Plan</i>, add your exam with a date: Learny creates daily tasks.</li><li><b>Focus.</b> Write a concrete outcome and press <i>Start focus</i>.</li>
+    <li><b>Create and review cards.</b> Create cards from what you studied and review today's.</li><li><b>Explain.</b> Use Feynman or the roulette to explain in your own words.</li>
+    <li><b>Reinforce.</b> In <i>Reinforce</i>, see which subjects fail and start there tomorrow.</li></ol></article>
+  <div class="grid planner-grid spaced">
+    <article class="card"><h2>Pomodoro</h2><p class="lead">25 min of focus and a 5 min break (changeable in <i>Today → Block options → Adjust times</i> or Settings). When a block ends, note whether you achieved your outcome and how focused you were. Your daily goal and streak are calculated automatically. After a block or exam, Learny shows a summary with only that session's data and lets you choose <i>Finish for today</i> or <i>Keep going a bit</i>. If the dimmed menu during a block bothers you, turn it off in <i>Settings → Layout</i>.</p></article>
+    <article class="card"><h2>Flashcards</h2><p class="lead">Press <i>+ Create</i>, write a question and answer, and try to recall before revealing. To create several in a row use <i>Save and add another</i> (or Ctrl+Enter); the <i>reverse card</i> checkbox also creates the question the other way round, which arrives the next day. Rate honestly: the harder it was, the sooner the card comes back; each button shows in how many days it will return. Send the ones you master to the Library.</p></article>
+    <article class="card"><h2>Tutor and search</h2><p class="lead">The top bar asks a tutor that questions before answering. Its <i>Context</i> (subject, level, mode, dictation) is in <i>Practice</i>. <i>Local guide</i> works offline; Gemini needs your free key (Settings). Google, Wikipedia and Perplexity open a new tab.</p></article>
+    <article class="card"><h2>Planner</h2><p class="lead">Each date is split into phases: understanding, practice, review, mock exam and final review. Tick off finished tasks. If you fall behind, Learny moves up to 2 tasks per exam to today, discards the rest and explains it in <i>Changes to your plan</i>. Each date says whether what is left still fits your daily pace, and <i>Replan from today</i> recalculates the plan.</p></article>
+  </div>
+  <div class="grid planner-grid spaced">
+    <article class="card"><h2>Next best action</h2><p class="lead">In <i>Today</i>, Learny recommends one action and explains <b>why</b> with real data. Order: today's cards, exam plan, failed cards, weakest subject and, if nothing is pending, new material. Below you will see up to <b>two alternatives</b>. If starting is hard today, press <i data-ptxt="stuck">I'm struggling to start today</i>: it suggests something very small and closing the window changes nothing. <i>Start smart session</i> (in <i>More options</i>) chains three steps: card and error review, a Pomodoro and a Feynman explanation.</p></article>
+    <article class="card"><h2>Where the advanced stuff is</h2><p class="lead">Nothing was removed: it is one click away in collapsible blocks. <i>Today → More about today</i> and <i>Block options</i>. <i>Practice → More ways to review</i> and <i>More practice tools</i> (roulette, notes, reading). <i>Library → Starter decks and your own decks</i>. <i>Plan → <span data-ptxt="recoveryTitle">Exam report</span></i>. <i>Reinforce → More data</i>. <i>Settings → Artificial intelligence</i> (key, model, proxy). During a focus block or exam only the current activity and its controls are shown.</p></article>
+    <article class="card"><h2>What Gemini is and how to get your key</h2><p class="lead">Learny's AI features (tutor, Generate study set, Create with AI) use <b>Gemini</b>, Google's artificial intelligence. Without a key, Learny still works with the <i>Local guide</i>. To turn the AI on:</p>
+    <ol class="steps"><li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> with your Google account and press <i>Create API key</i>.</li>
+    <li>Copy the key and paste it in <i>Settings → Artificial intelligence</i>; press <i>Save preferences</i>. When you reopen Settings the field looks empty: that is normal, the key is saved.</li>
+    <li>Optional: change the model in that same block. The default is <code>gemini-3.8-flash</code>. Model list: <a href="https://ai.google.dev/gemini-api/docs/models" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/models</a>.</li></ol>
+    <p class="lead">The key is personal: do not share it. Free-usage limits are set by Google.</p></article>
+    <article class="card"><h2>AI tutor and privacy</h2><p class="lead">After each tutor answer you can ask <i>Explain more simply</i>, <i>Give me an exercise</i> or <i>Create cards</i>, and cancel while waiting. To avoid exposing your key, you can enter your own proxy URL in Settings (see <code>proxy-worker.example.js</code>).</p></article>
+  </div>
+  <div class="grid planner-grid spaced">
+    <article class="card"><h2>More ways to review</h2><p class="lead"><i>Exam mode</i> uses today's cards. <i>Interleave</i> mixes them by subject. <i>5 minutes</i> runs a short session. <i data-ptxt="realExam">Real exam</i> combines today's cards, the ones you failed and random ones, with a 1.5 min per card stopwatch. If you review a card before its date and know it, its schedule does not change.</p></article>
+    <article class="card"><h2>Notes and reading</h2><p class="lead">In <i>Practice → More practice tools</i>, save quick notes and turn them into cards. <i>Generate study set</i> summarizes a text and proposes questions. The microphone dictates your explanation or question (Chrome and Edge).</p></article>
+    <article class="card"><h2>Decks</h2><p class="lead">In <i>Library → Starter decks and your own decks</i> add starter decks or create yours with one card per line: <code>question | answer</code>. <i>Share deck</i> (Settings) exports your cards and decks without progress. You can also import CSV or Anki text (.csv, .txt).</p></article>
+    <article class="card"><h2>Special plans</h2><p class="lead"><i>Smart study</i> creates the full plan with Pomodoros and tasks per phase. <i>Emergency plan</i> spreads the last 3 days. <i data-ptxt="recoveryTitle">Exam report</i> turns your <span data-ptxt="missMany">mistakes</span> into <span data-ptxt="recoveryPlan">a recovery plan</span> spanning 7 days. In <i>Practice</i>, the tutor offers <i>5 exercises</i> and <i>Error mode</i>, which points out where your reasoning fails.</p></article>
+  </div>
+  <article class="card spaced"><h2>Sharing with students and with your teacher</h2><p class="lead">A teacher picks in <i>Library → Share with students or with your teacher → Share deck</i> the subjects to send, gives them a name, author, description and version, and downloads a file (no progress, notes or key). The student opens it with <i>Import deck or report</i> and sees a preview. Whenever they want, the student presses <i>Report for my teacher</i>: a file is downloaded with, for each card of that deck, how many times they reviewed it and how many times they failed. The teacher imports it with <i>Import student report</i> in <i>Reinforce → Your students' results</i> and sees who has reviewed, the percentage without a miss and the cards the class fails most. To update a deck, keep the name and author and raise the version. Everything is done with files: there are no accounts and no server.</p></article>
+  <article class="card spaced"><h2>Appearance and typography</h2><p class="lead">In <i>Settings</i>, the collapsible blocks <i>Appearance</i>, <i>Typography and reading</i> and <i>Layout</i> change how Learny looks. The <b>theme</b> can be Automatic, Dark, Black (OLED), Light, Sepia, High contrast or Chrome (black and silver, fixed accent); the <b>accent</b> accepts a custom color that Learny adjusts until it is readable. You also choose the interface <b>language</b> (English or Spanish), corners, cards, background, density, fonts, text size (13 to 24 px), line spacing and more. Changes show instantly but are only saved with <i>Save preferences</i>; if you close the window without saving, everything goes back.</p></article>
+  <article class="card spaced"><h2>Keyboard shortcuts</h2><p class="lead"><kbd>Space</kbd> reveal answer · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> rate · <kbd>P</kbd> start or pause the Pomodoro · <kbd>Esc</kbd> close a window · <kbd>Enter</kbd> in the concrete outcome starts the block · <kbd>Z</kbd> undo. Card shortcuts work in <i>Practice</i>. The whole flow can be done with the keyboard: <kbd>Tab</kbd> moves forward, <kbd>Shift</kbd>+<kbd>Tab</kbd> back, <kbd>Enter</kbd> or <kbd>Space</kbd> press, and when a window closes focus returns to the button that opened it.</p></article>
+  <article class="card spaced"><h2>Data, backups and installation</h2><p class="lead">In Settings you can download a backup, import JSON or CSV and share a deck without your progress. On mobile, use <i>Add to home screen</i> to install it and use it offline. Before deleting or importing, Learny saves an automatic copy you can restore in Settings. If you clear browser data you lose your progress: download backups from time to time.</p></article>`;
+  function swapGuide(en) {
+    const g = document.getElementById('guide'); if (!g) return;
+    if (en) { if (guideEs === null) { guideEs = g.innerHTML; g.setAttribute('translate', 'no'); g.innerHTML = GUIDE_EN; } }
+    else if (guideEs !== null) { g.removeAttribute('translate'); g.innerHTML = guideEs; guideEs = null; }
+  }
+
+  /* ---- Guía local del tutor y IA en el idioma elegido ---- */
+  const EN_GUIDES = [
+    { q: 'What is the core idea in one sentence?', tip: 'Strip away the decoration and keep the cause or the definition.', ch: 'Explain it to a 12-year-old in 20 seconds.' },
+    { q: 'What example of your own shows this?', tip: 'Skip the textbook example; use one from your life.', ch: 'Change one variable and predict what happens.' },
+    { q: 'Where does this idea break down?', tip: 'Look for a counterexample or an edge case.', ch: 'Write down the doubt you still cannot resolve.' }
+  ];
+  function enGuide(topic, extra = '') { // los títulos de bloque siguen en español porque parseBlocks los reconoce; el DOM los traduce
+    const g = EN_GUIDES[Math.abs([...`${topic}${extra}`].reduce((a, c) => a + c.charCodeAt(0), 0)) % EN_GUIDES.length], t = topic || 'this topic';
+    return `**Pregunta guía**\n${g.q}\n\n**Pista**\n${g.tip}\n\n**Explicación**\nAbout “${t}”: state the core idea, an example of your own and a doubt.\n\n**Ejemplo**\nIf you are studying ${topic || 'the topic'}, compare a typical case with an edge case.\n\n**Siguiente reto**\n${g.ch}${extra ? `\n\nYour text: ${extra.slice(0, 180)}${extra.length > 180 ? '…' : ''}` : ''}`;
+  }
+  const AI_NOTE = '\n\nIMPORTANT: write your whole answer in English. Keep any bold block titles (for example **Pregunta guía**) exactly as written above, in Spanish, because the app parses them. If a "question | answer" line format is requested, write the content in English.';
+  function patchGlobals() {
+    try {
+      if (typeof askGemini === 'function' && !askGemini.__i18n) {
+        const o = askGemini, w = (p) => { if (cur !== 'en') return o(p); const b = cleanMl(p, MAX_PROMPT - AI_NOTE.length); return o(b ? b + AI_NOTE : b); }; w.__i18n = true; // JS-013: el recorte de askGemini (MAX_PROMPT) ya no se come la nota: se recorta el prompt y luego se añade
+        window.askGemini = w; if (window.Learny) window.Learny.askGemini = w;
+      }
+      if (typeof localGuide === 'function' && !localGuide.__i18n) {
+        const o = localGuide, w = (topic, extra) => (cur === 'en' ? enGuide(topic, extra) : o(topic, extra)); w.__i18n = true; window.localGuide = w;
+      }
+    } catch (e) { console.error('Learny · idioma', e); }
+  }
+
+  /* ---- Cambio de idioma ---- */
+  const btn = () => document.getElementById('lang-toggle');
+  function paintToggle() {
+    const b = btn(); if (!b) return;
+    b.textContent = cur === 'en' ? 'ES' : 'EN';
+    b.setAttribute('aria-label', cur === 'en' ? 'Cambiar a español' : 'Switch to English'); b.title = b.getAttribute('aria-label');
+    b.lang = cur === 'en' ? 'es' : 'en'; // R6: la etiqueta está en el idioma de destino; con lang el lector la pronuncia con la voz correcta
+  }
+  function restoreAll() {
+    const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) doText(n);
+    document.querySelectorAll('[placeholder],[aria-label],[title],[alt]').forEach((el) => ATTRS.forEach((a) => el.hasAttribute(a) && doAttr(el, a)));
+    onTitle();
+  }
+  function setLang(next) {
+    cur = next; document.documentElement.lang = next; patchGlobals();
+    if (next === 'en') {
+      swapGuide(true); walk(document.body); onTitle();
+      if (window.MutationObserver) {
+        obs = obs || new MutationObserver(onMut); obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+        const t = document.querySelector('title'); if (t) { titleObs = titleObs || new MutationObserver(onTitle); titleObs.observe(t, { childList: true, characterData: true, subtree: true }); }
+      }
+    } else {
+      obs?.disconnect(); titleObs?.disconnect(); restoreAll(); swapGuide(false);
+    }
+    paintToggle();
+    try { if (typeof applyProfileTexts === 'function') applyProfileTexts({ ...state.settings, lang: next }); } catch (e) { console.error('Learny · textos por perfil', e); } // la guía en inglés se acaba de reemplazar: se reescriben sus data-ptxt
+  }
+  function sync(s) {
+    try {
+      const next = s && s.lang === 'en' ? 'en' : 'es'; // español por defecto (decisión del 30-10-2026)
+      if (next === cur) { paintToggle(); return; }
+      setLang(next);
+    } catch (e) { console.error('Learny · idioma', e); }
+  }
+  function init() {
+    if (typeof state === 'undefined' || !document.body) return;
+    btn()?.addEventListener('click', () => {
+      state.settings.lang = cur === 'en' ? 'es' : 'en'; save(); applyAppearance();
+      toast(cur === 'en' ? 'Language: English.' : 'Idioma: español.');
+    });
+    sync(state.settings);
+  }
+  window.LearnyI18n = Object.freeze({ sync, t: (es) => tr(es, false), get lang() { return cur; } });
+  init();
+})();

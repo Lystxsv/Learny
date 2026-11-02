@@ -1,0 +1,1292 @@
+:root {
+  --bg: #101114; --sidebar: #14161a; --surface: #191b20; --surface2: #22252c; --input: #121419;
+  --border: #30343d; --text: #f3f4f6; --muted: #a6abb7;
+  --accent: #a7f3d0; --accent2: #46c793; --on-accent: #10241a; --danger: #fca5a5;
+  --tag-bg: #20352c; --flash-a: #24352f; --flash-b: #1a2923; --flash-border: #3e6655; --flash-line: #4c675a;
+  --base: 100%;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html { font-size: var(--base); }
+body { margin: 0; background: var(--bg); color: var(--text); min-width: 320px; }
+/* Iconos: Material Symbols (subconjunto guardado en el propio repo; no se descarga nada de internet). Uso: <span class="material-symbols-outlined" aria-hidden="true" translate="no">nombre</span> */
+@font-face { font-family: 'Material Symbols Outlined'; font-style: normal; font-weight: 400; font-display: block; src: url(material-symbols.woff2) format('woff2'); }
+.material-symbols-outlined { font-family: 'Material Symbols Outlined'; font-weight: 400; font-style: normal; font-size: 1.2em; line-height: 1; display: inline-block; vertical-align: -0.2em; text-transform: none; letter-spacing: normal; white-space: nowrap; -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; user-select: none; }
+[hidden] { display: none !important; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button.lumi-hide { transition: transform .18s ease, filter .18s ease, background .18s ease; } /* motion.css excluye a Lumi: conserva la transición que tenía */
+button:disabled { opacity: .55; cursor: not-allowed; transform: none; filter: none; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.skip-link { position: absolute; left: -999px; top: 0; z-index: 10; padding: var(--s1) var(--s2); background: var(--accent); color: var(--on-accent); border-radius: 0 0 var(--r-ctl) 0; }
+.skip-link:focus { left: 0; }
+
+/* Estructura */
+.app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; min-height: 100dvh; }
+.sidebar { position: sticky; top: 0; height: 100vh; height: 100dvh; padding: var(--s3) var(--s2); background: var(--sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s4); }
+.brand { display: flex; align-items: center; gap: var(--s1); padding: 0 var(--s1); }
+.logo { width: 42px; height: 42px; }
+.logo svg { display: block; width: 100%; height: 100%; }
+.brand strong { font-size: var(--fs-sub); }
+.brand span { display: block; color: var(--muted); font-size: var(--fs-cap); }
+.nav { display: grid; gap: var(--s1); }
+.nav-label { margin: 0 0 .3rem var(--s1); color: var(--muted); font-size: var(--fs-cap); text-transform: uppercase; letter-spacing: .1em; }
+.nav-button, .outline-button, .option-button, .topic-chip { border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--text); background: var(--surface2); }
+.nav-button { padding: var(--s2); text-align: left; background: transparent; border-color: transparent; color: var(--muted); }
+.nav-button.active, .nav-button:hover { color: var(--accent); background: var(--surface2); border-color: var(--border); }
+.sidebar-footer { margin-top: auto; border-top: 1px solid var(--border); padding: var(--s2) var(--s1); color: var(--muted); font-size: var(--fs-cap); line-height: 1.45; }
+.main { width: 100%; max-width: 1450px; margin: auto; padding: 1.5rem clamp(1rem, 4vw, 3.5rem) 3rem; }
+.topbar { display: flex; gap: var(--s2); align-items: center; margin-bottom: var(--s4); }
+.topbar-tools { display: flex; gap: var(--s1); margin-left: auto; }
+.ai-input { display: flex; align-items: center; gap: var(--s1); flex: 1; max-width: 780px; padding: .25rem var(--s1) .25rem var(--s2); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); }
+.ai-input input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
+.ai-input:focus-within { border-color: var(--accent); }
+.ai-input select { max-width: 110px; background: transparent; color: var(--muted); border: 0; border-right: 1px solid var(--border); padding: var(--s1); }
+.ai-input select option { background: var(--surface); color: var(--text); }
+.ask-button, .primary-button { border: 0; border-radius: var(--r-ctl); padding: var(--s1) var(--s2); background: var(--accent); color: var(--on-accent); font-weight: 750; }
+.icon-button { border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface); padding: var(--s1); color: var(--text); min-width: 2.6rem; }
+
+/* Páginas y tipografía */
+.page { display: none; }
+.page.active { display: block; }
+.eyebrow { color: var(--accent); font-weight: 800; font-size: var(--fs-cap); letter-spacing: .09em; text-transform: uppercase; margin: 0; }
+.page-heading { margin-bottom: var(--s3); }
+h1 { margin: var(--s1) 0; font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.05em; }
+h2 { margin: 0; font-size: var(--fs-body); }
+.lead, .empty { color: var(--muted); line-height: 1.55; }
+.fact { color: var(--muted); font-size: var(--fs-cap); margin: var(--s1) 0 0; }
+.rhythm { margin: -.25rem 0 var(--s2); font-size: var(--fs-cap); }
+.hint { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--fs-cap); }
+
+/* Tarjetas y rejillas */
+.grid { display: grid; gap: var(--s2); }
+.study-grid, .planner-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.metrics { grid-template-columns: repeat(3, 1fr); margin: var(--s2) 0; }
+.spaced { margin-top: var(--s2); }
+.card { padding: var(--s3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s2); margin-bottom: var(--s2); }
+.head-inline { display: flex; align-items: center; gap: var(--s1); flex-wrap: wrap; }
+.tag { padding: .25rem var(--s1); border-radius: 999px; background: var(--tag-bg); color: var(--accent); font-size: var(--fs-cap); font-weight: 700; white-space: nowrap; }
+.tag.urgent { background: var(--err-bg); color: var(--danger); }
+.metric { padding: var(--s2); background: var(--surface2); border-radius: var(--r-card); }
+.metric b { display: block; font-size: calc(var(--fs-sub) * 1.35); }
+.metric span, .session-item span { color: var(--muted); font-size: var(--fs-cap); }
+
+/* Pomodoro */
+.timer { text-align: center; padding: var(--s2) 0; font-size: clamp(3.7rem, 9vw, 6rem); font-weight: 800; letter-spacing: -.07em; font-variant-numeric: tabular-nums; }
+.timer small { display: block; margin-top: var(--s2); color: var(--muted); font-size: var(--fs-cap); font-weight: 400; letter-spacing: 0; }
+.intention, textarea, .card input, .tutor-context input, .tutor-context textarea { width: 100%; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--text); background: var(--input); outline-color: var(--accent); }
+.tutor-context label, .pomodoro-card label { display: grid; gap: var(--s1); color: var(--muted); font-size: var(--fs-cap); }
+textarea { min-height: 165px; resize: vertical; margin-top: var(--s2); }
+.actions, .roulette-tools { display: flex; gap: var(--s1); align-items: center; margin-top: var(--s2); flex-wrap: wrap; }
+.roulette-tools .intention { flex: 1; min-width: 180px; width: auto; }
+.outline-button, .option-button, .topic-chip { padding: var(--s1) var(--s2); }
+
+/* Biblioteca, flashcards, planificador */
+.library-inline { margin: var(--s2) 0; }
+.library-list, .session-list { display: grid; gap: var(--s2); }
+.library-card, .session-item { padding: var(--s2); border-bottom: 1px solid var(--border); }
+.library-card:last-child, .session-item:last-child { border: 0; }
+.library-card p { color: var(--muted); margin: var(--s1) 0; }
+.library-card span { color: var(--muted); font-size: var(--fs-cap); }
+.row-actions, .card-tools { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.text-button { display: inline-block; margin-top: var(--s1); padding: 0; border: 0; background: none; color: var(--accent); }
+.text-button.danger { color: var(--danger); }
+.flashcard { min-height: 180px; display: grid; place-items: center; align-content: center; text-align: center; padding: var(--s3); background: linear-gradient(135deg, var(--flash-a), var(--flash-b)); border: 1px solid var(--flash-border); border-radius: var(--r-card); font-size: var(--fs-sub); font-weight: 650; overflow-wrap: anywhere; }
+.flashcard small, .flashcard span { color: var(--muted); font-size: var(--fs-cap); font-weight: 400; }
+.flashcard hr { width: 100%; border: 0; border-top: 1px solid var(--flash-line); }
+.card-reveal { width: 100%; margin-top: var(--s2); }
+.rating-row, .topic-results { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+.topic-wrap { display: inline-flex; align-items: stretch; }
+.topic-wrap .topic-chip { border-radius: var(--r-ctl) 0 0 var(--r-ctl); }
+.chip-x { border: 1px solid var(--border); border-left: 0; border-radius: 0 var(--r-ctl) var(--r-ctl) 0; background: var(--surface2); color: var(--muted); padding: 0 var(--s1); }
+.roulette-panel { margin-top: var(--s2); }
+.guided-feedback { margin-top: var(--s2); padding: var(--s2); border-radius: var(--r-ctl); background: var(--surface2); color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.guided-feedback b { color: var(--text); }
+
+/* Análisis */
+.chart { height: 190px; display: flex; gap: var(--s1); align-items: stretch; border-bottom: 1px solid var(--border); margin-top: var(--s2); }
+.bar-col { flex: 1; min-width: 16px; display: flex; flex-direction: column; gap: var(--s1); }
+.bar-area { flex: 1; display: flex; align-items: flex-end; }
+.bar { width: 100%; background: linear-gradient(to top, var(--accent2), var(--accent)); border-radius: var(--r-ctl) var(--r-ctl) 0 0; }
+.bar-col span { text-align: center; font-size: var(--fs-cap); color: var(--muted); }
+.weak-topic { display: flex; justify-content: space-between; padding: var(--s1) 0; border-bottom: 1px solid var(--border); color: var(--muted); }
+.weak-topic b { color: var(--danger); font-size: var(--fs-cap); }
+
+/* Ventanas */
+.modal { width: min(560px, calc(100vw - 2rem)); max-height: 88vh; overflow: auto; padding: 0; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.modal::backdrop { background: #000b; backdrop-filter: blur(3px); }
+.modal-content { position: relative; display: grid; gap: var(--s2); padding: var(--s3); }
+.modal-content h2 { padding-right: var(--s4); }
+.modal-content label { display: grid; gap: var(--s1); color: var(--muted); }
+.modal-content input:not([type=checkbox]):not([type=radio]), .modal-content select { padding: var(--s1); color: var(--text); background: var(--input); border: 1px solid var(--border); border-radius: var(--r-ctl); width: 100%; }
+.modal-content label.check { display: flex; align-items: center; gap: var(--s1); }
+.modal-content p { margin: 0; line-height: 1.5; }
+.modal-content a { color: var(--accent); }
+.modal-close { position: absolute; right: .8rem; top: .8rem; border: 0; border-radius: var(--r-ctl); background: var(--surface2); color: var(--text); font-size: var(--fs-sub); width: 2.2rem; height: 2.2rem; line-height: 1; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
+.choice-list { border: 1px solid var(--border); border-radius: var(--r-ctl); margin: 0; }
+.scale { display: flex; gap: var(--s1); flex-wrap: wrap; padding: var(--s2); }
+.scale label { display: flex; align-items: center; gap: var(--s1); }
+.modal-tip, .ai-answer { padding: var(--s2); background: var(--surface2); color: var(--muted); border-radius: var(--r-ctl); line-height: 1.55; overflow-wrap: anywhere; }
+.ai-answer { color: var(--text); }
+.roulette-timer { font-size: var(--fs-title); text-align: center; color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+.toast { position: fixed; bottom: 1.2rem; left: 50%; z-index: 5; max-width: calc(100vw - 2rem); padding: var(--s2) var(--s2); border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent); transform: translate(-50%, 150%); opacity: 0; } /* la transición y el desplazamiento los define motion.css */
+.toast.show { transform: translate(-50%, 0); opacity: 1; }
+.toast.error { background: var(--err-bg); color: var(--danger); }
+.bottom-nav { display: none; }
+.today-queue { margin-bottom: var(--s2); }
+.tutor-context { margin-bottom: var(--s3); }
+.tutor-context summary { cursor: pointer; font-weight: 700; }
+.tutor-context .form-row, .tutor-context label { margin-top: var(--s2); }
+.tutor-context textarea { min-height: 70px; }
+.form-row.compact { margin-top: var(--s2); }
+.actions.tight { margin-top: 0; }
+.alert { padding: var(--s2) var(--s2); border-radius: var(--r-ctl); background: var(--err-bg); color: var(--danger); margin-bottom: var(--s2); }
+.task-row { display: flex; gap: var(--s1); align-items: flex-start; padding: var(--s1) 0; border-bottom: 1px solid var(--border); color: var(--text); }
+.task-row input { margin-top: var(--s1); }
+.tutor-block { padding: var(--s1) var(--s2); background: var(--surface2); border-radius: var(--r-ctl); }
+.tutor-block h3 { margin: 0 0 var(--s1); font-size: var(--fs-cap); color: var(--accent); }
+.tutor-block p { margin: 0; color: var(--muted); }
+.card-tools .text-button { min-height: 2.4rem; }
+
+/* Temas y accesibilidad */
+.theme-sepia { --bg: #302a20; --sidebar: #2a2419; --surface: #3c3428; --surface2: #4c4232; --input: #2e281e; --border: #786b54; --text: #fff4dc; --muted: #decfb5; --accent: #f2d39b; --accent2: #d8b070; --on-accent: #2e2412; --tag-bg: #54472f; --flash-a: #54472f; --flash-b: #463b28; --flash-border: #8a7a5c; --flash-line: #8a7a5c; --danger: #ffb4a8; }
+.theme-contrast { --bg: #000; --sidebar: #000; --surface: #050505; --surface2: #161616; --input: #000; --border: #fff; --text: #fff; --muted: #fff; --accent: #ff0; --accent2: #ff0; --on-accent: #000; --tag-bg: #222; --flash-a: #000; --flash-b: #000; --flash-border: #fff; --flash-line: #fff; --danger: #ff8a8a; }
+.font-dyslexic { font-family: OpenDyslexic, Verdana, Arial, sans-serif; }
+/* Movimiento reducido: ya no hay una regla global que lo apague todo. motion.css quita desplazamientos y escalas y deja fundidos cortos; el esqueleto de carga se detiene allí y Lumi tiene sus propias reglas (más abajo). */
+
+/* Responsive */
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: sticky; top: 0; z-index: 3; height: auto; padding-top: calc(var(--s1) + env(safe-area-inset-top, 0px)); padding-left: calc(var(--s2) + env(safe-area-inset-left, 0px)); padding-right: calc(var(--s2) + env(safe-area-inset-right, 0px)); flex-direction: row; align-items: center; padding: var(--s1) var(--s2); gap: var(--s2); border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar .nav, .nav-label, .sidebar-footer { display: none; }
+  .bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; gap: var(--s1); padding: .45rem .5rem calc(.45rem + env(safe-area-inset-bottom)); background: var(--sidebar); border-top: 1px solid var(--border); }
+  .bottom-nav .nav-button { text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .main { padding-bottom: var(--s4); }
+  .toast { bottom: 4.6rem; }
+}
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; }
+  .ai-input { flex-basis: 100%; }
+  .topbar-tools { margin-left: 0; }
+  .study-grid, .planner-grid, .metrics, .form-row { grid-template-columns: 1fr; }
+}
+
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#modal-body{display:grid;gap:var(--s2)}
+
+/* ===== Mejoras de aspecto y guía ===== */
+body[data-density="compact"] { --pad: var(--s2); } body[data-density="roomy"] { --pad: var(--s4); }
+.card { padding: var(--pad, var(--s3)); }
+.page.active > .card { margin-bottom: var(--s2); }
+.nav-button.active { box-shadow: inset 3px 0 0 var(--accent); }
+.lead { max-width: 70ch; }
+.steps { margin: var(--s2) 0 0; padding-left: var(--s3); display: grid; gap: var(--s1); color: var(--muted); line-height: 1.5; }
+.steps b, .page .card i { color: var(--text); font-style: normal; font-weight: 650; }
+kbd { padding: .15rem var(--s1); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--r-ctl); background: var(--surface2); font-size: .85em; }
+.option-button.easy { border-color: var(--accent2); }
+@media (max-width: 820px) { .bottom-nav .nav-button { justify-content: center; padding: var(--s1) .3rem; font-size: var(--fs-cap); } }
+
+/* ===== Rediseño: cuaderno cuadriculado de tinta ===== */
+:root {
+  --bg: #0e1220; --sidebar: #121830; --surface: #171d38; --surface2: #202850; --input: #0f1428;
+  --border: #2d366a; --text: #eef0fb; --muted: #a9aeca; --grid: #ffffff08;
+  --accent: #9db8ff; --accent2: #5b84ff; --on-accent: #0b1230; --tag-bg: #232d5e; --danger: #ffb1b8;
+  --flash-a: #26306a; --flash-b: #1a2250; --flash-border: #4a5aa8; --flash-line: #4a5aa8;
+  --radius: var(--r-card); --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+.theme-sepia, .theme-contrast { --grid: transparent; }
+body { background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 28px 28px; line-height: 1.5; }
+button:hover { transform: none; filter: brightness(1.12); }
+h1, h2, .brand strong { font-family: var(--serif); font-weight: 600; }
+h1 { letter-spacing: -.02em; font-size: clamp(1.9rem, 3.6vw, 2.6rem); max-width: 22ch; }
+h2 { font-size: var(--fs-sub); }
+.eyebrow { font-family: inherit; font-size: var(--fs-cap); letter-spacing: .04em; text-transform: none; color: var(--accent); }
+.card { border-radius: var(--radius); background: var(--surface); }
+.outline-button, .option-button, .topic-chip, .ask-button, .primary-button, .icon-button, .nav-button { border-radius: var(--r-ctl); }
+.primary-button { font-weight: 700; }
+.sidebar { width: 260px; }
+.nav { gap: .25rem; }
+.nav-label { margin-top: var(--s2); }
+.nav-button { display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s2); }
+.nav-button.active { box-shadow: inset 3px 0 0 var(--accent); }
+.main { max-width: 1240px; }
+.topbar { margin-bottom: var(--s4); }
+.page-heading { margin-bottom: var(--s3); padding-bottom: var(--s2); border-bottom: 1px solid var(--border); }
+.page.active > .card, .page.active > .grid, .page.active > .alert { margin-bottom: var(--s2); }
+.page.active > .spaced { margin-top: 0; }
+
+/* Hoy: Pomodoro como pieza central */
+#study.active { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: var(--s2); align-items: start; }
+#study .page-heading, #study .metrics, #study #daily-rhythm { grid-column: 1 / -1; margin-bottom: 0; }
+#study .pomodoro-card { border-left: 4px solid var(--accent); margin: 0; }
+#study .today-queue { margin: 0; }
+#study #missions-card { margin: 0; }
+#study .metrics { margin: 0; }
+.timer { font-family: var(--serif); font-weight: 600; font-size: clamp(4rem, 9vw, 6.4rem); letter-spacing: -.03em; }
+.metric { border: 1px solid var(--border); background: var(--surface); }
+
+/* Practicar */
+#practice .study-grid { margin-bottom: var(--s2); align-items: start; }
+.recall-compare { margin: var(--s2) 0 0; padding: var(--s1) var(--s2); border-left: 3px solid var(--accent2); background: #0003; text-align: left; font-size: var(--fs-body); font-weight: 400; }
+.recall-wrap { display: grid; gap: .3rem; margin-top: var(--s2); color: var(--muted); font-size: var(--fs-cap); }
+.recall-wrap textarea { min-height: 80px; margin: 0; }
+.task-row.done { color: var(--muted); }
+.task-row.done > span:last-child { text-decoration: line-through; }
+.task-row small { color: var(--muted); margin-left: .3rem; }
+
+/* Planificar */
+.week-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s1); }
+.day { display: flex; flex-direction: column; gap: .3rem; padding: var(--s1); min-height: 110px; border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); font-size: var(--fs-cap); }
+.day.today { border-color: var(--accent); }
+.day small { color: var(--muted); font-size: var(--fs-cap); }
+.day small.done { text-decoration: line-through; }
+.day .tag { white-space: normal; }
+
+/* Reforzar */
+.concept-map { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+.node { padding: var(--s1) var(--s2); border: 1px solid var(--flash-border); border-radius: 999px; background: var(--flash-a); font-size: calc(.9rem * var(--s, 1)); }
+.node small { display: block; color: var(--muted); font-size: var(--fs-cap); }
+.level { display: flex; justify-content: space-between; margin: .3rem 0; color: var(--muted); }
+.level b { color: var(--accent); }
+.guide-flow .steps { counter-reset: s; list-style: none; padding: 0; }
+.guide-flow .steps li { counter-increment: s; padding-left: var(--s4); position: relative; }
+.guide-flow .steps li::before { content: counter(s); position: absolute; left: 0; top: -.05rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--fs-cap); }
+
+@media (max-width: 1000px) {
+  .week-cal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 820px) {
+  .bottom-nav { gap: .2rem; padding-left: .3rem; padding-right: .3rem; }
+  .bottom-nav .nav-button { flex-direction: column; gap: .1rem; padding: var(--s1) .1rem; font-size: var(--fs-body); text-align: center; box-shadow: none; }
+  .bottom-nav .nav-button small { font-size: .62rem; }
+  .bottom-nav .nav-button.active { box-shadow: inset 0 3px 0 var(--accent); }
+}
+
+.topic-wrap .topic-chip:only-child { border-radius: var(--r-ctl); }
+#exam-clock { font-variant-numeric: tabular-nums; }
+
+/* =========================================================
+   Sistema de diseño
+   Espaciado 8/16/24/32 · 4 tamaños de texto · 2 radios ·
+   1 primario + éxito/aviso/error · estados uniformes
+   ========================================================= */
+:root {
+  --s1: .5rem; --s2: 1rem; --s3: 1.5rem; --s4: 2rem;
+  --fs-body: 1rem; --fs-sub: 1.15rem; --fs-title: clamp(1.9rem, 3.6vw, 2.6rem); --fs-num: clamp(4rem, 9vw, 6.4rem);
+  --r-card: 14px; --r-ctl: 9px;
+  --fs-cap: .85rem; --err-bg: #4a2326; --ok: #8ee6b0; --warn: #ffd58a; --err: #ffb1b8;
+}
+.theme-contrast { --ok: #0f0; --warn: #ff0; --err: #ff8a8a; }
+
+/* Estados uniformes: hover, focus, active, disabled, loading */
+.outline-button:hover, .option-button:hover, .topic-chip:hover, .icon-button:hover, .nav-button:hover { border-color: var(--accent); }
+.primary-button:hover, .ask-button:hover { filter: brightness(1.08); }
+button:active:not(:disabled) { transform: scale(.98); }
+button:disabled { opacity: .55; cursor: not-allowed; filter: none; }
+.ai-input:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1:focus { outline: none; }
+.card, .metric, .modal { border-radius: var(--r-card); }
+.icon-button { min-width: 2.75rem; min-height: 2.75rem; }
+
+/* Tokens de texto aplicados */
+h1 { font-size: var(--fs-title); }
+.next-title { margin: 0; font-family: var(--serif); font-size: var(--fs-sub); font-weight: 600; }
+.timer { font-size: var(--fs-num); }
+
+/* Hoy: acción principal arriba, Pomodoro y misiones debajo */
+#study .today-queue { border-left: 4px solid var(--accent2); }
+
+/* Estado de guardado, avisos y temporizador flotante */
+.save-status { align-self: center; color: var(--muted); font-size: var(--fs-cap); white-space: nowrap; }
+.save-status.bad { color: var(--err); font-weight: 700; }
+.alert.info { background: var(--tag-bg); color: var(--accent); }
+.mini-timer { position: fixed; right: var(--s3); bottom: var(--s3); z-index: 6; min-height: 44px; padding: var(--s1) var(--s2); border: 1px solid var(--accent); border-radius: 999px; background: var(--surface); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 6px 20px #0006; }
+.actions.center { justify-content: center; }
+.library-search input { width: 100%; margin-bottom: var(--s2); padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--text); background: var(--input); }
+.action-row { display: flex; justify-content: space-between; align-items: center; gap: var(--s2); padding: var(--s2) 0; border-bottom: 1px solid var(--border); }
+.action-row:last-child { border-bottom: 0; }
+.action-row p { margin: .15rem 0 0; }
+.modal-content label.check span { color: var(--text); }
+code { padding: .1rem var(--s1); border-radius: var(--r-ctl); background: var(--surface2); font-size: .9em; }
+
+/* Carga: esqueleto y animaciones que comunican estado */
+.skeleton { height: 4.5rem; border-radius: var(--r-ctl); background: linear-gradient(90deg, var(--surface2), var(--border), var(--surface2)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+/* Entradas de tarjeta, feedback de calificación, pulso de fin de bloque y hoja inferior: ahora en motion.css y js/17-movimiento.js (v63: se eliminaron card-in, fb-good, fb-soft, done-pulse y sheet-up de aquí). */
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* Aviso con acción «Deshacer» */
+.toast:not(.show) { visibility: hidden; pointer-events: none; }
+.toast-action { margin-left: var(--s1); padding: .2rem var(--s1); border: 1px solid currentColor; border-radius: var(--r-ctl); background: transparent; color: inherit; font-weight: 700; }
+
+/* Móvil: 5 destinos, hojas inferiores, objetivos táctiles */
+@media (max-width: 820px) {
+  .bottom-nav { grid-template-columns: repeat(5, 1fr); }
+  .mini-timer { top: auto; right: var(--s2); bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+  .toast { bottom: calc(4.6rem + env(safe-area-inset-bottom)); }
+  .modal { width: 100%; max-width: 100%; margin: auto 0 0; max-height: 88dvh; border-radius: var(--r-card) var(--r-card) 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
+  .modal-content { padding: var(--s3) var(--s2); }
+  .modal-content::before { content: ""; justify-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin-bottom: -.25rem; }
+  input, textarea, select { font-size: max(16px, 1rem); }
+  .action-row { flex-direction: column; align-items: stretch; }
+}
+@media (pointer: coarse) {
+  button, .outline-button, .option-button, .topic-chip, .chip-x, .icon-button, .nav-button { min-height: 44px; min-width: 44px; }
+  .text-button { display: inline-flex; align-items: center; min-height: 44px; }
+  input[type=checkbox], input[type=radio] { width: 1.3rem; height: 1.3rem; }
+  .task-row, .scale label, .modal-content label.check { min-height: 44px; align-items: center; }
+}
+@media (prefers-contrast: more) { :root { --border: #8a94d6; --muted: #d4d8ee; } }
+
+/* Corrección móvil: nada debe ensanchar la página más que la pantalla */
+.main, .ai-input { min-width: 0; }
+.ai-input input { width: 100%; min-width: 0; }
+@media (max-width: 820px) { .app { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .ai-input { flex-wrap: wrap; row-gap: .25rem; padding: var(--s1); }
+  .ai-input select { order: 1; flex: 1; max-width: none; border-right: 0; }
+  .ai-input .ask-button { order: 2; }
+  .ai-input input { order: 3; flex-basis: 100%; padding: var(--s1) .25rem; border-top: 1px solid var(--border); }
+}
+
+/* Móvil: cabecera compacta para que "Siguiente mejor acción" se vea al abrir */
+@media (max-width: 820px) { .sidebar { width: 100%; } }
+@media (max-width: 600px) {
+  .brand span { display: none; }
+  .topbar-tools { position: fixed; top: 0; right: 0; z-index: 4; height: calc(42px + 1.4rem); align-items: center; margin: 0; padding-right: var(--s2); }
+  .save-status:not(.bad) { display: none; }
+  .topbar { margin-bottom: var(--s2); }
+  .tutor-context { margin-bottom: var(--s2); }
+  .page-heading { margin-bottom: var(--s2); padding-bottom: var(--s1); }
+}
+
+@media (max-width: 600px) { .fact { display: none; } }
+
+/* Campos con etiqueta visible */
+.field { display: grid; gap: var(--s1); color: var(--muted); font-size: var(--fs-cap); }
+.field textarea { margin-top: 0; }
+.field.grow { flex: 1; min-width: 180px; }
+.pomodoro-card .field { margin-top: var(--s2); }
+.roulette-tools { align-items: flex-end; }
+.library-search { margin-bottom: var(--s2); }
+.library-search input { margin-bottom: 0; }
+
+/* Diálogo de confirmación */
+.confirm { width: min(440px, calc(100vw - 2rem)); }
+.confirm-message { white-space: pre-line; color: var(--muted); }
+.danger-button { padding: var(--s1) var(--s2); border: 1px solid var(--err); border-radius: var(--r-ctl); background: var(--err-bg); color: var(--err); font-weight: 700; }
+.danger-button:hover { filter: brightness(1.15); }
+
+/* Las rejillas pueden encoger y las etiquetas largas saltan de línea (evita desbordes en móvil) */
+.grid > * { min-width: 0; }
+.card-head { flex-wrap: wrap; }
+.card-head > .actions { margin-left: auto; }
+.row-actions, .card-tools { gap: var(--s1) var(--s2); }
+#challenge-tag { white-space: normal; text-align: right; }
+@media (max-width: 600px) {
+  .study-grid, .planner-grid, .metrics, .form-row { grid-template-columns: minmax(0, 1fr); }
+  .card-head { flex-wrap: wrap; }
+}
+
+/* Saltos de línea de tarjetas y notas */
+.flashcard > div, .library-card p, .recall-compare { white-space: pre-line; }
+
+/* Estadísticas: muestra y definiciones */
+.metric small { display: block; margin-top: .25rem; color: var(--muted); font-size: var(--fs-cap); font-weight: 400; line-height: 1.35; }
+.stats-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin-bottom: var(--s2); }
+.field.inline { display: flex; align-items: center; gap: var(--s1); }
+.field.inline select { padding: var(--s1); color: var(--text); background: var(--input); border: 1px solid var(--border); border-radius: var(--r-ctl); }
+.stats-bar .lead { margin: 0; font-size: var(--fs-cap); }
+.how-calc { margin-bottom: var(--s2); }
+.how-calc summary { cursor: pointer; font-weight: 700; }
+.how-calc .steps { list-style: disc; padding-left: var(--s3); }
+
+.weak-topic b { white-space: nowrap; margin-left: var(--s1); }
+
+/* Bandeja de revisión de tarjetas */
+.review-card { display: grid; gap: var(--s1); margin: 0; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); }
+.review-card textarea { min-height: 0; margin: 0; resize: vertical; }
+.review-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s1); flex-wrap: wrap; }
+.seg-group { display: inline-flex; gap: var(--s1); }
+.modal-content label.seg { display: inline-block; }
+.seg { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; }
+.seg span { display: inline-block; padding: var(--s1) var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); color: var(--text); background: var(--surface); cursor: pointer; }
+.seg input:checked + span { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.seg input[value="discard"]:checked + span { background: var(--err-bg); color: var(--err); border-color: var(--err); }
+.seg input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+.review-card.discarded textarea { opacity: .5; }
+.review-src, .review-warn { margin: 0; font-size: var(--fs-cap); color: var(--muted); }
+.review-warn { color: var(--warn); }
+.review-warn:empty { display: none; }
+
+/* ===== Etapa 5: planificador transparente e importación con vista previa ===== */
+.plan-load { font-size: var(--fs-cap, .8rem); }
+.plan-load.ok { color: var(--ok); } .plan-load.warn { color: var(--warn); }
+.import-sum { display: flex; flex-wrap: wrap; gap: var(--s1); list-style: none; padding: 0; margin: 0; }
+.import-sum li { padding: var(--s1) var(--s2); border-radius: var(--r-ctl); background: var(--surface2); color: var(--muted); }
+.import-sum li b { color: var(--text); font-size: 1.2rem; margin-right: .2rem; }
+.import-sum li.ok b { color: var(--ok); } .import-sum li.err b { color: var(--err); }
+.import-group summary { cursor: pointer; font-weight: 700; padding: var(--s1) 0; }
+.import-group.err summary { color: var(--err); }
+.import-list { max-height: 11rem; overflow: auto; margin: 0 0 var(--s1); padding-left: 1.4rem; color: var(--muted); font-size: var(--fs-cap, .85rem); line-height: 1.5; }
+
+/* ===== Etapa 6A: reducir la complejidad visible ===== */
+/* Bloques plegables («Más opciones»): lo avanzado queda a un clic, no eliminado */
+summary { cursor: pointer; font-weight: 700; padding-block: .5rem; }
+summary small { font-weight: 400; color: var(--muted); margin-left: var(--s1); font-size: var(--fs-cap); }
+details.card > summary { padding-block: .25rem; }
+details.card[open] > summary { margin-bottom: var(--s1); }
+details.card > :not(summary), .more-inline > :not(summary) { margin-top: var(--s2); }
+.more-inline { margin-top: var(--s2); border-top: 1px solid var(--border); }
+.more-inline > summary { color: var(--accent); }
+.more-inline .lead.rhythm { margin-top: var(--s2); }
+.tool-block { padding: var(--s2) 0 0; margin-top: var(--s2); border-top: 1px solid var(--border); }
+.tool-block .card-head { margin-bottom: var(--s1); }
+details.card > .tool-block:first-of-type { margin-top: var(--s1); }
+details.card > .grid > .tool-block { margin-top: 0; }
+@media (pointer: coarse) { summary { min-height: 44px; display: list-item; } }
+
+/* Hoy: una acción recomendada, su motivo y dos alternativas */
+.today-queue .next-title { font-size: clamp(1.3rem, 2.4vw, 1.7rem); line-height: 1.25; }
+.today-queue .why { margin: var(--s1) 0 var(--s2); color: var(--muted); line-height: 1.55; max-width: 70ch; overflow-wrap: anywhere; }
+.today-queue .why b { color: var(--text); }
+.today-queue .card-head { margin-bottom: var(--s1); }
+.primary-button.big { min-height: 48px; padding: var(--s1) var(--s3); font-size: var(--fs-sub); }
+.alts-head { margin: var(--s3) 0 var(--s1); font-size: var(--fs-cap); font-weight: 700; color: var(--muted); }
+.alt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.alt { display: flex; gap: var(--s2); align-items: center; justify-content: space-between; flex-wrap: wrap; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); }
+.alt-text { flex: 1 1 14rem; min-width: 0; }
+.alt .why { margin: .25rem 0 0; font-size: var(--fs-cap); }
+.alt .outline-button { flex: 0 0 auto; }
+#study .today-queue { grid-column: 1 / -1; grid-row: 2; }
+#study .pomodoro-card { grid-column: 1; grid-row: 3; }
+#study .more-today { grid-column: 2; grid-row: 3; align-self: start; margin: 0; }
+#study .more-today .metrics { margin: var(--s2) 0; }
+#study .more-today .tool-block { margin-top: var(--s1); }
+@media (max-width: 1000px) {
+  #study.active { grid-template-columns: minmax(0, 1fr); }
+  #study .today-queue, #study .pomodoro-card, #study .more-today { grid-column: 1; grid-row: auto; }
+}
+
+/* Modo sesión: durante un bloque o un examen solo se ve la actividad actual y sus controles */
+body.session-study #study .page-heading .lead,
+body.session-study #study .today-queue,
+body.session-study #study .more-today,
+body.session-study #pomodoro-more,
+body.session-study .tutor-context { display: none; }
+body.session-study #study.active { grid-template-columns: minmax(0, 1fr); }
+body.session-study #study .pomodoro-card { grid-column: 1; grid-row: auto; }
+body.session-practice .tutor-context,
+body.session-practice #practice .page-heading .lead,
+body.session-practice .feynman-card,
+body.session-practice .more-tools,
+body.session-practice #review-more { display: none; }
+body.session-practice #practice .study-grid { grid-template-columns: minmax(0, 1fr); }
+
+/* Usuario nuevo: un único primer paso */
+body.new-user #study.active { grid-template-columns: minmax(0, 1fr); }
+body.new-user #study .more-today { display: none; }
+body.new-user:not(.new-pomo) #study .pomodoro-card { display: none; }
+body.new-user #study .pomodoro-card, body.new-user #study .today-queue { grid-column: 1; grid-row: auto; }
+body.new-user[data-page="study"] .tutor-context { display: none; }
+
+/* El contexto del tutor es avanzado: solo se muestra en Practicar (y nunca durante una sesión) */
+body:not([data-page="practice"]) .tutor-context { display: none; }
+
+/* ===== Etapa 6B: móvil y teclado ===== */
+@media (pointer: coarse), (max-width: 820px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]), select { min-height: 44px; }
+  .card-tools .text-button, .text-button { min-height: 44px; min-width: 44px; }
+  .modal-close { width: 44px; height: 44px; }
+  .review-card textarea { min-height: 44px; }
+}
+@media (max-width: 820px) {
+  .bottom-nav .nav-button:focus-visible { outline-offset: -4px; }
+}
+#main:focus { outline: none; }
+.flashcard:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* ===== Etapa 6B (cont.): barra inferior, temporizador y avisos sin solapes ===== */
+:root { --nav-h: 4.6rem; }
+.skip-link { min-height: 44px; display: inline-flex; align-items: center; }
+.modal h2:focus { outline: none; }
+@media (max-width: 820px) {
+  .main { padding-bottom: calc(var(--nav-h) + var(--s3)); }
+  .mini-timer { bottom: calc(var(--nav-h) + var(--s1)); }
+  .toast { bottom: calc(var(--nav-h) + var(--s1)); }
+  body.has-mini .toast { bottom: calc(var(--nav-h) + var(--s1) + 52px); }
+  /* Durante un bloque, los controles del temporizador quedan siempre a la vista sobre la barra inferior */
+  body.session-study .pomodoro-card .actions { position: sticky; bottom: calc(var(--nav-h) + var(--s1)); z-index: 2; background: var(--surface); padding: var(--s1) 0; margin-top: var(--s1); }
+  body.session-study #study .page-heading { margin-bottom: var(--s1); padding-bottom: 0; border: 0; }
+  body.session-study #study h1 { font-size: 1.25rem; margin: 0; }
+  body.session-study .pomodoro-card .timer { position: sticky; top: calc(var(--head-h, 62px) + var(--demo-h, 0px)); z-index: 2; background: var(--surface); }
+}
+@media (max-width: 600px) { body.session-study .ai-input { display: none; } }
+@media (max-width: 359px) { .brand strong { display: none; } }
+@media (max-height: 640px) { .timer { font-size: 3.4rem; padding: var(--s1) 0; } }
+@media (pointer: coarse) {
+  .modal-content a { display: inline-flex; align-items: center; min-height: 44px; }
+  .scale label { min-width: 44px; }
+}
+@media (max-width: 820px) { html { scroll-padding-top: 4.5rem; scroll-padding-bottom: calc(var(--nav-h) + var(--s2)); } } /* el control enfocado nunca queda bajo la cabecera ni la barra inferior */
+
+/* ===== v16: apariencia y tipografía (solo fuentes del sistema) ===== */
+:root { --font-text: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; --dotc: #ffffff24; --tint: #0003; --shadow: 0 4px 16px #0006; }
+body { font-family: var(--font-text); }
+body[data-font="humanist"] { --font-text: Verdana, "Segoe UI", Tahoma, Geneva, sans-serif; }
+body[data-font="serif"] { --font-text: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif; }
+body[data-font="rounded"] { --font-text: Nunito, "Avenir Next Rounded", "Avenir Next", "Trebuchet MS", sans-serif; }
+body[data-font="mono"] { --font-text: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; }
+body[data-font="dyslexic"] { --font-text: OpenDyslexic, Verdana, Arial, sans-serif; }
+body[data-headfont="same"] { --serif: var(--font-text); }
+body[data-lh="compact"] { line-height: 1.3; }
+body[data-lh="roomy"] { line-height: 1.8; }
+body[data-lh="compact"] :is(.lead, .why, .guided-feedback, .modal-tip, .ai-answer, .steps, .modal-content p, .sidebar-footer) { line-height: 1.35; }
+body[data-lh="roomy"] :is(.lead, .why, .guided-feedback, .modal-tip, .ai-answer, .steps, .modal-content p, .sidebar-footer) { line-height: 1.8; }
+body[data-ls="wide"] { letter-spacing: .03em; } body[data-ls="wide"] :is(h1, h2, h3) { letter-spacing: .03em; }
+body[data-ls="wider"] { letter-spacing: .07em; } body[data-ls="wider"] :is(h1, h2, h3) { letter-spacing: .07em; }
+body[data-cardtext="large"] .flashcard { font-size: 1.45rem; } body[data-cardtext="xlarge"] .flashcard { font-size: 1.8rem; }
+body[data-cardtext="large"] .recall-compare { font-size: 1.2rem; } body[data-cardtext="xlarge"] .recall-compare { font-size: 1.4rem; }
+body[data-width="narrow"] .main { max-width: 1000px; } body[data-width="wide"] .main { max-width: 1600px; }
+.timer { font-size: min(var(--fs-num), 21vw); }
+.recall-compare { background: var(--tint); }
+/* Fondo */
+body[data-bg="dots"] { background-image: radial-gradient(var(--dotc) 1.3px, transparent 1.4px); background-size: 22px 22px; }
+body[data-bg="plain"] { background-image: none; }
+/* Tarjetas con sombra (no en Alto contraste, que necesita el borde) */
+body[data-cards="shadow"]:not(.theme-contrast) :is(.card, .metric) { border-color: transparent; box-shadow: var(--shadow); }
+/* Temas */
+.theme-sepia { --dotc: #fff4dc1f; --tint: #0003; } .theme-contrast { --dotc: transparent; }
+.theme-light { --bg: #f4f5fa; --sidebar: #ffffff; --surface: #ffffff; --surface2: #eceff7; --input: #ffffff; --border: #cfd5e6; --text: #16193a; --muted: #565c7a; --tag-bg: #e3e8fb;
+  --danger: #b3261e; --err: #b3261e; --err-bg: #fde7e9; --ok: #1b7a43; --warn: #8a5a00; --grid: #16193a0a; --dotc: #16193a26; --tint: #16193a12; --shadow: 0 2px 10px #1b244a22;
+  --flash-a: #e8edff; --flash-b: #dde4fb; --flash-border: #a9b5e0; --flash-line: #a9b5e0; }
+.theme-oled { --bg: #000000; --sidebar: #000000; --surface: #0b0b0f; --surface2: #16161d; --input: #000000; --border: #2a2a36; --text: #f3f4fb; --muted: #a9aeca; --tag-bg: #1b1f3a;
+  --grid: #ffffff08; --flash-a: #14172e; --flash-b: #0d0f1f; --flash-border: #3a4580; --flash-line: #3a4580; }
+/* ===== Tema Cromo (body.theme-chrome): negro profundo y plata, monocromo. Todo cuelga de ese selector: al cambiar de tema no queda nada de esto ===== */
+.theme-chrome {
+  --bg: #080808; --sidebar: #101010; --surface: #161616; --surface2: #1d1d1d; --input: #0d0d0d;
+  --border: #383838; --text: #f5f5f5; --muted: #b8b8b8;
+  --accent: #c8c8c8; --accent2: #8c8c8c; --on-accent: #0a0a0a; --tag-bg: #262626;
+  --flash-a: #1a1a1a; --flash-b: #141414; --flash-border: #4a4a4a; --flash-line: #4a4a4a;
+  --danger: #f2f2f2; --err: #ffffff; --err-bg: #2a2a2a; --ok: #ececec; --warn: #b4b4b4;
+  --grid: transparent; --dotc: transparent; --tint: #0004;
+  --shadow: inset 0 1px 0 #ffffff12, 0 10px 26px #000c;
+  --chrome-edge: #7a7a7a; --chrome-dim: #909090;
+  --chrome-metal: linear-gradient(180deg, #f4f4f4 0%, #d2d2d2 48%, #a8a8a8 100%);
+}
+/* Fondo: degradado gris muy suave y estático (sin patrón); «Liso» sigue siendo liso */
+body.theme-chrome[data-bg="grid"], body.theme-chrome[data-bg="dots"] { background-image: radial-gradient(ellipse 120% 60% at 15% -10%, #1b1b1b 0%, #080808 60%), linear-gradient(180deg, #0c0c0c 0%, #080808 100%); background-size: auto; background-repeat: no-repeat; }
+/* Tarjetas: superficie oscura, borde plateado discreto y un filo de luz arriba (no brillan) */
+body.theme-chrome[data-cards="border"] :is(.card, .metric) { border-color: #3d3d3d; box-shadow: inset 0 1px 0 #ffffff12, 0 10px 24px -14px #000; }
+/* Campos y botones secundarios: borde gris con contraste suficiente (se redefine --border solo en ellos) */
+.theme-chrome :is(input, select, textarea) { --border: var(--chrome-edge); }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button) { --border: var(--chrome-edge); }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):hover { background: #262626; }
+.theme-chrome :is(.outline-button, .option-button, .topic-chip, .icon-button):disabled { --border: #4a4a4a; border-style: dashed; }
+.theme-chrome ::placeholder { color: var(--chrome-dim); opacity: 1; }
+.theme-chrome :is(input, select, textarea):user-invalid { box-shadow: 0 0 0 2px #fff; }
+/* Foco: anillo blanco de alto contraste (el grosor y el desfase siguen siendo los de siempre) */
+.theme-chrome :focus-visible { outline-color: #fff; }
+/* Botón principal: plata con degradado sutil y texto oscuro; hover, active, focus y disabled distintos */
+.theme-chrome :is(.primary-button, .ask-button) { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 0 0 1px #ececec, inset 0 1px 0 #fff, 0 1px 3px #000a; }
+.theme-chrome :is(.primary-button, .ask-button):hover { background: linear-gradient(180deg, #ffffff 0%, #e2e2e2 48%, #b8b8b8 100%); filter: none; }
+.theme-chrome :is(.primary-button, .ask-button):active:not(:disabled) { background: linear-gradient(180deg, #a8a8a8 0%, #c6c6c6 100%); box-shadow: inset 0 2px 5px #0007; }
+.theme-chrome :is(.primary-button, .ask-button):disabled { background: #262626; color: #9a9a9a; box-shadow: inset 0 0 0 1px #5a5a5a; opacity: 1; }
+.theme-chrome .demo-banner .primary-button { box-shadow: none; } /* el aviso de la demo conserva sus colores */
+/* Avisos: el error se distingue por texto, icono y recuadro, no solo por el tono */
+.theme-chrome .toast { background: var(--chrome-metal); color: #0a0a0a; box-shadow: inset 0 1px 0 #fff, 0 10px 30px #000c; }
+.theme-chrome .toast.error { background: #1d1d1d; color: #fff; box-shadow: inset 0 0 0 2px #fff, 0 10px 30px #000c; }
+.theme-chrome .toast.error::before { content: "Error: "; font-weight: 800; } /* el aviso de error se distingue por el texto «Error:» y el recuadro blanco, sin depender del color */
+.theme-chrome .tag.urgent { background: #f2f2f2; color: #0a0a0a; box-shadow: 0 0 0 1px #fff; } /* urgente = claro sobre oscuro con anillo: no depende del tono ni cambia el tamaño de la etiqueta */
+.theme-chrome :is(.modal-content, .lead, .modal-tip) a { text-decoration: underline; text-underline-offset: .15em; }
+/* Ventanas y marca */
+.theme-chrome .modal { border-color: #4a4a4a; box-shadow: inset 0 1px 0 #ffffff14, 0 24px 60px #000; }
+.theme-chrome .logo { border-radius: 25%; box-shadow: 0 0 0 1px #6a6a6a, 0 2px 10px #000c; }
+.theme-chrome .logo rect { fill: #d4d4d4; } .theme-chrome .logo path { stroke: #0a0a0a; } .theme-chrome .logo circle { fill: #0a0a0a; }
+/* Disposición: misiones y dato curioso */
+body.hide-missions #missions-card, body.hide-fact .fact { display: none; }
+/* Menú lateral de iconos (solo escritorio): el texto sigue en el DOM, con font-size 0 */
+@media (min-width: 821px) {
+  body[data-sidebar="icons"] .app { grid-template-columns: 76px minmax(0, 1fr); }
+  body[data-sidebar="icons"] .sidebar { width: 76px; padding: var(--s3) .5rem; align-items: center; }
+  body[data-sidebar="icons"] .brand { padding: 0; justify-content: center; }
+  body[data-sidebar="icons"] .brand > div:last-child, body[data-sidebar="icons"] .nav-label, body[data-sidebar="icons"] .sidebar-footer { display: none; }
+  body[data-sidebar="icons"] .sidebar .nav { width: 100%; }
+  body[data-sidebar="icons"] .sidebar .nav-button { font-size: 0; justify-content: center; padding: .6rem 0; }
+  body[data-sidebar="icons"] .sidebar .nav-button > span { font-size: 1.35rem; }
+}
+/* Ventana de ajustes */
+.settings-group { padding-bottom: var(--s1); }
+.settings-group > summary { color: var(--accent); }
+.modal-content input[type=range] { padding: 0; min-height: 0; }
+.modal-content input[type=color] { padding: .15rem; height: 2.6rem; cursor: pointer; }
+.modal-content output { color: var(--text); font-weight: 700; }
+/* v16: con texto grande o monoespaciado nada debe ensanchar la página */
+.field.inline { flex-wrap: wrap; } .field.inline select, .stats-bar select { max-width: 100%; }
+:is(.lead, .steps li, .how-calc li, .hint, .modal-tip) { overflow-wrap: anywhere; } code { overflow-wrap: anywhere; }
+/* v16: cabecera y barra inferior móviles no escalan con el tamaño de texto elegido */
+@media (max-width: 820px) { .bottom-nav .nav-button small { font-size: clamp(9px, 2.6vw, 11px); letter-spacing: 0; } }
+@media (max-width: 600px) { .topbar-tools .icon-button { min-width: 44px; min-height: 44px; padding: .25rem .4rem; font-size: 16px; letter-spacing: 0; } .topbar-tools { gap: .35rem; } }
+@media (max-width: 600px) { .brand strong { font-size: 16px; letter-spacing: 0; } }
+
+/* ===== Etapa 1: inicio personal (selector de tiempo y accesos) ===== */
+.mode-picker { display: flex; flex-wrap: wrap; gap: var(--s1); margin-bottom: var(--s2); }
+.seg-btn { padding: var(--s1) var(--s2); border: 1px solid var(--border); border-radius: 999px; background: var(--surface2); color: var(--text); }
+.seg-btn:hover { border-color: var(--accent); }
+.seg-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
+.subject-chips { display: flex; flex-wrap: wrap; gap: var(--s1); margin: var(--s2) 0 var(--s1); }
+.quick-links { margin: var(--s2) 0 0; display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); }
+.today-queue .hint { margin-top: var(--s1); }
+
+/* ===== Etapa 2: modo inmersivo (refina session-study / session-practice) y distracciones ===== */
+.distraction-zone { margin-top: var(--s2); padding: var(--s2); border: 1px dashed var(--border); border-radius: var(--r-ctl); background: var(--surface2); }
+.distraction-zone .field { margin: 0 0 var(--s1); }
+.distraction-row { display: flex; gap: var(--s1); }
+.distraction-row input { flex: 1; min-width: 0; }
+.distraction-list { list-style: none; margin: var(--s1) 0 0; padding: 0; color: var(--muted); font-size: var(--fs-cap); overflow-wrap: anywhere; }
+.distraction-list:empty { display: none; }
+.distraction-list li::before { content: "• "; }
+.distraction-zone .hint { margin-top: var(--s1); }
+.ambient { margin-top: var(--s2); }
+/* Durante un bloque o un examen, el menú y la barra superior se atenúan; vuelven al pasar el ratón o al enfocarlos con el teclado */
+body.session-study .sidebar, body.session-study .topbar, body.session-study .bottom-nav,
+body.session-practice .sidebar, body.session-practice .topbar, body.session-practice .bottom-nav { opacity: .3; transition: opacity var(--dur-base) var(--ease-out); }
+body.session-study .sidebar:hover, body.session-study .sidebar:focus-within, body.session-study .topbar:hover, body.session-study .topbar:focus-within, body.session-study .bottom-nav:hover, body.session-study .bottom-nav:focus-within,
+body.session-practice .sidebar:hover, body.session-practice .sidebar:focus-within, body.session-practice .topbar:hover, body.session-practice .topbar:focus-within, body.session-practice .bottom-nav:hover, body.session-practice .bottom-nav:focus-within { opacity: 1; }
+body.session-study #offline-note, body.session-study .fact { display: none; }
+body.session-study #study .pomodoro-card { max-width: 720px; margin-inline: auto; }
+@media (min-height: 641px) { body.session-study .pomodoro-card .timer { font-size: min(calc(var(--fs-num) * 1.15), 22vw); } }
+
+/* ===== Etapa 3: cierre de sesión · y ajuste «no atenuar» ===== */
+.closure-list { margin: 0; padding-left: var(--s3); display: grid; gap: var(--s1); color: var(--muted); line-height: 1.5; overflow-wrap: anywhere; }
+.closure-list b { color: var(--text); }
+.modal-content .why { color: var(--muted); }
+.modal-content .why b { color: var(--text); }
+/* Si el usuario desactiva el atenuado inmersivo (Ajustes → Disposición), el menú y la barra no cambian */
+body.no-dim .sidebar, body.no-dim .topbar, body.no-dim .bottom-nav { opacity: 1; }
+
+/* ===== Etapa 4: «Hoy me cuesta arrancar» ===== */
+.stuck-list { display: grid; gap: var(--s1); }
+.stuck-opt { display: grid; gap: .2rem; text-align: left; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); color: var(--text); }
+.profile-opt { min-height: 64px; font-size: 1.05em; }
+.stuck-opt:hover { border-color: var(--accent); }
+.stuck-opt small { color: var(--muted); font-size: var(--fs-cap); }
+
+/* ===== Etapa 5: bienvenida opcional ===== */
+.welcome-actions { justify-content: flex-end; }
+.welcome-actions .text-button { margin: 0 auto 0 0; }
+.welcome-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s1); border: 0; padding: 0; margin: 0; min-width: 0; }
+.modal-content label.welcome-time { position: relative; display: block; color: var(--text); }
+.welcome-time input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.welcome-time span { display: grid; gap: .2rem; justify-items: center; min-height: 44px; padding: var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); text-align: center; cursor: pointer; }
+.welcome-time small { color: var(--muted); font-size: var(--fs-cap); }
+.welcome-time:hover span { border-color: var(--accent); }
+.welcome-time input:checked + span { border: 2px solid var(--accent); padding: calc(var(--s2) - 1px); font-weight: 700; }
+.welcome-time input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 480px) { .welcome-times { grid-template-columns: minmax(0, 1fr); } }
+
+/* ===== Etapa 6: portada pública (capa aparte; la app queda oculta mientras se ve) ===== */
+body.show-landing .app, body.show-landing .bottom-nav, body.show-landing .skip-link, body.show-landing #mini-timer { display: none !important; }
+.landing { min-height: 100vh; min-height: 100dvh; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) calc(var(--s4) + env(safe-area-inset-bottom, 0px)) env(safe-area-inset-left, 0px); }
+.landing-head, .landing-main, .landing-foot { width: min(1080px, 100%); margin-inline: auto; padding-inline: clamp(1rem, 4vw, 2rem); }
+.landing-head { padding-block: var(--s3) var(--s1); }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--s4); align-items: center; padding-block: var(--s4); }
+.landing h1 { margin: var(--s1) 0 var(--s2); font-size: var(--fs-title); line-height: 1.15; }
+.landing h1:focus, .landing h2:focus { outline: none; }
+.landing-cta { margin-top: var(--s3); }
+.landing-cta .primary-button, .landing-end .primary-button { min-height: 48px; }
+.landing-note { margin: var(--s2) 0 0; color: var(--muted); font-size: var(--fs-cap); line-height: 1.5; }
+.landing-mock { margin: 0; min-width: 0; }
+.landing-mock-ui { display: grid; gap: var(--s2); pointer-events: none; user-select: none; }
+.landing-mock figcaption { margin-top: var(--s1); color: var(--muted); font-size: var(--fs-cap); line-height: 1.5; }
+.landing-mock-card .next-title { margin: 0; }
+.landing-mock-why { margin: var(--s1) 0 var(--s2); color: var(--muted); line-height: 1.5; }
+.landing-mock-why b { color: var(--text); }
+.landing-mock-btn { display: inline-block; padding: var(--s1) var(--s2); border-radius: var(--r-ctl); background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.landing-mock-btn.out { background: var(--surface2); color: var(--text); border: 1px solid var(--border); font-weight: 500; font-size: var(--fs-cap); }
+.landing-mock-alt { margin: var(--s2) 0 0; padding-top: var(--s2); border-top: 1px solid var(--border); color: var(--muted); }
+.landing-mock-alt b { color: var(--text); }
+.landing-flash { display: grid; gap: var(--s1); justify-items: center; text-align: center; padding: var(--s3); background: linear-gradient(135deg, var(--flash-a), var(--flash-b)); border: 1px solid var(--flash-border); border-radius: var(--radius); }
+.landing-flash small { color: var(--muted); }
+.landing-flash p { margin: 0; font-family: var(--serif); font-size: var(--fs-sub); line-height: 1.4; }
+.landing-mock-rate { display: flex; flex-wrap: wrap; gap: var(--s1); justify-content: center; margin-top: var(--s1); }
+.landing-section { padding-block: var(--s4); border-top: 1px solid var(--border); }
+.landing-section h2 { margin: 0; font-size: var(--fs-title); line-height: 1.2; }
+.landing-steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); padding: 0; margin: var(--s3) 0 0; }
+.landing-steps li { counter-increment: step; padding: var(--s3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.landing-steps li::before { content: counter(step); display: grid; place-items: center; width: 2rem; height: 2rem; margin-bottom: var(--s1); border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 800; }
+.landing-steps h3 { margin: 0 0 var(--s1); font-family: var(--serif); font-size: var(--fs-sub); }
+.landing-steps p { margin: 0; color: var(--muted); line-height: 1.55; }
+.landing-trust ul { margin: var(--s2) 0 0; padding-left: 1.2rem; display: grid; gap: var(--s1); color: var(--muted); line-height: 1.5; }
+.landing-trust li::marker { color: var(--accent); }
+.landing-end { margin-top: var(--s3); }
+.landing-foot { padding-block: var(--s2); color: var(--muted); font-size: var(--fs-cap); }
+.landing-foot a { color: var(--accent); }
+@media (max-width: 820px) {
+  .landing-hero { grid-template-columns: minmax(0, 1fr); gap: var(--s3); padding-block: var(--s3); }
+  .landing-steps { grid-template-columns: minmax(0, 1fr); }
+  .landing-cta .primary-button, .landing-cta .outline-button { flex: 1 1 100%; }
+}
+
+/* Etapa 7: demo aislada. Banner permanente (sticky arriba, en el flujo): no tapa controles ni la barra móvil inferior.
+   Colores propios y fijos para que el contraste no dependa del tema ni del acento del usuario. */
+.demo-banner { position: sticky; top: 0; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .35rem var(--s2); padding: calc(.45rem + env(safe-area-inset-top, 0px)) calc(var(--s2) + env(safe-area-inset-right, 0px)) .45rem calc(var(--s2) + env(safe-area-inset-left, 0px)); background: #ffd166; color: #1f1600; border-bottom: 2px solid #1f1600; font-size: var(--fs-cap, .85rem); line-height: 1.35; }
+.demo-banner p { margin: 0; flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }
+.demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); }
+.demo-banner .primary-button { min-height: 44px; background: #1f1600; color: #ffd166; }
+.demo-banner .text-button { min-height: 44px; margin: 0; padding: 0 .5rem; color: #1f1600; text-decoration: underline; }
+.demo-banner :focus-visible { outline: 3px solid #1f1600; outline-offset: 2px; }
+body.is-demo .sidebar { top: var(--demo-h, 0px); height: calc(100vh - var(--demo-h, 0px)); height: calc(100dvh - var(--demo-h, 0px)); }
+@media (max-width: 820px) { body.is-demo .sidebar { height: auto; padding-top: var(--s1); } } /* bajo el aviso de demostración, que ya cubre la zona segura */
+@media (max-width: 600px) { body.is-demo .topbar-tools { top: var(--demo-h, 0px); } }
+
+/* Fase 1: lista de copias automáticas */
+.backup-list { display: grid; gap: 8px; margin-top: 8px; }
+.backup-list button { text-align: left; }
+
+/* ===== Lumi (compañero de estudio) · parte 16 =====
+   Variables con alcance del componente (.lumi). No toca el tema ni el acento del usuario.
+   Cromo redefine estas variables en `.theme-chrome .lumi` con grises plateados (sin amarillo). */
+.lumi { --lumi-size: 80px; position: relative; width: var(--lumi-size); height: var(--lumi-size); flex: none; }
+.lumi-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* Enfoque: nada se mueve (ver más abajo la regla de la abeja). */
+/* Animaciones: solo opacity/transform. Neutral: pose estática (sin movimiento continuo). */
+.lumi.is-entering { animation: lumi-in .3s ease-out both; }
+.lumi[data-paused="true"], .lumi[data-paused="true"] * { animation-play-state: paused !important; } /* pestaña oculta: nada corre */
+@keyframes lumi-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lumi, .lumi *, .lumi-msg, .lumi-msg-card { animation: none !important; transition: none !important; } }
+.reduce-motion .lumi, .reduce-motion .lumi *, .reduce-motion .lumi-msg, .reduce-motion .lumi-msg-card { animation: none !important; transition: none !important; }
+/* Botón de ocultar: botón real, objetivo táctil ampliado con ::after, sin el salto global de button:hover. */
+.lumi-hide { position: absolute; top: -6px; right: -4px; width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text); font-size: 1rem; line-height: 1; }
+.lumi-hide::after { content: ""; position: absolute; inset: -9px; }
+.lumi-hide:hover, .lumi-hide:focus-visible { transform: none; filter: none; }
+.lumi-msg[data-on="true"] { opacity: 1; }
+body.session-study .lumi-hide, body.session-study .lumi-msg, body.session-study .lumi-msg-card { display: none; } /* sesión de enfoque: sin mensajes ni controles, solo la luz tenue */
+
+/* Lumi · bloque 2: segundo slot (solo texto) junto al contador de Práctica. Mismo fade y mismas reglas de movimiento reducido. */
+.lumi-msg-card { color: var(--text); font-size: var(--fs-cap); opacity: 0; transition: opacity .3s ease; }
+.lumi-msg-card[data-on="true"] { opacity: 1; }
+.lumi-msg-card:empty { display: none; }
+
+/* Lumi · bloque 3: gestos breves de un solo ciclo (transform). Con movimiento reducido (sistema o Learny) las reglas de arriba los anulan. */
+.lumi[data-react="celebrate"] .lumi-svg { animation: lumi-hop .4s ease-out 1; }
+.lumi[data-react="welcome"] .lumi-svg { animation: lumi-wave .4s ease-in-out 1; transform-origin: 50% 80%; }
+@keyframes lumi-hop { 0%, 100% { transform: none; } 40% { transform: translateY(-6px); } }
+@keyframes lumi-wave { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(4deg); } }
+
+/* ===== Lumi · avatar «Abeja pixelada» (bloque 2) =====
+   Arte propio en SVG local, fiel a la referencia: rejilla 40×40, cubo isométrico, colores planos por caras. Es la única apariencia de Lumi (la luciérnaga se eliminó).
+   Las variables --bee-* viven en .lumi (no tocan el tema ni el acento del usuario). El contorno exterior amarillo (--bee-rim, 1 celda) separa a la abeja de los fondos oscuros sin brillos.
+   Las alas son translúcidas (interior con transparencia, como en la referencia). Alto contraste: contornos negros y blancos, colores planos. */
+.lumi { --bee-rim: #ffcc44; --bee-line: #401e1d; --bee-sided: #221310; --bee-topd: #723024; --bee-top: #fee861; --bee-toph: #ffff82;
+  --bee-side: #d99021; --bee-front: #ffb236; --bee-glint: #f9fff9; --bee-cream: #fff3ba; --bee-stripe: #8a4d3b;
+  --bee-wing: #f9fff9; --bee-wing-i: rgba(255, 255, 255, .55); --bee-ant: #9a4f30; --bee-cheek: #ff7345; }
+.theme-light .lumi { --bee-rim: #f0b429; --bee-wing: #8fa7d1; --bee-wing-i: rgba(143, 167, 209, .35); } /* sobre fondo claro el contorno blanco de las alas desaparecería */
+.theme-contrast .lumi { --bee-rim: #fff; --bee-line: #000; --bee-sided: #000; --bee-topd: #000; --bee-top: #ffff00; --bee-toph: #ffff00; --bee-side: #ffb000; --bee-front: #ffd400;
+  --bee-glint: #fff; --bee-cream: #fff; --bee-stripe: #000; --bee-wing: #fff; --bee-wing-i: #fff; --bee-ant: #000; --bee-cheek: #ff7a00; }
+.theme-chrome .lumi { --bee-rim: #dcdcdc; }
+
+.b-rim { fill: var(--bee-rim); } .b-line { fill: var(--bee-line); } .b-sideD { fill: var(--bee-sided); } .b-topD { fill: var(--bee-topd); }
+.b-top { fill: var(--bee-top); } .b-topH { fill: var(--bee-toph); } .b-side { fill: var(--bee-side); } .b-front { fill: var(--bee-front); }
+.b-glint { fill: var(--bee-glint); } .b-cream { fill: var(--bee-cream); } .b-stripe { fill: var(--bee-stripe); }
+.b-wing { fill: var(--bee-wing); } .b-wingI { fill: var(--bee-wing-i); } .b-ant { fill: var(--bee-ant); } .b-cheek { fill: var(--bee-cheek); }
+
+/* Tamaños múltiplos de la rejilla (80 = 2 px por celda; 60 = 1,5 px, 3 px físicos a 2×; 40 = 1 px): con otros tamaños las celdas salen desiguales (crispEdges). */
+.lumi { --lumi-size: 80px; }
+@media (max-width: 820px) { .lumi { --lumi-size: 60px; } }
+body.session-study .lumi { --lumi-size: 40px; }
+.lumi .lumi-hide { top: -10px; } /* el sprite ocupa casi toda la rejilla: el «×» sube 4 px para tapar menos el cubo (a la derecha se queda igual: más afuera provoca desborde en móvil) */
+
+/* Poses de la abeja: solo transform (unidades del viewBox: 1 = una celda). Pivotes en el arranque de cada parte. Gestos de UN ciclo; el controlador los limpia con temporizador.
+   NEUTRAL: alas en reposo (sin movimiento continuo); un aleteo muy breve solo al aparecer. FOCUS: sin ninguna animación. Con movimiento reducido (sistema o Learny) las reglas generales las anulan. */
+.bee-wing-l { transform-origin: 11px 13px; } .bee-wing-r { transform-origin: 14px 13px; } .bee-antennae { transform-origin: 13px 14px; }
+.lumi-svg--bee { transform-origin: 50% 85%; }
+@keyframes bee-flap-l { 0%, 100% { transform: none; } 35% { transform: translateY(-1px) rotate(9deg); } 70% { transform: rotate(-3deg); } }
+@keyframes bee-flap-r { 0%, 100% { transform: none; } 35% { transform: translateY(-1px) rotate(-9deg); } 70% { transform: rotate(3deg); } }
+@keyframes bee-feel { 0%, 100% { transform: none; } 35% { transform: rotate(-12deg); } 70% { transform: rotate(8deg); } }
+@keyframes bee-lean { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
+@keyframes bee-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
+.lumi.is-entering .bee-wing-l { animation: bee-flap-l .3s ease-out 1; }
+.lumi.is-entering .bee-wing-r { animation: bee-flap-r .3s ease-out 1; }
+.lumi[data-react="celebrate"] .bee-wing-l { animation: bee-flap-l .4s ease-in-out 1; } /* además del salto lumi-hop del bloque 3 */
+.lumi[data-react="celebrate"] .bee-wing-r { animation: bee-flap-r .4s ease-in-out 1; }
+.lumi[data-react="welcome"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; } /* además de la inclinación lumi-wave */
+/* SUPPORT, PROGRESS y EMPTY: el controlador ya los marca (GESTURE). Solo se perciben si el personaje está visible donde ocurren (hoy Lumi vive en Inicio y esos eventos pasan en Práctica). */
+.lumi[data-react="support"] .lumi-svg--bee { animation: bee-lean .4s ease-in-out 1; }
+.lumi[data-react="progress"] .lumi-svg--bee { animation: bee-nod .4s ease-in-out 1; }
+.lumi[data-react="empty"] .bee-antennae { animation: bee-feel .4s ease-in-out 1; }
+.lumi[data-pose="focus"] .lumi-svg--bee, .lumi[data-pose="focus"] .lumi-svg--bee * { animation: none !important; } /* enfoque: pose estática */
+
+/* Corrección móvil : en táctil la regla general `button { min-height/min-width: 44px }` agrandaba el «×» a 44×44 sobre un Lumi de 48 px y lo tapaba.
+   El botón visible vuelve a sus 26 px; el área de toque de 44 px ya la da `.lumi-hide::after` (inset: -9px). */
+.lumi-hide { min-width: 0; min-height: 0; }
+.lumi-hide::after { inset: -10px; } /* 24 px útiles + 2×10 = 44 px de área de toque (antes 42 por el borde) */
+
+/* ===== Lumi · avatar Eevee (bloque 1) =====
+   Segunda apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'bee' | 'eevee'; la abeja es la predeterminada). El arte es el SVG de js/16-lumi-eevee.js (pixel art propio, trazado de la imagen de referencia).
+   Eevee conserva sus colores en todos los temas (la referencia es pixel art con contornos oscuros); solo en Alto contraste se añade un contorno blanco de 1 celda (--ev-rim) para que la silueta no se pierda sobre negro.
+   Tiene caja propia (rejilla 56×56): 84 px en escritorio, 56 px en móvil (≤ 820 px) y 42 px en sesión de enfoque, múltiplos de la rejilla para que las celdas salgan nítidas. Sus poses (orejas, cola) están en el bloque «Lumi · poses de Eevee y WALL·E». */
+.lumi .lumi-svg--eevee { display: none; }
+.lumi[data-avatar="eevee"] .lumi-svg--eevee { display: block; }
+.lumi[data-avatar="eevee"] .lumi-svg--bee { display: none; }
+.lumi { --ev-ink: #110f1d; --ev-line: #4b2d1d; --ev-dark: #683c23; --ev-shade: #985b3c; --ev-base: #c48649; --ev-light: #deaa6c; --ev-mid: #aa7645; --ev-tan: #d5b491; --ev-cream: #f5e4b8; --ev-glint: #f8f1d5; --ev-rim: transparent; }
+.theme-contrast .lumi { --ev-rim: #fff; }
+.e-rim { fill: var(--ev-rim); } .e-ink { fill: var(--ev-ink); } .e-line { fill: var(--ev-line); } .e-dark { fill: var(--ev-dark); } .e-shade { fill: var(--ev-shade); } .e-base { fill: var(--ev-base); }
+.e-light { fill: var(--ev-light); } .e-mid { fill: var(--ev-mid); } .e-tan { fill: var(--ev-tan); } .e-cream { fill: var(--ev-cream); } .e-glint { fill: var(--ev-glint); }
+.lumi[data-avatar="eevee"] { --lumi-size: 84px; }
+@media (max-width: 820px) { .lumi[data-avatar="eevee"] { --lumi-size: 56px; } }
+body.session-study .lumi[data-avatar="eevee"] { --lumi-size: 42px; }
+.lumi[data-pose="focus"] .lumi-svg--eevee, .lumi[data-pose="focus"] .lumi-svg--eevee * { animation: none !important; } /* enfoque: pose estática */
+
+/* Selector «Apariencia de Lumi» (Ajustes → Disposición). Radios nativos (teclado: flechas) con tarjeta; la elegida se distingue por borde grueso, marca de verificación y negrita, no solo por color. */
+.lumi-avatar-group { border: 0; padding: 0; margin: var(--s2) 0 0; min-width: 0; }
+.lumi-avatar-group legend { padding: 0; margin-bottom: var(--s1); color: var(--muted); }
+.lumi-avatar-opts { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.modal-content label.lumi-avatar-opt { position: relative; display: block; flex: 1 1 11rem; min-width: 0; color: var(--text); }
+.lumi-avatar-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.lumi-avatar-card { display: flex; align-items: center; gap: var(--s1); min-height: 44px; padding: var(--s1) var(--s2); border: 1px solid var(--border); border-radius: var(--r-ctl); background: var(--surface2); cursor: pointer; }
+.lumi-avatar-opt:hover .lumi-avatar-card { border-color: var(--accent); }
+.lumi-avatar-opt input:checked + .lumi-avatar-card { border: 2px solid var(--accent); padding: calc(var(--s1) - 1px) calc(var(--s2) - 1px); font-weight: 700; }
+.lumi-avatar-opt input:focus-visible + .lumi-avatar-card { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lumi-avatar-name { flex: 1 1 auto; min-width: 0; }
+.lumi-avatar-check { visibility: hidden; font-weight: 700; color: var(--accent); }
+.lumi-avatar-opt input:checked + .lumi-avatar-card .lumi-avatar-check { visibility: visible; }
+/* Miniaturas decorativas: sin estados, sin animaciones y sin clics; cada dibujo en un múltiplo de su rejilla. */
+body .lumi.lumi-thumb { display: block; pointer-events: none; }
+body .lumi.lumi-thumb[data-avatar="bee"] { --lumi-size: 60px; }
+body .lumi.lumi-thumb[data-avatar="eevee"] { --lumi-size: 56px; }
+.lumi-thumb, .lumi-thumb * { animation: none !important; transition: none !important; }
+
+/* ===== Lumi · avatar WALL·E =====
+   Tercera apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'walle'). El arte es el SVG de js/16-lumi-walle.js (pixel art propio, trazado de la imagen de referencia; 36×36 celdas en una rejilla 40×40).
+   Conserva sus colores en todos los temas; solo en Alto contraste se añade un contorno blanco de 1 celda (--wl-rim). Usa la misma caja que la abeja (80 / 60 / 40 px): múltiplos de 40, celdas nítidas.
+   Sus poses (cabeza, brazos) están en el bloque «Lumi · poses de Eevee y WALL·E». */
+.lumi .lumi-svg--walle { display: none; }
+.lumi[data-avatar="walle"] .lumi-svg--walle { display: block; }
+.lumi[data-avatar="walle"] .lumi-svg--bee { display: none; }
+.lumi { --wl-ink: #2e2827; --wl-dark: #4b4540; --wl-mid: #71685e; --wl-light: #c8c5c2; --wl-tan: #a99782; --wl-gold: #d7bc83; --wl-line: #725836; --wl-white: #fff; --wl-rim: transparent; }
+.theme-contrast .lumi { --wl-rim: #fff; }
+.w-rim { fill: var(--wl-rim); } .w-ink { fill: var(--wl-ink); } .w-dark { fill: var(--wl-dark); } .w-mid { fill: var(--wl-mid); } .w-light { fill: var(--wl-light); }
+.w-tan { fill: var(--wl-tan); } .w-gold { fill: var(--wl-gold); } .w-line { fill: var(--wl-line); } .w-white { fill: var(--wl-white); }
+.lumi[data-pose="focus"] .lumi-svg--walle, .lumi[data-pose="focus"] .lumi-svg--walle * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="walle"] { --lumi-size: 60px; }
+
+/* ===== Lumi · poses de Eevee y WALL·E (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda; pivotes en el arranque de cada parte), un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend).
+   Las reglas generales ya cubren movimiento reducido (sistema y Learny), la pestaña oculta (data-paused) y la desactivación de Lumi; en FOCUS las reglas de cada avatar anulan toda animación.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; solo un gesto breve al aparecer. CELEBRATE y WELCOME suman al salto/saludo general (lumi-hop / lumi-wave).
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+@keyframes lumi-lean { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes lumi-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1.5px); } }
+.lumi-svg--eevee, .lumi-svg--walle { transform-origin: 50% 85%; }
+
+/* Eevee: orejas y cola */
+.eevee-ear-l { transform-origin: 13px 16px; } .eevee-ear-r { transform-origin: 29px 17px; } .eevee-tail { transform-origin: 34px 32px; }
+@keyframes eevee-flick-l { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(2deg); } }
+@keyframes eevee-flick-r { 0%, 100% { transform: none; } 35% { transform: rotate(6deg); } 70% { transform: rotate(-2deg); } }
+@keyframes eevee-wag { 0%, 100% { transform: none; } 30% { transform: rotate(7deg); } 65% { transform: rotate(-5deg); } }
+@keyframes eevee-sway { 0%, 100% { transform: none; } 50% { transform: rotate(4deg); } }
+.lumi[data-avatar="eevee"].is-entering .eevee-ear-l { animation: eevee-flick-l .3s ease-out 1; }
+.lumi[data-avatar="eevee"].is-entering .eevee-ear-r { animation: eevee-flick-r .3s ease-out 1; }
+.lumi[data-avatar="eevee"].is-entering .eevee-tail { animation: eevee-wag .3s ease-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-ear-l { animation: eevee-flick-l .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="celebrate"] .eevee-tail { animation: eevee-wag .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="welcome"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="welcome"] .eevee-tail { animation: eevee-sway .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="support"] .lumi-svg--eevee { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="progress"] .lumi-svg--eevee { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="progress"] .eevee-ear-r { animation: eevee-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="eevee"][data-react="empty"] .eevee-tail { animation: eevee-sway .4s ease-in-out 1; }
+
+/* WALL·E: cabeza y brazos */
+.walle-head { transform-origin: 20px 17px; } .walle-arm-l { transform-origin: 14px 19px; } .walle-arm-r { transform-origin: 30px 21px; }
+@keyframes walle-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
+@keyframes walle-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(4deg); } }
+@keyframes walle-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes walle-arm-l-up { 0%, 100% { transform: none; } 40% { transform: rotate(7deg); } }
+@keyframes walle-arm-r-up { 0%, 100% { transform: none; } 40% { transform: rotate(-7deg); } }
+@keyframes walle-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-12deg); } 55% { transform: rotate(4deg); } 80% { transform: rotate(-6deg); } }
+.lumi[data-avatar="walle"].is-entering .walle-head { animation: walle-tilt .3s ease-out 1; }
+.lumi[data-avatar="walle"][data-react="celebrate"] .walle-arm-l { animation: walle-arm-l-up .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="celebrate"] .walle-arm-r { animation: walle-arm-r-up .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="welcome"] .walle-arm-r { animation: walle-wave .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="welcome"] .walle-head { animation: walle-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="support"] .walle-head { animation: walle-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="progress"] .walle-head { animation: walle-nod .4s ease-in-out 1; }
+.lumi[data-avatar="walle"][data-react="empty"] .walle-head { animation: walle-tilt-r .4s ease-in-out 1; }
+
+/* ===== Lumi · dock global (v42) =====
+   Lumi y su mensaje viven en un dock fijo fuera de las páginas: visibles en TODAS las secciones, así sus gestos (apoyo, progreso, vacío…) se ven donde ocurren.
+   El dock no captura clics (pointer-events: none); solo el «×» es pulsable. Sin cambios de estados, textos ni frecuencias. */
+.lumi-dock { position: fixed; right: var(--s3); bottom: var(--s3); z-index: 3; pointer-events: none; }
+body:not(.has-lumi) .lumi-dock, body.show-landing .lumi-dock { display: none !important; }
+.lumi-dock .lumi { pointer-events: none; }
+.lumi-dock .lumi-hide { pointer-events: auto; }
+.lumi-dock .lumi-msg { position: absolute; right: 0; bottom: 100%; margin: 0 0 var(--s1); width: max-content; max-width: min(240px, calc(100vw - 2 * var(--s2))); padding: var(--s1) var(--s2); border: 1px solid var(--border); border-radius: var(--r-card); background: var(--surface); color: var(--text); font-size: var(--fs-cap); line-height: 1.4; text-align: left; box-shadow: 0 4px 14px #0004; opacity: 0; transition: opacity .3s ease; }
+.lumi-dock .lumi-msg[data-on="true"] { opacity: 1; }
+.lumi-dock .lumi-msg:empty { display: none; }
+body.has-mini .lumi-dock { bottom: calc(var(--s3) + 56px); }
+@media (max-width: 820px) {
+  .lumi-dock { right: var(--s2); bottom: calc(var(--nav-h) + var(--s1)); }
+  body.has-mini .lumi-dock { bottom: calc(var(--nav-h) + var(--s1) + 52px); }
+  body.session-study .lumi-dock { bottom: calc(var(--nav-h) + var(--s1) + 64px); }
+}
+
+
+/* ===== Lumi · avatar Daniel Carreon (bloque 1) =====
+   Cuarta apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'daniel'). El arte es el SVG de js/16-lumi-daniel.js (pixel art, 56×74 celdas en una rejilla 76×76).
+   Conserva sus colores en todos los temas (tiene contorno casi negro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--dn-rim).
+   Caja propia: 76 px (1 px por celda; 2 px físicos a 2×) en escritorio y móvil, y 38 px en sesión de enfoque. Sus poses (Bloque 2) irán en un bloque aparte. */
+.lumi .lumi-svg--daniel { display: none; }
+.lumi[data-avatar="daniel"] .lumi-svg--daniel { display: block; }
+.lumi[data-avatar="daniel"] .lumi-svg--bee { display: none; }
+.lumi { --dn-ink: #0a0a28; --dn-hd: #3a1e10; --dn-hl: #5c3820; --dn-sk: #f3c192; --dn-ss: #cd845c; --dn-gr: #1c8034; --dn-gd: #105220; --dn-bl: #3e7ed6; --dn-bd: #245494; --dn-gy: #bebec4; --dn-wh: #ffffff; --dn-rim: transparent; }
+.theme-contrast .lumi { --dn-rim: #fff; }
+.d-rim { fill: var(--dn-rim); } .d-ink { fill: var(--dn-ink); } .d-hd { fill: var(--dn-hd); } .d-hl { fill: var(--dn-hl); } .d-sk { fill: var(--dn-sk); } .d-ss { fill: var(--dn-ss); }
+.d-gr { fill: var(--dn-gr); } .d-gd { fill: var(--dn-gd); } .d-bl { fill: var(--dn-bl); } .d-bd { fill: var(--dn-bd); } .d-gy { fill: var(--dn-gy); } .d-wh { fill: var(--dn-wh); }
+.lumi[data-avatar="daniel"] { --lumi-size: 76px; }
+body.session-study .lumi[data-avatar="daniel"] { --lumi-size: 38px; }
+.lumi-svg--daniel { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--daniel, .lumi[data-pose="focus"] .lumi-svg--daniel * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="daniel"] { --lumi-size: 76px; }
+
+/* ===== Lumi · poses de Daniel Carreon (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 76; el sprite está desplazado (10, 1)); pivotes en transform-origin en esas unidades.
+   Un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend). Movimiento reducido (sistema y Learny), pestaña oculta (data-paused) y desactivación de Lumi
+   los cubren las reglas generales sobre .lumi *; en FOCUS la regla del bloque anterior anula toda animación.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un ladeo mínimo de cabeza. CELEBRATE y WELCOME suman al salto/saludo general (lumi-hop / lumi-wave).
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+.daniel-head { transform-origin: 38px 47px; }  /* cuello */
+.daniel-eyes { transform-origin: 38px 33px; }  /* centro de los ojos */
+.daniel-arm-l { transform-origin: 28px 53px; } /* hombro izquierdo (del dibujo) */
+.daniel-arm-r { transform-origin: 56px 51px; } /* hombro derecho */
+@keyframes daniel-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes daniel-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes daniel-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(3deg); } }
+@keyframes daniel-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes daniel-arm-l-up { 0%, 100% { transform: none; } 40% { transform: rotate(12deg); } }
+@keyframes daniel-arm-r-up { 0%, 100% { transform: none; } 40% { transform: rotate(-12deg); } }
+@keyframes daniel-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-26deg); } 55% { transform: rotate(-8deg); } 80% { transform: rotate(-20deg); } }
+.lumi[data-avatar="daniel"].is-entering .daniel-eyes { animation: daniel-blink .3s ease-in-out 1; }
+.lumi[data-avatar="daniel"].is-entering .daniel-head { animation: daniel-tilt .3s ease-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-arm-l { animation: daniel-arm-l-up .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-arm-r { animation: daniel-arm-r-up .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="celebrate"] .daniel-eyes { animation: daniel-blink .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="welcome"] .daniel-arm-r { animation: daniel-wave .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="welcome"] .daniel-head { animation: daniel-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="support"] .lumi-svg--daniel { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="support"] .daniel-head { animation: daniel-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="progress"] .lumi-svg--daniel { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="progress"] .daniel-head { animation: daniel-nod .4s ease-in-out 1; }
+.lumi[data-avatar="daniel"][data-react="empty"] .daniel-head { animation: daniel-tilt-r .4s ease-in-out 1; }
+
+
+/* ===== Lumi · avatar Yor Forger (bloque 1) =====
+   Quinta apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'yor'). El arte es el SVG de js/16-lumi-yor.js (pixel art, 19×22 celdas en una rejilla 24×24).
+   Conserva sus colores en todos los temas (tiene contorno casi negro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--yr-rim).
+   Caja propia: 72 px (3 px por celda) en escritorio y móvil, y 36 px en sesión de enfoque. Sus poses (Bloque 2) irán en un bloque aparte. */
+.lumi .lumi-svg--yor { display: none; }
+.lumi[data-avatar="yor"] .lumi-svg--yor { display: block; }
+.lumi[data-avatar="yor"] .lumi-svg--bee { display: none; }
+.lumi { --yr-ink: #0b0b12; --yr-hair: #2c2c3c; --yr-skin: #f6d5bc; --yr-blush: #e98f8f; --yr-tan: #8a6a2c; --yr-gold: #d6aa3a; --yr-pale: #f1dc8e; --yr-shine: #fff3b4;
+  --yr-eyed: #8c1022; --yr-eye: #d9283e; --yr-deep: #5a0a16; --yr-white: #ffffff; --yr-rim: transparent; }
+.theme-contrast .lumi { --yr-rim: #fff; }
+.y-rim { fill: var(--yr-rim); } .y-ink { fill: var(--yr-ink); } .y-hair { fill: var(--yr-hair); } .y-skin { fill: var(--yr-skin); } .y-blush { fill: var(--yr-blush); } .y-tan { fill: var(--yr-tan); }
+.y-gold { fill: var(--yr-gold); } .y-pale { fill: var(--yr-pale); } .y-shine { fill: var(--yr-shine); } .y-eyed { fill: var(--yr-eyed); } .y-eye { fill: var(--yr-eye); } .y-deep { fill: var(--yr-deep); } .y-white { fill: var(--yr-white); }
+.lumi[data-avatar="yor"] { --lumi-size: 72px; }
+body.session-study .lumi[data-avatar="yor"] { --lumi-size: 36px; }
+.lumi-svg--yor { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--yor, .lumi[data-pose="focus"] .lumi-svg--yor * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="yor"] { --lumi-size: 72px; }
+
+/* ===== Lumi · poses de Yor Forger (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 24; el sprite está desplazado (3, 1)); pivotes en transform-origin en esas unidades.
+   Un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend). Movimiento reducido (sistema y Learny), pestaña oculta (data-paused) y desactivación de Lumi
+   los cubren las reglas generales sobre .lumi *; en FOCUS la regla del bloque anterior anula toda animación.
+   Los ojos (.yor-eyes) y los adornos (.yor-gem-l/-r) son grupos hermanos de .yor-body, no hijos de la cabeza: por eso NO se gira la cabeza (se despegarían del cuerpo); los gestos de cuerpo entero
+   (inclinación, asentimiento, salto, saludo) se aplican al SVG con los keyframes generales (lumi-lean, lumi-nod, lumi-hop, lumi-wave) y las partes solo hacen movimientos pequeños propios.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un movimiento mínimo de los adornos. CELEBRATE y WELCOME suman al salto/saludo general.
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+.yor-gem-l { transform-origin: 7.5px 11px; }   /* base del adorno izquierdo (junto al pelo) */
+.yor-gem-r { transform-origin: 17.5px 11px; }  /* base del adorno derecho */
+.yor-eyes { transform-origin: 12.5px 15px; }   /* centro de los ojos */
+@keyframes yor-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes yor-flick-l { 0%, 100% { transform: none; } 35% { transform: rotate(6deg); } 70% { transform: rotate(-2deg); } }
+@keyframes yor-flick-r { 0%, 100% { transform: none; } 35% { transform: rotate(-6deg); } 70% { transform: rotate(2deg); } }
+@keyframes yor-perk-l { 0%, 100% { transform: none; } 45% { transform: rotate(4deg); } }
+@keyframes yor-perk-r { 0%, 100% { transform: none; } 45% { transform: rotate(-4deg); } }
+@keyframes yor-sway-r { 0%, 100% { transform: none; } 25% { transform: rotate(-9deg); } 55% { transform: rotate(3deg); } 80% { transform: rotate(-5deg); } }
+@keyframes yor-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(3deg); } }
+.lumi[data-avatar="yor"].is-entering .yor-eyes { animation: yor-blink .3s ease-in-out 1; }
+.lumi[data-avatar="yor"].is-entering .yor-gem-l { animation: yor-flick-l .3s ease-out 1; }
+.lumi[data-avatar="yor"].is-entering .yor-gem-r { animation: yor-flick-r .3s ease-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-gem-l { animation: yor-flick-l .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-gem-r { animation: yor-flick-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="celebrate"] .yor-eyes { animation: yor-blink .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="welcome"] .yor-gem-r { animation: yor-sway-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .lumi-svg--yor { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .yor-gem-l { animation: yor-perk-l .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="support"] .yor-gem-r { animation: yor-perk-r .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="progress"] .lumi-svg--yor { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="progress"] .yor-eyes { animation: yor-blink .4s ease-in-out 1; }
+.lumi[data-avatar="yor"][data-react="empty"] .lumi-svg--yor { animation: yor-tilt-r .4s ease-in-out 1; }
+
+/* ===== Lumi · avatar Cat Black (bloque 1) =====
+   Sexta apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'gato'; nombre visible «Cat Black»). El arte es el SVG de js/16-lumi-gato.js (pixel art, 50×58 celdas en una rejilla 64×64).
+   Pelaje casi negro: para que la silueta no se pierda sobre los temas oscuros el dibujo lleva un contorno de 1 celda (--gt-rim) gris azulado; en Claro no hace falta (transparente), en Cromo es gris plata y en Alto contraste blanco.
+   Caja propia: 96 px (1,5 px por celda) en escritorio, 64 px (1 px por celda) en móvil y 48 px en sesión de enfoque; miniatura del selector 64 px. Sus poses (Bloque 2) irán en un bloque aparte. */
+.lumi .lumi-svg--gato { display: none; }
+.lumi[data-avatar="gato"] .lumi-svg--gato { display: block; }
+.lumi[data-avatar="gato"] .lumi-svg--bee { display: none; }
+.lumi { --gt-ink: #0c0c10; --gt-gy: #8c8c8c; --gt-wh: #ffffff; --gt-rim: #50556e; }
+.theme-light .lumi { --gt-rim: transparent; }
+.theme-chrome .lumi { --gt-rim: #6a6a6a; }
+.theme-contrast .lumi { --gt-rim: #fff; }
+.g-rim { fill: var(--gt-rim); } .g-ink { fill: var(--gt-ink); } .g-gy { fill: var(--gt-gy); } .g-wh { fill: var(--gt-wh); }
+.lumi[data-avatar="gato"] { --lumi-size: 96px; }
+@media (max-width: 820px) { .lumi[data-avatar="gato"] { --lumi-size: 64px; } }
+body.session-study .lumi[data-avatar="gato"] { --lumi-size: 48px; }
+.lumi-svg--gato { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--gato, .lumi[data-pose="focus"] .lumi-svg--gato * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="gato"] { --lumi-size: 64px; }
+
+/* ===== Lumi · poses de Cat Black (bloque 2) =====
+   Solo representan el estado que ya decide LumiCompanion (data-pose / data-react / .is-entering): no cambian textos, frecuencias, prioridades ni condiciones.
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 64; el sprite está desplazado (7, 3)); pivotes en transform-origin en esas unidades.
+   Un ciclo de ≤ 400 ms que el controlador limpia con temporizador (no con animationend). Movimiento reducido (sistema y Learny), pestaña oculta (data-paused) y desactivación de Lumi
+   los cubren las reglas generales sobre .lumi *; en FOCUS la regla del bloque anterior anula toda animación.
+   NEUTRAL: pose de la referencia, sin movimiento continuo; al aparecer, un parpadeo y un meneo breve de la cola. CELEBRATE y WELCOME suman al salto/saludo general (lumi-hop / lumi-wave).
+   SUPPORT, PROGRESS y EMPTY: gestos mínimos, sin tristeza ni énfasis. */
+.gato-eyes { transform-origin: 32px 26px; }   /* centro de los ojos (el parpadeo comprime en vertical aros y pupilas a la vez) */
+.gato-ear-r { transform-origin: 41px 22px; }  /* base de la oreja derecha */
+.gato-tail { transform-origin: 52px 41px; }   /* base de la cola, donde se une al cuerpo */
+@keyframes gato-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes gato-ear-flick { 0%, 100% { transform: none; } 35% { transform: rotate(7deg); } 70% { transform: rotate(-3deg); } }
+@keyframes gato-ear-perk { 0%, 100% { transform: none; } 45% { transform: rotate(-5deg); } }
+@keyframes gato-wag { 0%, 100% { transform: none; } 30% { transform: rotate(7deg); } 65% { transform: rotate(-5deg); } }
+@keyframes gato-sway { 0%, 100% { transform: none; } 50% { transform: rotate(5deg); } }
+@keyframes gato-twitch { 0%, 100% { transform: none; } 40% { transform: rotate(4deg); } }
+.lumi[data-avatar="gato"].is-entering .gato-eyes { animation: gato-blink .3s ease-in-out 1; }
+.lumi[data-avatar="gato"].is-entering .gato-tail { animation: gato-twitch .3s ease-out 1; }
+.lumi[data-avatar="gato"][data-react="celebrate"] .gato-tail { animation: gato-wag .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="celebrate"] .gato-ear-r { animation: gato-ear-flick .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="celebrate"] .gato-eyes { animation: gato-blink .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="welcome"] .gato-tail { animation: gato-sway .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="welcome"] .gato-ear-r { animation: gato-ear-flick .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="support"] .lumi-svg--gato { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="support"] .gato-ear-r { animation: gato-ear-perk .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="progress"] .lumi-svg--gato { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="progress"] .gato-eyes { animation: gato-blink .4s ease-in-out 1; }
+.lumi[data-avatar="gato"][data-react="empty"] .gato-tail { animation: gato-sway .4s ease-in-out 1; }
+
+/* ===== Lumi · reposo con vida (v60) =====
+   El controlador ya marca data-anim="idle" cuando Lumi está activa, sin enfoque y sin movimiento reducido; hasta ahora ningún CSS lo usaba y en reposo no se movía nada.
+   Aquí cada apariencia hace movimientos pequeños y espaciados (respiración, parpadeo, cola, orejas, alas, cabeza), con periodos distintos para que no se muevan a la vez.
+   Solo transform sobre los mismos grupos de las poses. Se apagan solos: en enfoque (data-anim="none"), con movimiento reducido (sistema o Learny), con la pestaña oculta (data-paused) y durante un examen.
+   Nunca pisan una pose: no se aplican mientras haya un gesto (data-react) o la entrada (.is-entering). */
+@keyframes lumi-breathe { 0%, 100% { transform: none; } 50% { transform: translateY(-2px); } }
+@keyframes idle-blink { 0%, 90%, 100% { transform: none; } 94% { transform: scaleY(.15); } }
+@keyframes idle-wag { 0%, 55%, 100% { transform: none; } 65% { transform: rotate(7deg); } 78% { transform: rotate(-5deg); } 90% { transform: none; } }
+@keyframes idle-ear-l { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(-6deg); } 92% { transform: rotate(2deg); } }
+@keyframes idle-ear-r { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(6deg); } 92% { transform: rotate(-2deg); } }
+@keyframes idle-tilt { 0%, 58%, 100% { transform: none; } 66%, 80% { transform: rotate(-5deg); } 90% { transform: none; } }
+@keyframes idle-wing-l { 0%, 55%, 100% { transform: none; } 61% { transform: translateY(-1px) rotate(8deg); } 67% { transform: rotate(-2deg); } 73% { transform: translateY(-1px) rotate(7deg); } 79% { transform: none; } }
+@keyframes idle-wing-r { 0%, 55%, 100% { transform: none; } 61% { transform: translateY(-1px) rotate(-8deg); } 67% { transform: rotate(2deg); } 73% { transform: translateY(-1px) rotate(-7deg); } 79% { transform: none; } }
+@keyframes idle-feel { 0%, 78%, 100% { transform: none; } 86% { transform: rotate(-10deg); } 93% { transform: rotate(6deg); } }
+
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .lumi-svg { animation: lumi-breathe 4.5s ease-in-out infinite; }
+/* Abeja */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-wing-l { animation: idle-wing-l 3.4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-wing-r { animation: idle-wing-r 3.4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .bee-antennae { animation: idle-feel 6s ease-in-out infinite; }
+/* Eevee */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-tail { animation: idle-wag 4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-ear-l { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .eevee-ear-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* WALL·E */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .walle-head { animation: idle-tilt 6s ease-in-out infinite; }
+/* Daniel Carreon */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .daniel-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .daniel-head { animation: idle-tilt 9s ease-in-out infinite; }
+/* Yor Forger */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-gem-l { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .yor-gem-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* Cat Black */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-eyes { animation: idle-blink 5.5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-tail { animation: idle-wag 4s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .gato-ear-r { animation: idle-ear-r 7s ease-in-out infinite; }
+/* En enfoque (data-pose="focus") las reglas por apariencia ya anulan toda animación con !important. */
+/* v64: tras 30 s sin actividad el controlador pasa a data-anim="rest" (ninguna regla de arriba aplica: pose de la referencia, sin repintar el SVG en cada fotograma) y vuelve a "idle" con la primera actividad.
+   La capa propia de la respiración solo existe mientras el reposo está activo (will-change se retira al detenerse). */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .lumi-svg { will-change: transform; }
+
+/* ===== v67 · Fase 5: intervalo visible en los botones de calificar ===== */
+.rate-int { margin-left: .4rem; color: var(--muted); font-size: var(--fs-cap); font-weight: 400; white-space: nowrap; }
+
+
+/* ===== v71 · Fase 8: tareas con cifra concreta ===== */
+.task-item { border-bottom: 1px solid var(--border); }
+.task-item .task-row { border-bottom: 0; }
+.task-go { margin: 0 0 var(--s1) calc(1.3rem + var(--s1)); color: var(--muted); font-size: var(--fs-cap); overflow-wrap: anywhere; }
+.task-go .text-button { margin: 0 0 0 var(--s1); }
+
+/* ===== Lumi · avatar Miku Nakano (id cc, bloque 1) =====
+   Séptima apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'cc'). El arte es el SVG de js/16-lumi-cc.js (pixel art, 56×84 celdas en una rejilla 88×88).
+   Conserva sus colores en todos los temas (tiene contorno azul marino propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--cc-rim).
+   Caja propia: 88 px (1 px por celda) en escritorio, 66 px en móvil y 44 px en sesión de enfoque; miniatura del selector 88 px. */
+.lumi .lumi-svg--cc { display: none; }
+.lumi[data-avatar="cc"] .lumi-svg--cc { display: block; }
+.lumi[data-avatar="cc"] .lumi-svg--bee { display: none; }
+.lumi { --cc-ink: #0d183c; --cc-hood: #96c8e5; --cc-hoodS: #5b99ca; --cc-hoodD: #4270a2; --cc-hair: #ad6256; --cc-hairD: #723c44; --cc-hairX: #592a32; --cc-hl: #e6ae79;
+  --cc-gold: #f4e67e; --cc-goldD: #deaa4d; --cc-skin: #fce8d4; --cc-blush: #f0beb0; --cc-white: #f8faf6; --cc-eye: #262d58; --cc-rim: transparent; }
+.theme-contrast .lumi { --cc-rim: #fff; }
+.cc-r { fill: var(--cc-rim); } .cc-ink { fill: var(--cc-ink); } .cc-hood { fill: var(--cc-hood); } .cc-hoodS { fill: var(--cc-hoodS); } .cc-hoodD { fill: var(--cc-hoodD); }
+.cc-hair { fill: var(--cc-hair); } .cc-hairD { fill: var(--cc-hairD); } .cc-hairX { fill: var(--cc-hairX); } .cc-hl { fill: var(--cc-hl); } .cc-gold { fill: var(--cc-gold); } .cc-goldD { fill: var(--cc-goldD); }
+.cc-skin { fill: var(--cc-skin); } .cc-blush { fill: var(--cc-blush); } .cc-white { fill: var(--cc-white); } .cc-eye { fill: var(--cc-eye); }
+.lumi[data-avatar="cc"] { --lumi-size: 88px; }
+@media (max-width: 820px) { .lumi[data-avatar="cc"] { --lumi-size: 66px; } }
+body.session-study .lumi[data-avatar="cc"] { --lumi-size: 44px; }
+.lumi-svg--cc { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--cc, .lumi[data-pose="focus"] .lumi-svg--cc * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="cc"] { --lumi-size: 88px; }
+
+/* ===== Lumi · poses de Miku Nakano (bloque 2) =====
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 88; el sprite está desplazado (16, 2)); un ciclo de ≤ 400 ms que el controlador limpia con temporizador.
+   Movimiento reducido, pestaña oculta y desactivación de Lumi los cubren las reglas generales; FOCUS anula toda animación. Sin cambios de textos, frecuencias ni condiciones. */
+.cc-head { transform-origin: 44px 56px; } .cc-eyes { transform-origin: 44px 49px; }
+.cc-arm-l { transform-origin: 28px 58px; } .cc-arm-r { transform-origin: 58px 58px; } .cc-tail { transform-origin: 62px 68px; }
+@keyframes cc-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes cc-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-3deg); } }
+@keyframes cc-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(2deg); } }
+@keyframes cc-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes cc-arm-l-up { 0%, 100% { transform: none; } 40% { transform: rotate(10deg); } }
+@keyframes cc-arm-r-up { 0%, 100% { transform: none; } 40% { transform: rotate(-10deg); } }
+@keyframes cc-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-16deg); } 55% { transform: rotate(-4deg); } 80% { transform: rotate(-12deg); } }
+@keyframes cc-wag { 0%, 100% { transform: none; } 30% { transform: rotate(7deg); } 65% { transform: rotate(-5deg); } }
+@keyframes cc-sway { 0%, 100% { transform: none; } 50% { transform: rotate(5deg); } }
+.lumi[data-avatar="cc"].is-entering .cc-eyes { animation: cc-blink .3s ease-in-out 1; }
+.lumi[data-avatar="cc"].is-entering .cc-tail { animation: cc-wag .3s ease-out 1; }
+.lumi[data-avatar="cc"][data-react="celebrate"] .cc-arm-l { animation: cc-arm-l-up .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="celebrate"] .cc-arm-r { animation: cc-arm-r-up .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="celebrate"] .cc-tail { animation: cc-wag .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="celebrate"] .cc-eyes { animation: cc-blink .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="welcome"] .cc-arm-r { animation: cc-wave .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="welcome"] .cc-head { animation: cc-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="support"] .lumi-svg--cc { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="support"] .cc-head { animation: cc-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="progress"] .lumi-svg--cc { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="progress"] .cc-head { animation: cc-nod .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="empty"] .cc-tail { animation: cc-sway .4s ease-in-out 1; }
+.lumi[data-avatar="cc"][data-react="empty"] .cc-head { animation: cc-tilt-r .4s ease-in-out 1; }
+/* Reposo con vida */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-head { animation: idle-tilt 9s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .cc-tail { animation: idle-wag 4s ease-in-out infinite; }
+
+/* ===== Lumi · avatar Alisa Kujou (bloque 1) =====
+   Octava apariencia, elegible en Ajustes → Apariencia de Lumi (settings.mascotAvatar = 'alisa'). El arte es el SVG de js/16-lumi-alisa.js (pixel art de alta resolución, 115×179 celdas en una rejilla 200×200), trazado de la imagen aportada.
+   Conserva sus colores en todos los temas (tiene contorno oscuro propio); solo en Alto contraste se añade un contorno blanco de 1 celda (--al-rim).
+   Caja propia: 128 px (≈0,64 px por celda) en escritorio, 90 px en móvil y 64 px en sesión de enfoque; miniatura del selector 64 px (regla v79). */
+.lumi .lumi-svg--alisa { display: none; }
+.lumi[data-avatar="alisa"] .lumi-svg--alisa { display: block; }
+.lumi[data-avatar="alisa"] .lumi-svg--bee { display: none; }
+.lumi { --al-ink: #190d1e; --al-ink2: #2e1f2d; --al-ribD: #671e2d; --al-dark: #403648; --al-gray: #554f59; --al-rib: #9f3346; --al-hairDD: #6f5e71; --al-hairD: #8b7886; --al-eye: #4e93b3; --al-ribL: #d45d6b; --al-hairM: #a28fa2; --al-hairL2: #c9afb5; --al-hair: #d5c7cd; --al-eyeL: #abd8eb; --al-hairL: #e2d4dc; --al-blush: #f6dce0; --al-skin: #fceee5; --al-white: #fbf8fb; --al-rim: transparent; }
+.theme-contrast .lumi { --al-rim: #fff; }
+.al-rim { fill: var(--al-rim); }
+.al-ink { fill: var(--al-ink); } .al-ink2 { fill: var(--al-ink2); } .al-ribD { fill: var(--al-ribD); } .al-dark { fill: var(--al-dark); } .al-gray { fill: var(--al-gray); } .al-rib { fill: var(--al-rib); } .al-hairDD { fill: var(--al-hairDD); } .al-hairD { fill: var(--al-hairD); } .al-eye { fill: var(--al-eye); } .al-ribL { fill: var(--al-ribL); } .al-hairM { fill: var(--al-hairM); } .al-hairL2 { fill: var(--al-hairL2); } .al-hair { fill: var(--al-hair); } .al-eyeL { fill: var(--al-eyeL); } .al-hairL { fill: var(--al-hairL); } .al-blush { fill: var(--al-blush); } .al-skin { fill: var(--al-skin); } .al-white { fill: var(--al-white); }
+.lumi[data-avatar="alisa"] { --lumi-size: 128px; }
+@media (max-width: 820px) { .lumi[data-avatar="alisa"] { --lumi-size: 90px; } }
+body.session-study .lumi[data-avatar="alisa"] { --lumi-size: 64px; }
+.lumi-svg--alisa { transform-origin: 50% 90%; }
+.lumi[data-pose="focus"] .lumi-svg--alisa, .lumi[data-pose="focus"] .lumi-svg--alisa * { animation: none !important; } /* enfoque: pose estática */
+body .lumi.lumi-thumb[data-avatar="alisa"] { --lumi-size: 70px; }
+
+/* ===== Lumi · poses de Alisa Kujou (bloque 2) =====
+   Solo transform sobre los grupos del SVG (1 unidad = 1 celda del viewBox 200; el sprite está desplazado (42, 10)); un ciclo de ≤ 400 ms que el controlador limpia con temporizador.
+   Movimiento reducido (sistema y Learny), pestaña oculta y desactivación de Lumi los cubren las reglas generales sobre .lumi *; FOCUS anula toda animación. Sin cambios de textos, frecuencias ni condiciones.
+   Los ojos van dentro de la cabeza; el lazo, el ahoge y el brazo son grupos aparte (movimientos pequeños, ≤ 12°). */
+.alisa-head { transform-origin: 107px 110px; }    /* cuello */
+.alisa-eyes { transform-origin: 102px 85px; }    /* centro de los ojos */
+.alisa-ribbon { transform-origin: 65px 90px; }  /* donde el lazo se une al pelo */
+.alisa-ahoge { transform-origin: 96px 32px; }   /* base del mechón */
+.alisa-arm-r { transform-origin: 122px 121px; }   /* hombro del brazo extendido */
+@keyframes alisa-blink { 0%, 100% { transform: none; } 45% { transform: scaleY(.15); } }
+@keyframes alisa-tilt { 0%, 100% { transform: none; } 45% { transform: rotate(-3deg); } }
+@keyframes alisa-tilt-r { 0%, 100% { transform: none; } 45% { transform: rotate(2deg); } }
+@keyframes alisa-nod { 0%, 100% { transform: none; } 40% { transform: translateY(1px); } }
+@keyframes alisa-flick { 0%, 100% { transform: none; } 35% { transform: rotate(-9deg); } 70% { transform: rotate(3deg); } }
+@keyframes alisa-sway { 0%, 100% { transform: none; } 35% { transform: rotate(-8deg); } 70% { transform: rotate(5deg); } }
+@keyframes alisa-arm-up { 0%, 100% { transform: none; } 40% { transform: rotate(-12deg); } }
+@keyframes alisa-wave { 0%, 100% { transform: none; } 25% { transform: rotate(-22deg); } 55% { transform: rotate(-6deg); } 80% { transform: rotate(-16deg); } }
+.lumi[data-avatar="alisa"].is-entering .alisa-eyes { animation: alisa-blink .3s ease-in-out 1; }
+.lumi[data-avatar="alisa"].is-entering .alisa-ahoge { animation: alisa-sway .3s ease-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-arm-r { animation: alisa-arm-up .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-ribbon { animation: alisa-flick .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="celebrate"] .alisa-eyes { animation: alisa-blink .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="welcome"] .alisa-arm-r { animation: alisa-wave .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="welcome"] .alisa-head { animation: alisa-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="support"] .lumi-svg--alisa { animation: lumi-lean .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="support"] .alisa-head { animation: alisa-tilt .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="progress"] .lumi-svg--alisa { animation: lumi-nod .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="progress"] .alisa-head { animation: alisa-nod .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="empty"] .alisa-ahoge { animation: alisa-sway .4s ease-in-out 1; }
+.lumi[data-avatar="alisa"][data-react="empty"] .alisa-head { animation: alisa-tilt-r .4s ease-in-out 1; }
+/* Reposo con vida */
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-eyes { animation: idle-blink 5s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-head { animation: idle-tilt 9s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-ribbon { animation: idle-ear-l 6s ease-in-out infinite; }
+body:not(.session-practice) .lumi[data-anim="idle"]:not([data-react]):not(.is-entering) .alisa-ahoge { animation: idle-ear-r 7s ease-in-out infinite; }
+
+/* v74: con Lumi activa, el dato curioso del día lo dice ella; el de «Más sobre hoy» se oculta (sin Lumi se sigue viendo) */
+body.has-lumi #study .fact { display: none; }
+
+/* ===== v79 · Selector «Apariencia de Lumi»: todas las tarjetas miden lo mismo (solo vista previa) =====
+   Antes la tarjeta crecía con la miniatura (--lumi-size de 56 a 88 px según el personaje) y las opciones de la última fila se estiraban (flex: 1 1 11rem).
+   Ahora: cuadrícula de columnas iguales, tarjeta de alto fijo y miniatura en una caja común de 64 px. No toca .lumi fuera de .lumi-thumb: el tamaño de cada personaje en la página no cambia. */
+.lumi-avatar-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--s1); }
+.modal-content label.lumi-avatar-opt { flex: none; min-width: 0; }
+.lumi-avatar-card { box-sizing: border-box; width: 100%; height: 84px; min-height: 84px; }
+.lumi-avatar-card .lumi-thumb { --lumi-size: 64px !important; flex: none; width: 64px; height: 64px; }
+.lumi-avatar-name { overflow-wrap: anywhere; }
+
+/* v80 · Alisa Kujou en alta resolución: sprite de 115×179 celdas en una rejilla 200×200 (≈0,64 px por celda); cajas 128 / 90 / 64 px y pivotes de las poses recalculados en esa rejilla. La miniatura de Ajustes sigue en 64 px (regla v79). */
+
+/* ===== v81 · Perfiles · Etapa 3b: bordes de los controles de la bienvenida con contraste ≥ 3:1 (WCAG 1.4.11) =====
+   Medido con los valores de cada tema: el borde normal (--border) da 1,25–1,47:1 en Oscuro, Negro, Claro y Sepia (Alto contraste y Cromo ya cumplen).
+   --ui-edge es el borde con ≥ 3:1 frente a la superficie, a la superficie secundaria y al fondo del campo (3,11–3,9:1 en los cuatro temas).
+   Solo se aplica a la bienvenida (opciones de perfil, tiempo y tamaño de texto, campo de nombre y «Atrás»); el resto de la app conserva su borde.
+   Los selectores llevan un elemento más de especificidad para ganar también a las reglas «hover: none» de motion.css (que se carga después). */
+:root { --ui-edge: #6f759b; }
+.theme-oled { --ui-edge: #64656f; }
+.theme-light { --ui-edge: #81869e; }
+.theme-sepia { --ui-edge: #9c9079; }
+.theme-contrast { --ui-edge: #ffffff; }
+.theme-chrome { --ui-edge: #7a7a7a; }
+button.stuck-opt.profile-opt, label.welcome-time span { border-color: var(--ui-edge); }   /* la opción marcada conserva su borde de acento de 2 px (más específico) */
+.modal-content input.w-edge:not([type=checkbox]):not([type=radio]) { border-color: var(--ui-edge); }
+button.outline-button.w-edge { border-color: var(--ui-edge); }
+
+/* ===== v83 · Lector de pantalla R7–R12 ===== */
+button.stuck-opt.profile-opt[aria-pressed="true"] { border: 2px solid var(--accent); padding: calc(var(--s2) - 1px); } /* R7: al volver con «Atrás» se ve (y se oye, aria-pressed) cuál se eligió; el grosor lo distingue sin depender del color */
+.modal-content h3.eyebrow { margin: 0; } /* R9: «Accesibilidad» es un encabezado real (tecla H) con el mismo aspecto de antes */
+
+/* Cuentas (Bloque 2): botón «Entrar» / «Cuenta» de la barra superior */
+.account-button { font-weight: 700; padding-inline: var(--s2); }
+@media (max-width: 420px) { .topbar-tools .account-button { padding-inline: .4rem; font-size: 14px; } }
+
+/* PC1 · predecir antes de ver la respuesta (opcional) */
+.predict-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); margin-top: var(--s2); }
+.predict-label { flex-basis: 100%; color: var(--muted); font-size: var(--fs-cap); }
+.predict-row .option-button[aria-pressed="true"] { border: 2px solid var(--accent); padding: calc(var(--s2) - 1px); font-weight: 700; }
+
+/* C8 · texto de ejemplo (placeholder) legible en todos los temas (≥ 4,5:1; lo comprueba tests/contraste-placeholder.spec.js).
+   Antes usaba el gris por defecto del navegador (#757575), que fallaba en dark, oled, sepia y contrast. El tema Cromo conserva su regla propia. */
+::placeholder { color: var(--muted); opacity: 1; }
+.theme-contrast ::placeholder { color: #cfcfcf; } /* en alto contraste --muted es blanco puro: así no se confunde con lo que la persona escribió */
